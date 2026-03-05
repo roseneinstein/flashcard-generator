@@ -529,9 +529,10 @@ function HFeat({icon,title,desc}){
 function Card({card,idx,total,onPrev,onNext}){
   const[fl,setFl]=useState(false);
   const[anim,setAnim]=useState('in');
-  const txRef=useRef(null);
-  const tyRef=useRef(null);
-  const isSwipeRef=useRef(false);
+  const tx=useRef(null);
+  const ty=useRef(null);
+  const didSwipe=useRef(false);
+  const didFlip=useRef(false); // prevents click firing after touchend
 
   useEffect(function(){setFl(false);setAnim('in');},[idx]);
 
@@ -544,34 +545,45 @@ function Card({card,idx,total,onPrev,onNext}){
   }
 
   function tStart(e){
-    txRef.current=e.touches[0].clientX;
-    tyRef.current=e.touches[0].clientY;
-    isSwipeRef.current=false;
+    tx.current=e.touches[0].clientX;
+    ty.current=e.touches[0].clientY;
+    didSwipe.current=false;
+    didFlip.current=false;
   }
 
   function tMove(e){
-    if(txRef.current===null)return;
-    var dx=Math.abs(e.touches[0].clientX-txRef.current);
-    var dy=Math.abs(e.touches[0].clientY-tyRef.current);
-    // Only a clear horizontal movement counts as swipe
-    if(dx>18&&dx>dy*2) isSwipeRef.current=true;
+    if(tx.current===null)return;
+    var dx=Math.abs(e.touches[0].clientX-tx.current);
+    var dy=Math.abs(e.touches[0].clientY-ty.current);
+    if(dx>16&&dx>dy*1.8) didSwipe.current=true;
   }
 
   function tEnd(e){
-    if(txRef.current===null)return;
-    var dx=e.changedTouches[0].clientX-txRef.current;
-    var swipe=isSwipeRef.current;
-    txRef.current=null;
-    tyRef.current=null;
-    isSwipeRef.current=false;
-    if(!swipe){
-      // Pure tap — always flip
+    if(tx.current===null)return;
+    var endX=e.changedTouches[0].clientX;
+    var dx=endX-tx.current;
+    var swipe=didSwipe.current;
+    tx.current=null;
+    ty.current=null;
+
+    if(swipe){
+      didSwipe.current=false;
+      didFlip.current=true; // block the click that fires right after
+      if(dx<-50&&idx<total-1) go('next');
+      else if(dx>50&&idx>0) go('prev');
+    } else {
+      didSwipe.current=false;
+      didFlip.current=true; // also block click — we handle flip here
       setFl(function(f){return !f;});
-      return;
     }
-    // Swipe — navigate
-    if(dx<-50&&idx<total-1) go('next');
-    else if(dx>50&&idx>0) go('prev');
+    // reset the click-block after iOS fires its synthetic click (~300ms)
+    setTimeout(function(){didFlip.current=false;},400);
+  }
+
+  function handleClick(){
+    // Only fires on desktop (mouse) — on mobile didFlip blocks it
+    if(didFlip.current) return;
+    setFl(function(f){return !f;});
   }
 
   var pts=(card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
@@ -582,20 +594,18 @@ function Card({card,idx,total,onPrev,onNext}){
   };
 
   return(
-    <div
-      style={{position:'relative',userSelect:'none',touchAction:'pan-y'}}
+    <div style={{position:'relative',userSelect:'none',touchAction:'pan-y'}}
       onTouchStart={tStart}
       onTouchMove={tMove}
       onTouchEnd={tEnd}
     >
-      {/* Desktop edge click zones */}
+      {/* Desktop prev/next edge zones */}
       <div style={{position:'absolute',left:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'}}
         onClick={function(e){e.stopPropagation();if(idx>0)go('prev');}}/>
       <div style={{position:'absolute',right:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'}}
         onClick={function(e){e.stopPropagation();if(idx<total-1)go('next');}}/>
 
-      <div className="fw" style={animStyle}
-        onClick={function(){if(!isSwipeRef.current)setFl(function(f){return !f;});}}>
+      <div className="fw" style={animStyle} onClick={handleClick}>
         <div className={fl?'fi fl':'fi'}>
           <div className="ff">
             <div className="fl-lbl">Topic</div>
@@ -635,6 +645,7 @@ function Card({card,idx,total,onPrev,onNext}){
     </div>
   );
 }
+
 
 function Quiz({qs}){
   // ALL hooks must come first — no conditional returns before hooks
