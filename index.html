@@ -437,9 +437,6 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 const{useState,useRef,useEffect}=React;
 
 const CFG={
-  API_KEY:'YOUR_ANTHROPIC_API_KEY_HERE',
-  GROQ_KEY:'YOUR_GROQ_API_KEY_HERE',
-  PROVIDER:'anthropic',  // change to 'groq' to switch AI — one word
   FREE_LIMIT:10,
   RZP_KEY:'YOUR_RAZORPAY_KEY_HERE',
 };
@@ -609,7 +606,6 @@ function App(){
     const txt=itab==='text'?notes:pdfTxt;
     if(!txt.trim())return st('Paste some notes first');
     if(!pro&&usage>=CFG.FREE_LIMIT){setPw(true);return}
-    if(CFG.API_KEY==='YOUR_ANTHROPIC_API_KEY_HERE')return st('Add your API key in CFG to activate');
     setLoading(true);setCards([]);setQuiz([]);
     try{
       const res=await callAI(txt,cnt);
