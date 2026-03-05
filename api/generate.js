@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { text, count, lang } = req.body;
+  const { text, count } = req.body;
   if (!text || !count) {
     return res.status(400).json({ error: 'Missing text or count' });
   }
@@ -14,15 +14,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
-  const isHindi = lang === 'hi';
-
-  const langRule = isHindi
-    ? `LANGUAGE RULE: Write ALL output — flashcard topics, points, quiz questions, options, and explanations — in simple, clear Hindi using Devanagari script. Use everyday conversational Hindi that a student would understand, not formal or literary Hindi.`
-    : `Write all content in English.`;
-
-  const prompt = `You are a study assistant for Indian competitive exams (UPSC, JEE, NEET, CA).
-
-${langRule}
+  const prompt = `You are a study assistant for Indian competitive exams.
 
 Return ONLY a JSON object. No markdown. No code fences. No extra text before or after.
 
@@ -34,8 +26,8 @@ CRITICAL RULES:
 2. Exactly 5 quiz objects.
 3. All string values must be on ONE line. Never put a real newline inside a string value.
 4. Separate bullet points inside "points" using the pipe character | like this: "point one | point two | point three"
-5. correct is a number 0 to 3.
-6. Keep topics short (3-6 words). Points must be scannable — not paragraphs.
+5. Use only basic ASCII. No special dashes, no curly quotes, no unicode.
+6. correct is a number 0 to 3.
 
 Study notes:
 ${text.substring(0, 2000)}`;
