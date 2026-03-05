@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -83,9 +83,6 @@ html.light body::after{
 /* THEME & LANG TOGGLES */
 .thm-tog{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.85rem;cursor:none;display:flex;align-items:center;justify-content:center;transition:border-color .2s,color .2s,background .2s;flex-shrink:0}
 .thm-tog:hover{border-color:var(--border-h);color:var(--text);background:var(--surface)}
-.lang-tog{font-size:0.7rem;font-weight:500;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:5px 12px;cursor:none;letter-spacing:0.04em;transition:all .2s;white-space:nowrap;font-family:'Geist',sans-serif}
-.lang-tog:hover{border-color:var(--border-h);color:var(--text)}
-.lang-tog.hi{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 /* CURSOR */
 #cur{width:8px;height:8px;background:var(--accent);border-radius:50%;position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:difference;transition:width .12s,height .12s}
 #cur-r{width:32px;height:32px;border:1px solid rgba(232,213,176,0.35);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .28s cubic-bezier(.22,1,.36,1),height .28s cubic-bezier(.22,1,.36,1),border-radius .2s}
@@ -472,359 +469,254 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 <div id="cur-r"></div>
 <div id="root"></div>
 
-<script type="text/babel">
+<script>
 const{useState,useRef,useEffect}=React;
+const e=React.createElement;
 
 const CFG={
   FREE_LIMIT:10,
   RZP_KEY:'YOUR_RAZORPAY_KEY_HERE',
 };
 
-function getUsage(){const t=new Date().toDateString();const s=JSON.parse(localStorage.getItem('fw_u')||'{}');return s.d===t?s.c||0:0}
-function bumpUsage(){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:getUsage()+1}))}
-function isPro(){return localStorage.getItem('fw_pro')==='true'}
+function getUsage(){var t=new Date().toDateString();var s=JSON.parse(localStorage.getItem('fw_u')||'{}');return s.d===t?s.c||0:0;}
+function bumpUsage(){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:getUsage()+1}));}
+function isPro(){return localStorage.getItem('fw_pro')==='true';}
 
 async function callAI(text,count){
-  // Calls OUR Vercel serverless function — API key stays safe on the server
-  const r=await fetch('/api/generate',{
+  var r=await fetch('/api/generate',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text,count,lang:lang||'en'}),
+    body:JSON.stringify({text,count}),
   });
-  if(!r.ok){
-    const e=await r.json().catch(()=>({}));
-    throw new Error(e.error||'Server error');
-  }
+  if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
 }
 
 function dlPDF(cards,title){
-  const rows=cards.map((c,i)=>`<div style="border:1px solid #e4e4e7;border-radius:10px;padding:20px;margin-bottom:16px;page-break-inside:avoid"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#a1a1aa;margin-bottom:8px">Card ${i+1}</div><div style="font-size:15px;margin-bottom:10px;line-height:1.5">${c.question}</div><div style="font-size:13px;color:#52525b;line-height:1.6;border-top:1px dashed #e4e4e7;padding-top:10px">${c.answer}</div></div>`).join('');
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${title}</title><style>body{font-family:Georgia,serif;padding:36px;max-width:680px;margin:auto}h1{font-size:20px;margin-bottom:4px}p{color:#a1a1aa;font-size:12px;margin-bottom:28px}</style></head><body><h1>${title}</h1><p>${new Date().toLocaleDateString('en-IN')} · ${cards.length} cards</p>${rows}</body></html>`);
+  var rows=cards.map(function(c,i){return '<div style="border:1px solid #e4e4e7;border-radius:10px;padding:20px;margin-bottom:16px;page-break-inside:avoid"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#a1a1aa;margin-bottom:8px">Card '+(i+1)+'</div><div style="font-size:15px;margin-bottom:10px;line-height:1.5">'+c.question+'</div><div style="font-size:13px;color:#52525b;line-height:1.6;border-top:1px dashed #e4e4e7;padding-top:10px">'+c.answer+'</div></div>';}).join('');
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>'+title+'</title><style>body{font-family:Georgia,serif;padding:36px;max-width:680px;margin:auto}h1{font-size:20px;margin-bottom:4px}p{color:#a1a1aa;font-size:12px;margin-bottom:28px}</style></head><body><h1>'+title+'</h1><p>'+new Date().toLocaleDateString('en-IN')+' · '+cards.length+' cards</p>'+rows+'</body></html>');
   w.document.close();
-  setTimeout(()=>w.print(),500);
+  setTimeout(function(){w.print();},500);
 }
 
-// Cursor + textarea auto-resize
 function useCursor(){
-  useEffect(()=>{
-    const dot=document.getElementById('cur'),ring=document.getElementById('cur-r');
-    let rx=0,ry=0,mx=0,my=0;
-    const mv=e=>{mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px'};
-    const tick=()=>{rx+=(mx-rx)*.1;ry+=(my-ry)*.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(tick)};
+  useEffect(function(){
+    var dot=document.getElementById('cur'),ring=document.getElementById('cur-r');
+    var rx=0,ry=0,mx=0,my=0;
+    var mv=function(ev){mx=ev.clientX;my=ev.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';};
+    var tick=function(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(tick);};
     document.addEventListener('mousemove',mv);
     tick();
-    const addHover=()=>{
-      document.querySelectorAll('button,a').forEach(el=>{
-        el.addEventListener('mouseenter',()=>document.body.classList.add('hov'));
-        el.addEventListener('mouseleave',()=>document.body.classList.remove('hov'));
+    var addHover=function(){
+      document.querySelectorAll('button,a').forEach(function(el){
+        el.addEventListener('mouseenter',function(){document.body.classList.add('hov');});
+        el.addEventListener('mouseleave',function(){document.body.classList.remove('hov');});
       });
     };
     addHover();
-    // Auto-resize textareas as user types
-    const autoResize=e=>{
-      const el=e.target;
-      if(el.tagName==='TEXTAREA'){
-        el.style.height='auto';
-        el.style.height=Math.min(el.scrollHeight,520)+'px';
-      }
+    var autoResize=function(ev){
+      var el=ev.target;
+      if(el.tagName==='TEXTAREA'){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,520)+'px';}
     };
     document.addEventListener('input',autoResize);
-    const obs=new MutationObserver(addHover);
+    var obs=new MutationObserver(addHover);
     obs.observe(document.body,{childList:true,subtree:true});
-    return()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('input',autoResize)};
+    return function(){document.removeEventListener('mousemove',mv);document.removeEventListener('input',autoResize);};
   },[]);
 }
 
-// Scroll reveal
 function useReveal(){
-  useEffect(()=>{
-    const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')}),{threshold:0.1});
-    document.querySelectorAll('.rev').forEach(el=>obs.observe(el));
-    return()=>obs.disconnect();
+  useEffect(function(){
+    var obs=new IntersectionObserver(function(es){es.forEach(function(ev){if(ev.isIntersecting)ev.target.classList.add('vis');});},{threshold:0.1});
+    document.querySelectorAll('.rev').forEach(function(el){obs.observe(el);});
+    return function(){obs.disconnect();};
   });
 }
 
-function HFeat({icon,title,desc}){
-  const r=useRef();
-  return(
-    <div className="fc" ref={r} onMouseMove={e=>{const b=r.current.getBoundingClientRect();r.current.style.setProperty('--mx',((e.clientX-b.left)/b.width*100)+'%');r.current.style.setProperty('--my',((e.clientY-b.top)/b.height*100)+'%')}}>
-      <span className="fc-ico">{icon}</span>
-      <div className="fc-body">
-        <div className="fc-t">{title}</div>
-        <p className="fc-d">{desc}</p>
-      </div>
-    </div>
+function HFeat(props){
+  var r=useRef();
+  return e('div',{className:'fc',ref:r,onMouseMove:function(ev){var b=r.current.getBoundingClientRect();r.current.style.setProperty('--mx',((ev.clientX-b.left)/b.width*100)+'%');r.current.style.setProperty('--my',((ev.clientY-b.top)/b.height*100)+'%');}},
+    e('span',{className:'fc-ico'},props.icon),
+    e('div',{className:'fc-body'},
+      e('div',{className:'fc-t'},props.title),
+      e('p',{className:'fc-d'},props.desc)
+    )
   );
 }
 
-function Card({card,idx,total,onPrev,onNext}){
-  const[fl,setFl]=useState(false);
-  const[anim,setAnim]=useState('in');
-  const tx=useRef(null);
-  const ty=useRef(null);
-  const didSwipe=useRef(false);
-  const didFlip=useRef(false); // prevents click firing after touchend
+function Card(props){
+  var card=props.card,idx=props.idx,total=props.total,onPrev=props.onPrev,onNext=props.onNext;
+  var fl=useState(false),setFl=fl[1];fl=fl[0];
+  var animS=useState('in'),setAnim=animS[1];var anim=animS[0];
+  var tx=useRef(null),ty=useRef(null),didSwipe=useRef(false),didFlip=useRef(false);
 
   useEffect(function(){setFl(false);setAnim('in');},[idx]);
 
   function go(dir){
     setAnim(dir==='next'?'out-left':'out-right');
-    setTimeout(function(){
-      dir==='next'?onNext():onPrev();
-      setAnim('in');
-    },270);
+    setTimeout(function(){dir==='next'?onNext():onPrev();setAnim('in');},270);
   }
-
-  function tStart(e){
-    tx.current=e.touches[0].clientX;
-    ty.current=e.touches[0].clientY;
-    didSwipe.current=false;
-    didFlip.current=false;
-  }
-
-  function tMove(e){
+  function tStart(ev){tx.current=ev.touches[0].clientX;ty.current=ev.touches[0].clientY;didSwipe.current=false;didFlip.current=false;}
+  function tMove(ev){
     if(tx.current===null)return;
-    var dx=Math.abs(e.touches[0].clientX-tx.current);
-    var dy=Math.abs(e.touches[0].clientY-ty.current);
-    if(dx>16&&dx>dy*1.8) didSwipe.current=true;
+    var dx=Math.abs(ev.touches[0].clientX-tx.current),dy=Math.abs(ev.touches[0].clientY-ty.current);
+    if(dx>16&&dx>dy*1.8)didSwipe.current=true;
   }
-
-  function tEnd(e){
+  function tEnd(ev){
     if(tx.current===null)return;
-    var endX=e.changedTouches[0].clientX;
-    var dx=endX-tx.current;
-    var swipe=didSwipe.current;
-    tx.current=null;
-    ty.current=null;
-
+    var endX=ev.changedTouches[0].clientX,dx=endX-tx.current,swipe=didSwipe.current;
+    tx.current=null;ty.current=null;
     if(swipe){
-      didSwipe.current=false;
-      didFlip.current=true; // block the click that fires right after
-      if(dx<-50&&idx<total-1) go('next');
-      else if(dx>50&&idx>0) go('prev');
+      didSwipe.current=false;didFlip.current=true;
+      if(dx<-50&&idx<total-1)go('next');
+      else if(dx>50&&idx>0)go('prev');
     } else {
-      didSwipe.current=false;
-      didFlip.current=true; // also block click — we handle flip here
+      didSwipe.current=false;didFlip.current=true;
       setFl(function(f){return !f;});
     }
-    // reset the click-block after iOS fires its synthetic click (~300ms)
     setTimeout(function(){didFlip.current=false;},400);
   }
-
-  function handleClick(){
-    // Only fires on desktop (mouse) — on mobile didFlip blocks it
-    if(didFlip.current) return;
-    setFl(function(f){return !f;});
-  }
+  function handleClick(){if(didFlip.current)return;setFl(function(f){return !f;});}
 
   var pts=(card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
-  var animStyle={
-    transition:'transform .27s cubic-bezier(.4,0,.2,1),opacity .27s ease',
-    transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.88) translateX(-44px)':'scale(0.88) translateX(44px)',
-    opacity:anim==='in'?1:0,
-  };
+  var animStyle={transition:'transform .27s cubic-bezier(.4,0,.2,1),opacity .27s ease',transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.88) translateX(-44px)':'scale(0.88) translateX(44px)',opacity:anim==='in'?1:0};
 
-  return(
-    <div style={{position:'relative',userSelect:'none',touchAction:'pan-y'}}
-      onTouchStart={tStart}
-      onTouchMove={tMove}
-      onTouchEnd={tEnd}
-    >
-      {/* Desktop prev/next edge zones */}
-      <div style={{position:'absolute',left:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'}}
-        onClick={function(e){e.stopPropagation();if(idx>0)go('prev');}}/>
-      <div style={{position:'absolute',right:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'}}
-        onClick={function(e){e.stopPropagation();if(idx<total-1)go('next');}}/>
-
-      <div className="fw" style={animStyle} onClick={handleClick}>
-        <div className={fl?'fi fl':'fi'}>
-          <div className="ff">
-            <div className="fl-lbl">Topic</div>
-            <div className="fl-q">{card.topic||card.question}</div>
-            <div className="fl-hint">tap to study</div>
-          </div>
-          <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'20px'}}>
-            <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:12}}>Key Points</div>
-            <div style={{width:'100%'}}>
-              {pts.map(function(line,i){
-                var t=line.trim();
-                if(!t)return null;
-                return(
-                  <div key={i} style={{display:'flex',gap:7,marginBottom:6,alignItems:'flex-start'}}>
-                    <span style={{color:'var(--accent)',fontSize:'0.65rem',marginTop:4,flexShrink:0}}>→</span>
-                    <span style={{fontSize:'0.82rem',lineHeight:1.65,color:'var(--text)',fontWeight:300}}>{t}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="fl-hint">tap to flip back</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:14}}>
-        {Array.from({length:total}).map(function(_,i){
-          return(
-            <div key={i} style={{
-              width:i===idx?18:6,height:6,borderRadius:3,
-              background:i===idx?'var(--accent)':'var(--muted2)',
-              transition:'width .35s cubic-bezier(.22,1,.36,1),background .2s',
-            }}/>
-          );
-        })}
-      </div>
-    </div>
+  return e('div',{style:{position:'relative',userSelect:'none',touchAction:'pan-y'},onTouchStart:tStart,onTouchMove:tMove,onTouchEnd:tEnd},
+    e('div',{style:{position:'absolute',left:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'},onClick:function(ev){ev.stopPropagation();if(idx>0)go('prev');}}),
+    e('div',{style:{position:'absolute',right:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'},onClick:function(ev){ev.stopPropagation();if(idx<total-1)go('next');}}),
+    e('div',{className:'fw',style:animStyle,onClick:handleClick},
+      e('div',{className:fl?'fi fl':'fi'},
+        e('div',{className:'ff'},
+          e('div',{className:'fl-lbl'},'Topic'),
+          e('div',{className:'fl-q'},card.topic||card.question),
+          e('div',{className:'fl-hint'},'tap to study')
+        ),
+        e('div',{className:'fb',style:{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'20px'}},
+          e('div',{className:'fl-lbl',style:{width:'100%',textAlign:'center',marginBottom:12}},'Key Points'),
+          e('div',{style:{width:'100%'}},
+            pts.map(function(line,i){
+              var t=line.trim();if(!t)return null;
+              return e('div',{key:i,style:{display:'flex',gap:7,marginBottom:6,alignItems:'flex-start'}},
+                e('span',{style:{color:'var(--accent)',fontSize:'0.65rem',marginTop:4,flexShrink:0}},'→'),
+                e('span',{style:{fontSize:'0.82rem',lineHeight:1.65,color:'var(--text)',fontWeight:300}},t)
+              );
+            })
+          ),
+          e('div',{className:'fl-hint'},'tap to flip back')
+        )
+      )
+    ),
+    e('div',{style:{display:'flex',justifyContent:'center',gap:6,marginTop:14}},
+      Array.from({length:total}).map(function(_,i){
+        return e('div',{key:i,style:{width:i===idx?18:6,height:6,borderRadius:3,background:i===idx?'var(--accent)':'var(--muted2)',transition:'width .35s cubic-bezier(.22,1,.36,1),background .2s'}});
+      })
+    )
   );
 }
 
-
-function Quiz({qs}){
-  // ALL hooks must come first — no conditional returns before hooks
-  const[qi,setQi]=useState(0);
-  const[ch,setCh]=useState(null);
-  const[sc,setSc]=useState(0);
-  const[done,setDone]=useState(false);
-  const[anim,setAnim]=useState('in');
-  const txRef=useRef(null);
-  const isSwipeRef=useRef(false);
+function Quiz(props){
+  var qs=props.qs;
+  var qiS=useState(0),setQi=qiS[1];var qi=qiS[0];
+  var chS=useState(null),setCh=chS[1];var ch=chS[0];
+  var scS=useState(0),setSc=scS[1];var sc=scS[0];
+  var doneS=useState(false),setDone=doneS[1];var done=doneS[0];
+  var animS=useState('in'),setAnim=animS[1];var anim=animS[0];
+  var txRef=useRef(null),isSwipeRef=useRef(false);
 
   useEffect(function(){setAnim('in');},[qi,done]);
 
   function goQ(dir){
     setAnim(dir==='next'?'out-left':'out-right');
     setTimeout(function(){
-      if(dir==='next'){
-        if(qi===qs.length-1){setDone(true);}
-        else{setQi(function(i){return i+1;});setCh(null);}
-      } else {
-        setQi(function(i){return Math.max(0,i-1);});setCh(null);
-      }
+      if(dir==='next'){if(qi===qs.length-1){setDone(true);}else{setQi(function(i){return i+1;});setCh(null);}}
+      else{setQi(function(i){return Math.max(0,i-1);});setCh(null);}
       setAnim('in');
     },260);
   }
-
-  function qTouchStart(e){txRef.current=e.touches[0].clientX;isSwipeRef.current=false;}
-  function qTouchMove(e){
+  function qTouchStart(ev){txRef.current=ev.touches[0].clientX;isSwipeRef.current=false;}
+  function qTouchMove(ev){if(txRef.current===null)return;if(Math.abs(ev.touches[0].clientX-txRef.current)>20)isSwipeRef.current=true;}
+  function qTouchEnd(ev){
     if(txRef.current===null)return;
-    if(Math.abs(e.touches[0].clientX-txRef.current)>20) isSwipeRef.current=true;
-  }
-  function qTouchEnd(e){
-    if(txRef.current===null)return;
-    var dx=e.changedTouches[0].clientX-txRef.current;
-    txRef.current=null;
+    var dx=ev.changedTouches[0].clientX-txRef.current;txRef.current=null;
+    var answered=ch!==null;
     if(!isSwipeRef.current||!answered)return;
-    if(dx<-40) goQ('next');
-    else if(dx>40&&qi>0) goQ('prev');
+    if(dx<-40)goQ('next');else if(dx>40&&qi>0)goQ('prev');
   }
 
-  // NOW safe to do conditional renders — all hooks are above
   if(done){
     var pct=Math.round(sc/qs.length*100);
     var msg=pct>=80?'Excellent — concepts are clear.':pct>=50?'Good effort. Review a few areas.':'Go through the cards once more.';
-    return(
-      <div className="qres">
-        <div className="qsb">{pct}%</div>
-        <div className="qrs">{sc} out of {qs.length} correct<br/>{msg}</div>
-        <button className="rbtn" onClick={function(){setQi(0);setCh(null);setSc(0);setDone(false);}}>Retry Quiz</button>
-      </div>
+    return e('div',{className:'qres'},
+      e('div',{className:'qsb'},pct+'%'),
+      e('div',{className:'qrs'},sc+' out of '+qs.length+' correct — '+msg),
+      e('button',{className:'rbtn',onClick:function(){setQi(0);setCh(null);setSc(0);setDone(false);}},'Retry Quiz')
     );
   }
 
-  var q=qs[qi];
-  var answered=ch!==null;
-  var animStyle={
-    transition:'transform .26s cubic-bezier(.4,0,.2,1),opacity .26s ease',
-    transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.9) translateX(-30px)':'scale(0.9) translateX(30px)',
-    opacity:anim==='in'?1:0,
-  };
+  var q=qs[qi],answered=ch!==null;
+  var animStyle={transition:'transform .26s cubic-bezier(.4,0,.2,1),opacity .26s ease',transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.9) translateX(-30px)':'scale(0.9) translateX(30px)',opacity:anim==='in'?1:0};
 
-  return(
-    <div className="qw" onTouchStart={qTouchStart} onTouchMove={qTouchMove} onTouchEnd={qTouchEnd}>
-      <div className="qpr">
-        <div className="qtr"><div className="qf" style={{width:(qi/qs.length*100)+'%'}}/></div>
-        <span className="qst">{qi+1}/{qs.length}</span>
-      </div>
-      <div style={animStyle}>
-        <div className="qq">{q.question}</div>
-        <div className="og">
-          {q.options.map(function(o,i){
-            var cls='ob';
-            if(answered){
-              if(i===q.correct)cls+=' cor';
-              else if(i===ch&&ch!==q.correct)cls+=' wrg';
-            }
-            return(
-              <button key={i} className={cls} disabled={answered} onClick={function(){
-                if(answered)return;
-                setCh(i);
-                if(i===q.correct)setSc(function(s){return s+1;});
-              }}>
-                <span style={{opacity:.35,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}}>{['A','B','C','D'][i]}</span>{o}
-              </button>
-            );
-          })}
-        </div>
-        {answered&&(
-          <div>
-            <div className="qex"><strong>{ch===q.correct?'Correct. ':'Incorrect. '}</strong>{q.explanation}</div>
-            <button className="nx" onClick={function(){goQ('next');}}>
-              {qi===qs.length-1?'See results':'Next →'}
-            </button>
-          </div>
-        )}
-      </div>
-      <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:18}}>
-        {qs.map(function(_,i){
-          return(
-            <div key={i} style={{
-              width:i===qi?18:6,height:6,borderRadius:3,
-              background:i===qi?'var(--accent)':'var(--muted2)',
-              transition:'width .35s cubic-bezier(.22,1,.36,1),background .2s',
-            }}/>
+  return e('div',{className:'qw',onTouchStart:qTouchStart,onTouchMove:qTouchMove,onTouchEnd:qTouchEnd},
+    e('div',{className:'qpr'},
+      e('div',{className:'qtr'},e('div',{className:'qf',style:{width:(qi/qs.length*100)+'%'}})),
+      e('span',{className:'qst'},(qi+1)+'/'+qs.length)
+    ),
+    e('div',{style:animStyle},
+      e('div',{className:'qq'},q.question),
+      e('div',{className:'og'},
+        q.options.map(function(o,i){
+          var cls='ob';
+          if(answered){if(i===q.correct)cls+=' cor';else if(i===ch&&ch!==q.correct)cls+=' wrg';}
+          return e('button',{key:i,className:cls,disabled:answered,onClick:function(){
+            if(answered)return;setCh(i);if(i===q.correct)setSc(function(s){return s+1;});
+          }},
+            e('span',{style:{opacity:.35,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}},['A','B','C','D'][i]),
+            o
           );
-        })}
-      </div>
-    </div>
+        })
+      ),
+      answered&&e('div',null,
+        e('div',{className:'qex'},e('strong',null,ch===q.correct?'Correct. ':'Incorrect. '),q.explanation),
+        e('button',{className:'nx',onClick:function(){goQ('next');}},qi===qs.length-1?'See results':'Next →')
+      )
+    ),
+    e('div',{style:{display:'flex',justifyContent:'center',gap:6,marginTop:18}},
+      qs.map(function(_,i){return e('div',{key:i,style:{width:i===qi?18:6,height:6,borderRadius:3,background:i===qi?'var(--accent)':'var(--muted2)',transition:'width .35s cubic-bezier(.22,1,.36,1),background .2s'}});})
+    )
   );
 }
 
-
-function PCard({name,price,period,feats,pop,onSel}){
-  const r=useRef();
-  return(
-    <div className={`plan${pop?' pop':''}`} ref={r} onMouseMove={e=>{const b=r.current.getBoundingClientRect();r.current.style.setProperty('--mx',((e.clientX-b.left)/b.width*100)+'%');r.current.style.setProperty('--my',((e.clientY-b.top)/b.height*100)+'%')}}>
-      <div className="p-tag">{name}{pop&&<span className="p-bdg">Popular</span>}</div>
-      <div className="p-price"><sup>₹</sup>{price}</div>
-      <div className="p-per">{period}</div>
-      <ul className="p-feats">{feats.map(f=><li key={f}>{f}</li>)}</ul>
-      <button className={`p-btn${pop?' pr':''}`} onClick={onSel}>{price==='0'?'Start free':'Get access'}</button>
-    </div>
+function PCard(props){
+  var r=useRef();
+  return e('div',{className:'plan'+(props.pop?' pop':''),ref:r,onMouseMove:function(ev){var b=r.current.getBoundingClientRect();r.current.style.setProperty('--mx',((ev.clientX-b.left)/b.width*100)+'%');r.current.style.setProperty('--my',((ev.clientY-b.top)/b.height*100)+'%');}},
+    e('div',{className:'p-tag'},props.name,props.pop&&e('span',{className:'p-bdg'},'Popular')),
+    e('div',{className:'p-price'},e('sup',null,'₹'),props.price),
+    e('div',{className:'p-per'},props.period),
+    e('ul',{className:'p-feats'},props.feats.map(function(f){return e('li',{key:f},f);})),
+    e('button',{className:'p-btn'+(props.pop?' pr':''),onClick:props.onSel},props.price==='0'?'Start free':'Get access')
   );
 }
 
 function App(){
   useCursor();
   useReveal();
-  const[itab,setItab]=useState('text');
-  const[dark,setDark]=useState(true);
-  const[lang,setLang]=useState('en');
-  const[notes,setNotes]=useState('');
-  const[fn,setFn]=useState('');
-  const[pdfTxt,setPdfTxt]=useState('');
-  const[cnt,setCnt]=useState(10);
-  const[loading,setLoading]=useState(false);
-  const[cards,setCards]=useState([]);
-  const[quiz,setQuiz]=useState([]);
-  const[ci,setCi]=useState(0);
-  const[rtab,setRtab]=useState('cards');
-  const[pw,setPw]=useState(false);
-  const[sp,setSp]=useState('pro');
-  const[toast,setToast]=useState('');
-  const[drag,setDrag]=useState(false);
-  const fref=useRef();
-  const tt=useRef();
+  var itabS=useState('text'),setItab=itabS[1];var itab=itabS[0];
+  var darkS=useState(true),setDark=darkS[1];var dark=darkS[0];
+  var notesS=useState(''),setNotes=notesS[1];var notes=notesS[0];
+  var fnS=useState(''),setFn=fnS[1];var fn=fnS[0];
+  var pdfTxtS=useState(''),setPdfTxt=pdfTxtS[1];var pdfTxt=pdfTxtS[0];
+  var cntS=useState(10),setCnt=cntS[1];var cnt=cntS[0];
+  var loadingS=useState(false),setLoading=loadingS[1];var loading=loadingS[0];
+  var cardsS=useState([]),setCards=cardsS[1];var cards=cardsS[0];
+  var quizS=useState([]),setQuiz=quizS[1];var quiz=quizS[0];
+  var ciS=useState(0),setCi=ciS[1];var ci=ciS[0];
+  var rtabS=useState('cards'),setRtab=rtabS[1];var rtab=rtabS[0];
+  var pwS=useState(false),setPw=pwS[1];var pw=pwS[0];
+  var spS=useState('pro'),setSp=spS[1];var sp=spS[0];
+  var toastS=useState(''),setToast=toastS[1];var toast=toastS[0];
+  var dragS=useState(false),setDrag=dragS[1];var drag=dragS[0];
+  var fref=useRef(),tt=useRef();
 
   function toggleTheme(){
     setDark(function(d){
@@ -834,229 +726,219 @@ function App(){
       return next;
     });
   }
-  function toggleLang(){setLang(function(l){return l==='en'?'hi':'en';});}
 
-  const usage=getUsage(),pro=isPro();
-  function st(m){setToast(m);clearTimeout(tt.current);tt.current=setTimeout(()=>setToast(''),2700)}
+  var usage=getUsage(),pro=isPro();
+  function st(m){setToast(m);clearTimeout(tt.current);tt.current=setTimeout(function(){setToast('');},2700);}
 
   async function gen(){
-    const txt=itab==='text'?notes:pdfTxt;
+    var txt=itab==='text'?notes:pdfTxt;
     if(!txt.trim())return st('Paste some notes first');
-    if(!pro&&usage>=CFG.FREE_LIMIT){setPw(true);return}
+    if(!pro&&usage>=CFG.FREE_LIMIT){setPw(true);return;}
     setLoading(true);setCards([]);setQuiz([]);
     try{
-      const res=await callAI(txt,cnt);
+      var res=await callAI(txt,cnt);
       setCards(res.flashcards||[]);setQuiz(res.quiz||[]);
       setCi(0);setRtab('cards');bumpUsage();
-      st(`${(res.flashcards||[]).length} cards ready`);
-      setTimeout(()=>document.getElementById('ra')?.scrollIntoView({behavior:'smooth',block:'start'}),100);
-    }catch(e){st('Error: '+(e.message||'Check config'))}
-    finally{setLoading(false)}
+      st((res.flashcards||[]).length+' cards ready');
+      setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
+    }catch(err){st('Error: '+(err.message||'Check config'));}
+    finally{setLoading(false);}
   }
 
   function hFile(file){
-    if(!file) return;
-    if(!file.type.includes('pdf')) return st('PDF files only');
-    if(file.size > 20*1024*1024) return st('PDF too large — keep under 20MB');
-    setFn(file.name);
-    setPdfTxt('');
-    st('Reading PDF…');
-    var loadLib = new Promise(function(resolve, reject){
-      if(window.pdfjsLib){ resolve(); return; }
-      var s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      s.onload = function(){
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        resolve();
-      };
-      s.onerror = reject;
+    if(!file)return;
+    if(!file.type.includes('pdf'))return st('PDF files only');
+    if(file.size>20*1024*1024)return st('PDF too large — keep under 20MB');
+    setFn(file.name);setPdfTxt('');st('Reading PDF…');
+    var loadLib=new Promise(function(resolve,reject){
+      if(window.pdfjsLib){resolve();return;}
+      var s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload=function(){window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';resolve();};
+      s.onerror=reject;
       document.head.appendChild(s);
     });
-    var reader = new FileReader();
-    reader.onload = function(e){
+    var reader=new FileReader();
+    reader.onload=function(ev){
       loadLib.then(function(){
-        var typedArray = new Uint8Array(e.target.result);
-        window.pdfjsLib.getDocument({data: typedArray}).promise.then(function(pdf){
-          var maxPages = Math.min(pdf.numPages, 20);
-          var allText = '';
-          var pagesDone = 0;
-          for(var p = 1; p <= maxPages; p++){
+        var typedArray=new Uint8Array(ev.target.result);
+        window.pdfjsLib.getDocument({data:typedArray}).promise.then(function(pdf){
+          var maxPages=Math.min(pdf.numPages,20),allText='',pagesDone=0;
+          for(var p=1;p<=maxPages;p++){
             (function(pageNum){
               pdf.getPage(pageNum).then(function(page){
                 page.getTextContent().then(function(tc){
-                  allText += tc.items.map(function(item){ return item.str; }).join(' ') + ' ';
+                  allText+=tc.items.map(function(item){return item.str;}).join(' ')+' ';
                   pagesDone++;
-                  if(pagesDone === maxPages){
-                    var txt = allText.trim();
-                    if(!txt){ st('No text found — try a text-based PDF'); return; }
-                    setPdfTxt(txt);
-                    st('Extracted ' + maxPages + ' of ' + pdf.numPages + ' pages — ready to generate');
+                  if(pagesDone===maxPages){
+                    var t=allText.trim();
+                    if(!t){st('No text found — try a text-based PDF');return;}
+                    setPdfTxt(t);
+                    st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
                   }
                 });
               });
             })(p);
           }
-        }).catch(function(err){ st('Could not read PDF: ' + err.message); });
-      }).catch(function(){ st('PDF library failed to load — check connection'); });
+        }).catch(function(err){st('Could not read PDF: '+err.message);});
+      }).catch(function(){st('PDF library failed to load — check connection');});
     };
     reader.readAsArrayBuffer(file);
   }
+
   function pay(plan){
     if(CFG.RZP_KEY==='YOUR_RAZORPAY_KEY_HERE')return st('Add Razorpay key to enable payments');
     new window.Razorpay({key:CFG.RZP_KEY,amount:plan==='pro'?9900:19900,currency:'INR',name:'FlipWise',description:plan==='pro'?'Pro · ₹99/mo':'Elite · ₹199/mo',theme:{color:'#e8d5b0'},
-      handler:()=>{localStorage.setItem('fw_pro','true');setPw(false);st('Access unlocked')}
+      handler:function(){localStorage.setItem('fw_pro','true');setPw(false);st('Access unlocked');}
     }).open();
   }
 
-  const itxt=itab==='text'?notes:pdfTxt;
-  const scrollApp=()=>document.getElementById('app')?.scrollIntoView({behavior:'smooth'});
+  var itxt=itab==='text'?notes:pdfTxt;
+  var scrollApp=function(){var el=document.getElementById('app');if(el)el.scrollIntoView({behavior:'smooth'});};
 
-  return(
-    <>
-      <nav>
-        <div className="logo">FlipWise</div>
-        <div className="nav-r">
-          <button className="nl" onClick={()=>document.getElementById('ft')?.scrollIntoView({behavior:'smooth'})}>Features</button>
-          <button className="nl" onClick={()=>document.getElementById('pr')?.scrollIntoView({behavior:'smooth'})}>Pricing</button>
-          <button className="thm-tog" onClick={toggleTheme} title="Toggle theme">{dark?'☀':'🌙'}</button>
-          <button className="np" onClick={scrollApp}>Try free</button>
-        </div>
-      </nav>
+  return e(React.Fragment,null,
+    /* NAV */
+    e('nav',null,
+      e('div',{className:'logo'},'FlipWise'),
+      e('div',{className:'nav-r'},
+        e('button',{className:'nl',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},'Features'),
+        e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Pricing'),
+        e('button',{className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
+        e('button',{className:'np',onClick:scrollApp},'Try free')
+      )
+    ),
 
-      {/* HERO */}
-      <section className="hero">
-        <div className="h-glow"/>
-        <div className="hero-wordmark" aria-hidden="true">FlipWise</div>
-        <div className="h-line">UPSC · JEE · NEET · CA</div>
-        <h1>Notes become<br/><em>flashcards</em></h1>
-        <p className="h-sub">Paste any text. Get precise revision cards and a self-test quiz — in seconds.</p>
-        <div className="pill-row">
-          {['UPSC Prelims','JEE Physics','NEET Bio','CA Law','History','Economics','Current Affairs'].map(t=><span key={t} className="pill">{t}</span>)}
-        </div>
-        <button className="cta" onClick={scrollApp}>Start for free →</button>
-      </section>
+    /* HERO */
+    e('section',{className:'hero'},
+      e('div',{className:'h-glow'}),
+      e('div',{className:'hero-wordmark','aria-hidden':'true'},'FlipWise'),
+      e('div',{className:'h-line'},'UPSC · JEE · NEET · CA'),
+      e('h1',null,'Notes become',e('br'),' ',e('em',null,'flashcards')),
+      e('p',{className:'h-sub'},'Paste any text. Get precise revision cards and a self-test quiz — in seconds.'),
+      e('div',{className:'pill-row'},
+        ['UPSC Prelims','JEE Physics','NEET Bio','CA Law','History','Economics','Current Affairs'].map(function(t){return e('span',{key:t,className:'pill'},t);})
+      ),
+      e('button',{className:'cta',onClick:scrollApp},'Start for free →')
+    ),
 
-      {/* FEATURES */}
-      <section id="ft" className="feat-wrap rev">
-        <div className="feat-eyebrow">What you get</div>
-        <h2 className="feat-heading">Built for how<br/><em>Indian students</em> actually study</h2>
-        <div className="fg">
-          <HFeat icon="⚡" title="Instant study cards" desc="Paste any notes — UPSC, JEE, NEET, CA. Get precise topic cards with pointers, tables and flows in seconds."/>
-          <HFeat icon="🧠" title="Memory-first flashcards" desc="Cards show topic → key pointers → flowcharts. Built for memorisation, not just reading."/>
-          <HFeat icon="📝" title="Self-test quiz" desc="After your cards, test yourself with MCQs from the same content. Know exactly what sticks."/>
-          <HFeat icon="📄" title="PDF upload & export" desc="Upload your study material as PDF. Download all flashcards as a clean printable PDF too."/>
-          <HFeat icon="📱" title="Mobile first" desc="Designed for phone screens. Study on the bus, in the hostel, between lectures — anywhere."/>
-          <HFeat icon="🔒" title="No signup needed" desc="Start immediately, no account required for free tier. Your notes stay private in your browser."/>
-        </div>
-      </section>
+    /* FEATURES */
+    e('section',{id:'ft',className:'feat-wrap rev'},
+      e('div',{className:'feat-eyebrow'},'What you get'),
+      e('h2',{className:'feat-heading'},'Built for how',e('br'),e('em',null,'Indian students'),' actually study'),
+      e('div',{className:'fg'},
+        e(HFeat,{icon:'⚡',title:'Instant study cards',desc:'Paste any notes — UPSC, JEE, NEET, CA. Get precise topic cards with pointers, tables and flows in seconds.'}),
+        e(HFeat,{icon:'🧠',title:'Memory-first flashcards',desc:'Cards show topic → key pointers → flowcharts. Built for memorisation, not just reading.'}),
+        e(HFeat,{icon:'📝',title:'Self-test quiz',desc:'After your cards, test yourself with MCQs from the same content. Know exactly what sticks.'}),
+        e(HFeat,{icon:'📄',title:'PDF upload & export',desc:'Upload your study material as PDF. Download all flashcards as a clean printable PDF too.'}),
+        e(HFeat,{icon:'📱',title:'Mobile first',desc:'Designed for phone screens. Study on the bus, in the hostel, between lectures — anywhere.'}),
+        e(HFeat,{icon:'🔒',title:'No signup needed',desc:'Start immediately, no account required for free tier. Your notes stay private in your browser.'})
+      )
+    ),
 
-      {/* APP */}
-      <section id="app" className="app-wrap">
-        <div className="ey rev">Generate</div>
-        <h2 className="st rev">Paste. <em>Generate.</em> Revise.</h2>
-        <div className="icard rev">
-          <div className="tbar">
-            <button className={`tb${itab==='text'?' act':''}`} onClick={()=>setItab('text')}>Text</button>
-            <button className={`tb${itab==='pdf'?' act':''}`} onClick={()=>setItab('pdf')}>PDF</button>
-          </div>
-          {itab==='text'?
-            <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder={lang==='hi'?'यहाँ अपने नोट्स पेस्ट करें…\n\nUPSC, JEE, NEET, CA — किसी भी विषय के नोट्स चलेंगे।':' Paste your study notes here…\n\nWorks with anything — UPSC answer keys, JEE chapters, NEET diagrams text, CA act excerpts, your own handwritten notes typed out…'}/>
-          :(
-            <>
-              <button className={`upz${drag?' dov':''}`} onClick={()=>fref.current.click()} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);hFile(e.dataTransfer.files[0])}}>
-                <span className="upz-i">↑</span>
-                {fn?<p><strong>{fn}</strong><br/>Click to replace</p>:<p>Drop PDF here or <strong>click to browse</strong><br/>Max ~20 pages for best results</p>}
-              </button>
-              <input type="file" accept=".pdf" ref={fref} onChange={e=>hFile(e.target.files[0])}/>
-              {fn&&<textarea value={pdfTxt} onChange={e=>setPdfTxt(e.target.value)} placeholder="Edit extracted text if needed…" style={{borderTop:'1px solid var(--border)'}}/>}
-            </>
-          )}
-          <div className="ctrl">
-            <div className="cbs">{[5,10,15,20].map(n=><button key={n} className={`cb${cnt===n?' s':''}`} onClick={()=>setCnt(n)}>{n}</button>)}</div>
-            <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <button className={`lang-tog${lang==='hi'?' hi':''}`} onClick={toggleLang} title="Switch output language">{lang==='hi'?'हिं':'EN'}</button>
-              <button className="gb" onClick={gen} disabled={loading||!itxt.trim()}>{loading?'Generating…':'Generate →'}</button>
-            </div>
-          </div>
-          {!pro&&<div className="urow"><div className="ut"><div className="uf" style={{width:`${Math.min(100,usage/CFG.FREE_LIMIT*100)}%`}}/></div><span className="utx">{usage}/{CFG.FREE_LIMIT} today</span></div>}
-        </div>
+    /* APP */
+    e('section',{id:'app',className:'app-wrap'},
+      e('div',{className:'ey rev'},'Generate'),
+      e('h2',{className:'st rev'},'Paste. ',e('em',null,'Generate.'),' Revise.'),
+      e('div',{className:'icard rev'},
+        e('div',{className:'tbar'},
+          e('button',{className:'tb'+(itab==='text'?' act':''),onClick:function(){setItab('text');}},'Text'),
+          e('button',{className:'tb'+(itab==='pdf'?' act':''),onClick:function(){setItab('pdf');}},'PDF')
+        ),
+        itab==='text'
+          ? e('textarea',{value:notes,onChange:function(ev){setNotes(ev.target.value);},placeholder:' Paste your study notes here…\n\nWorks with anything — UPSC answer keys, JEE chapters, NEET diagrams text, CA act excerpts, your own handwritten notes typed out…'})
+          : e(React.Fragment,null,
+              e('button',{className:'upz'+(drag?' dov':''),onClick:function(){fref.current.click();},
+                onDragOver:function(ev){ev.preventDefault();setDrag(true);},
+                onDragLeave:function(){setDrag(false);},
+                onDrop:function(ev){ev.preventDefault();setDrag(false);hFile(ev.dataTransfer.files[0]);}
+              },
+                e('span',{className:'upz-i'},'↑'),
+                fn ? e('p',null,e('strong',null,fn),e('br'),'Click to replace')
+                   : e('p',null,'Drop PDF here or ',e('strong',null,'click to browse'),e('br'),'Max ~20 pages for best results')
+              ),
+              e('input',{type:'file',accept:'.pdf',ref:fref,onChange:function(ev){hFile(ev.target.files[0]);}}),
+              fn&&e('textarea',{value:pdfTxt,onChange:function(ev){setPdfTxt(ev.target.value);},placeholder:'Edit extracted text if needed…',style:{borderTop:'1px solid var(--border)'}})
+            ),
+        e('div',{className:'ctrl'},
+          e('div',{className:'cbs'},
+            [5,10,15,20].map(function(n){return e('button',{key:n,className:'cb'+(cnt===n?' s':''),onClick:function(){setCnt(n);}},n);})
+          ),
+          e('button',{className:'gb',onClick:gen,disabled:loading||!itxt.trim()},loading?'Generating…':'Generate →')
+        ),
+        !pro&&e('div',{className:'urow'},
+          e('div',{className:'ut'},e('div',{className:'uf',style:{width:Math.min(100,usage/CFG.FREE_LIMIT*100)+'%'}})),
+          e('span',{className:'utx'},usage+'/'+CFG.FREE_LIMIT+' today')
+        )
+      ),
 
-        <div id="ra"/>
-        {loading&&<div className="ld"><div className="dots"><span/><span/><span/></div><p>Generating your cards…</p></div>}
+      e('div',{id:'ra'}),
+      loading&&e('div',{className:'ld'},e('div',{className:'dots'},e('span'),e('span'),e('span')),e('p',null,'Generating your cards…')),
 
-        {!loading&&cards.length>0&&(
-          <div className="rev" style={{marginTop:4}}>
-            <div className="rtabs">
-              <button className={`rt${rtab==='cards'?' act':''}`} onClick={()=>setRtab('cards')}>Flashcards<span className="bdg">{cards.length}</span></button>
-              <button className={`rt${rtab==='quiz'?' act':''}`} onClick={()=>setRtab('quiz')}>Quiz<span className="bdg">{quiz.length}</span></button>
-            </div>
-            <div className="rbody">
-              {rtab==='cards'&&<>
-                <Card
-                  card={cards[ci]}
-                  idx={ci}
-                  total={cards.length}
-                  onNext={()=>setCi(i=>Math.min(i+1,cards.length-1))}
-                  onPrev={()=>setCi(i=>Math.max(i-1,0))}
-                />
-                <div className="fca" style={{marginTop:8}}>
-                  <button className="ab" onClick={()=>setCi(0)}>↩ Reset</button>
-                  <button className="ab" onClick={()=>setCi(Math.floor(Math.random()*cards.length))}>⇄ Shuffle</button>
-                  <button className="ab" onClick={()=>setRtab('quiz')} disabled={!quiz.length}>📝 Quiz</button>
-                  <button className="ab pr" onClick={()=>dlPDF(cards,'FlipWise Study Cards')}>↓ PDF</button>
-                </div>
-              </>}
-              {rtab==='quiz'&&(quiz.length>0?<Quiz qs={quiz}/>:<div className="emp"><div className="emp-i">?</div><p>No quiz available</p></div>)}
-            </div>
-          </div>
-        )}
-        {!loading&&cards.length===0&&<div className="emp rev" style={{marginTop:14}}><div className="emp-i">◻</div><p>Your flashcards will appear here</p></div>}
-      </section>
+      !loading&&cards.length>0&&e('div',{className:'rev',style:{marginTop:4}},
+        e('div',{className:'rtabs'},
+          e('button',{className:'rt'+(rtab==='cards'?' act':''),onClick:function(){setRtab('cards');}},'Flashcards',e('span',{className:'bdg'},cards.length)),
+          e('button',{className:'rt'+(rtab==='quiz'?' act':''),onClick:function(){setRtab('quiz');}},'Quiz',e('span',{className:'bdg'},quiz.length))
+        ),
+        e('div',{className:'rbody'},
+          rtab==='cards'&&e(React.Fragment,null,
+            e(Card,{card:cards[ci],idx:ci,total:cards.length,
+              onNext:function(){setCi(function(i){return Math.min(i+1,cards.length-1);});},
+              onPrev:function(){setCi(function(i){return Math.max(i-1,0);});}
+            }),
+            e('div',{className:'fca',style:{marginTop:8}},
+              e('button',{className:'ab',onClick:function(){setCi(0);}},'↩ Reset'),
+              e('button',{className:'ab',onClick:function(){setCi(Math.floor(Math.random()*cards.length));}},'⇄ Shuffle'),
+              e('button',{className:'ab',onClick:function(){setRtab('quiz');},disabled:!quiz.length},'📝 Quiz'),
+              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,'FlipWise Study Cards');}},'↓ PDF')
+            )
+          ),
+          rtab==='quiz'&&(quiz.length>0?e(Quiz,{qs:quiz}):e('div',{className:'emp'},e('div',{className:'emp-i'},'?'),e('p',null,'No quiz available')))
+        )
+      ),
+      !loading&&cards.length===0&&e('div',{className:'emp rev',style:{marginTop:14}},e('div',{className:'emp-i'},'◻'),e('p',null,'Your flashcards will appear here'))
+    ),
 
-      {/* PRICING */}
-      <section id="pr" className="pr-wrap">
-        <div className="ey rev">Pricing</div>
-        <h2 className="st rev">Start free.<br/><em>Upgrade anytime.</em></h2>
-        <div className="plans rev">
-          <PCard name="Free" price="0" period="forever" feats={['10 generations/day','Text paste','Flashcard flip','PDF export']} onSel={scrollApp}/>
-          <PCard name="Pro" price="99" period="per month" pop feats={['Unlimited generations','PDF upload','All Free features','Priority access']} onSel={()=>setPw(true)}/>
-          <PCard name="Elite" price="199" period="per month" feats={['Everything in Pro','Anki export','Saved card sets','Batch generation']} onSel={()=>setPw(true)}/>
-        </div>
-      </section>
+    /* PRICING */
+    e('section',{id:'pr',className:'pr-wrap'},
+      e('div',{className:'ey rev'},'Pricing'),
+      e('h2',{className:'st rev'},'Start free.',e('br'),e('em',null,'Upgrade anytime.')),
+      e('div',{className:'plans rev'},
+        e(PCard,{name:'Free',price:'0',period:'forever',feats:['10 generations/day','Text paste','Flashcard flip','PDF export'],onSel:scrollApp}),
+        e(PCard,{name:'Pro',price:'99',period:'per month',pop:true,feats:['Unlimited generations','PDF upload','All Free features','Priority access'],onSel:function(){setPw(true);}}),
+        e(PCard,{name:'Elite',price:'199',period:'per month',feats:['Everything in Pro','Anki export','Saved card sets','Batch generation'],onSel:function(){setPw(true);}})
+      )
+    ),
 
-      <footer>
-        <div className="fl">FlipWise</div>
-        <div className="ft">Built for Indian students · 2025</div>
-      </footer>
+    e('footer',null,
+      e('div',{className:'fl'},'FlipWise'),
+      e('div',{className:'ft'},'Built for Indian students · 2025')
+    ),
 
-      {pw&&(
-        <div className="ov" onClick={e=>e.target===e.currentTarget&&setPw(false)}>
-          <div className="mo">
-            <div className="mo-ey">Upgrade</div>
-            <h2>Unlock full access</h2>
-            <p className="mo-s">You've used your free generations for today. Pick a plan — no interruptions, no limits.</p>
-            <div className="mo-plans">
-              {[{id:'pro',n:'Pro',p:'99',s:'per month',pk:'Unlimited · PDF upload'},{id:'elite',n:'Elite',p:'199',s:'per month',pk:'Pro + Anki + saved sets'}].map(x=>(
-                <div key={x.id} className={`mp${sp===x.id?' sel':''}`} onClick={()=>setSp(x.id)}>
-                  <div className="mp-n">{x.n}</div>
-                  <div className="mp-p"><sup>₹</sup>{x.p}</div>
-                  <div className="mp-s">{x.s}</div>
-                  <div className="mp-pk">{x.pk}</div>
-                </div>
-              ))}
-            </div>
-            <button className="pb" onClick={()=>pay(sp)}>Pay ₹{sp==='pro'?'99':'199'} via Razorpay →</button>
-            <button className="md" onClick={()=>setPw(false)}>Continue tomorrow</button>
-          </div>
-        </div>
-      )}
-      {toast&&<div className="toast">{toast}</div>}
-    </>
+    pw&&e('div',{className:'ov',onClick:function(ev){if(ev.target===ev.currentTarget)setPw(false);}},
+      e('div',{className:'mo'},
+        e('div',{className:'mo-ey'},'Upgrade'),
+        e('h2',null,'Unlock full access'),
+        e('p',{className:'mo-s'},"You've used your free generations for today. Pick a plan — no interruptions, no limits."),
+        e('div',{className:'mo-plans'},
+          [{id:'pro',n:'Pro',p:'99',s:'per month',pk:'Unlimited · PDF upload'},{id:'elite',n:'Elite',p:'199',s:'per month',pk:'Pro + Anki + saved sets'}].map(function(x){
+            return e('div',{key:x.id,className:'mp'+(sp===x.id?' sel':''),onClick:function(){setSp(x.id);}},
+              e('div',{className:'mp-n'},x.n),
+              e('div',{className:'mp-p'},e('sup',null,'₹'),x.p),
+              e('div',{className:'mp-s'},x.s),
+              e('div',{className:'mp-pk'},x.pk)
+            );
+          })
+        ),
+        e('button',{className:'pb',onClick:function(){pay(sp);}},'Pay ₹'+(sp==='pro'?'99':'199')+' via Razorpay →'),
+        e('button',{className:'md',onClick:function(){setPw(false);}},'Continue tomorrow')
+      )
+    ),
+    toast&&e('div',{className:'toast'},toast)
   );
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(App,null));
 </script>
-<script>(function(){var s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';document.head.appendChild(s)})()</script>
+<script>(function(){var s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';document.head.appendChild(s);})()</script>
 </body>
 </html>
