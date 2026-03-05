@@ -525,73 +525,69 @@ function HFeat({icon,title,desc}){
   );
 }
 
-function renderCardContent(text){
-  if(!text) return null;
-  const lines = text.split('\n').filter(l => l.trim());
-  return lines.map((line, i) => {
-    const t = line.trim();
-    // Table row: | cell | cell |
-    if(t.startsWith('|') && !t.startsWith('|---')){
-      const cells = t.split('|').map(c=>c.trim()).filter(c=>c && c!=='---');
-      if(cells.length > 0) return (
-        <div key={i} style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}>
-          {cells.map((c,j) => (
-            <span key={j} style={{background:'rgba(232,213,176,0.08)',borderRadius:4,padding:'2px 8px',fontSize:'0.78rem',color:'var(--text)'}}>{c}</span>
-          ))}
-        </div>
-      );
-    }
-    // Flow: word → word → word
-    if(t.includes(' → ') && t.split(' → ').length > 1){
-      const parts = t.split(' → ');
-      return (
-        <div key={i} style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:5,marginBottom:7,justifyContent:'center'}}>
-          {parts.map((p,j) => (
-            <React.Fragment key={j}>
+function CardLine({text}){
+  const t = text.trim();
+  if(!t) return null;
+  // Flow: A → B → C
+  if(t.includes(' → ')){
+    const parts = t.split(' → ');
+    return (
+      <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:5,marginBottom:7,justifyContent:'center'}}>
+        {parts.map(function(p,j){
+          return (
+            <span key={j} style={{display:'inline-flex',alignItems:'center',gap:5}}>
               <span style={{background:'rgba(232,213,176,0.08)',borderRadius:6,padding:'3px 9px',fontSize:'0.78rem',color:'var(--text)'}}>{p}</span>
               {j < parts.length-1 && <span style={{color:'var(--accent)',fontSize:'0.72rem'}}>→</span>}
-            </React.Fragment>
-          ))}
-        </div>
-      );
-    }
-    // Bullet point
-    if(t.startsWith('-') || t.startsWith('•') || t.startsWith('→')){
-      const txt = t.replace(/^[-•→]\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1');
-      return (
-        <div key={i} style={{display:'flex',gap:8,marginBottom:5,alignItems:'flex-start',textAlign:'left'}}>
-          <span style={{color:'var(--accent)',fontSize:'0.68rem',marginTop:4,flexShrink:0}}>→</span>
-          <span style={{fontSize:'0.83rem',lineHeight:1.65,color:'var(--text)',fontWeight:300}}>{txt}</span>
-        </div>
-      );
-    }
-    // Section heading **text** or numbered
-    if(t.startsWith('**') || /^\d+\./.test(t)){
-      const txt = t.replace(/\*\*(.*?)\*\*/g, '$1').replace(/^\d+\.\s*/, '');
-      return (
-        <div key={i} style={{fontSize:'0.72rem',fontWeight:500,color:'var(--accent)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:6,marginTop:i>0?10:0}}>{txt}</div>
-      );
-    }
-    // Plain text — strip any remaining ** markers
-    const txt = t.replace(/\*\*(.*?)\*\*/g, '$1');
-    return <p key={i} style={{fontSize:'0.85rem',lineHeight:1.65,marginBottom:4,color:'var(--text)',fontWeight:300}}>{txt}</p>;
-  });
+            </span>
+          );
+        })}
+      </div>
+    );
+  }
+  // Table row: | cell | cell |
+  if(t.charAt(0) === '|'){
+    const cells = t.split('|').map(function(c){return c.trim()}).filter(function(c){return c && c !== '---'});
+    if(cells.length > 0) return (
+      <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}>
+        {cells.map(function(c,j){
+          return <span key={j} style={{background:'rgba(232,213,176,0.08)',borderRadius:4,padding:'2px 8px',fontSize:'0.78rem',color:'var(--text)'}}>{c}</span>;
+        })}
+      </div>
+    );
+  }
+  // Bullet: starts with - or •
+  const firstChar = t.charAt(0);
+  if(firstChar === '-' || firstChar === '•'){
+    const txt = t.slice(1).trim();
+    return (
+      <div style={{display:'flex',gap:8,marginBottom:5,alignItems:'flex-start',textAlign:'left'}}>
+        <span style={{color:'var(--accent)',fontSize:'0.68rem',marginTop:4,flexShrink:0}}>→</span>
+        <span style={{fontSize:'0.83rem',lineHeight:1.65,color:'var(--text)',fontWeight:300}}>{txt}</span>
+      </div>
+    );
+  }
+  // Plain line
+  return <p style={{fontSize:'0.85rem',lineHeight:1.65,marginBottom:4,color:'var(--text)',fontWeight:300}}>{t}</p>;
 }
 
 function Card({card,idx}){
   const[fl,setFl]=useState(false);
   useEffect(()=>setFl(false),[idx]);
+  const pointsText = card.points || card.answer || '';
+  const lines = pointsText.split('\n').filter(function(l){return l.trim()});
   return(
     <div className="fw" onClick={()=>setFl(f=>!f)}>
       <div className={`fi${fl?' fl':''}`}>
         <div className="ff">
           <div className="fl-lbl">Topic</div>
-          <div className="fl-q" style={{fontSize:'clamp(1rem,2.8vw,1.4rem)',fontFamily:"'Instrument Serif',serif"}}>{card.topic||card.question}</div>
+          <div className="fl-q">{card.topic||card.question}</div>
           <div className="fl-hint">tap to study</div>
         </div>
         <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'22px 20px'}}>
           <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:14}}>Key Points</div>
-          <div style={{width:'100%'}}>{renderCardContent(card.points||card.answer)}</div>
+          <div style={{width:'100%'}}>
+            {lines.map(function(line,i){ return <CardLine key={i} text={line}/>; })}
+          </div>
           <div className="fl-hint">tap to flip back</div>
         </div>
       </div>
