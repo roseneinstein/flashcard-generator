@@ -528,7 +528,7 @@ function HFeat({icon,title,desc}){
 function Card({card,idx}){
   const[fl,setFl]=useState(false);
   useEffect(()=>setFl(false),[idx]);
-  const pts = (card.points||card.answer||'').split('\n').filter(function(l){return l.trim();});
+  const pts = (card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
   return(
     <div className="fw" onClick={()=>setFl(f=>!f)}>
       <div className={`fi${fl?' fl':''}`}>
