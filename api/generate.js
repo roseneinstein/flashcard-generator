@@ -1,6 +1,5 @@
 export default async function handler(req, res) {
 
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -11,8 +10,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing text or count' });
   }
 
-  // API key lives HERE on the server — never visible to browser
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Groq API key — stored safely in Vercel environment variables
+  const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured on server' });
@@ -36,15 +35,14 @@ Notes:
 ${text}`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'llama3-70b-8192',
         max_tokens: 3000,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -56,7 +54,7 @@ ${text}`;
       return res.status(500).json({ error: data.error.message });
     }
 
-    const raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+    const raw = data.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(raw);
 
     return res.status(200).json(parsed);
