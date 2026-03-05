@@ -10,8 +10,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing text or count' });
   }
 
-  // Groq API key — stored safely in Vercel environment variables
-  const apiKey = process.env.GROQ_API_KEY;
+  // Gemini API key — stored safely in Vercel environment variables
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured on server' });
@@ -35,18 +35,17 @@ Notes:
 ${text}`;
 
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'llama3-70b-8192',
-        max_tokens: 3000,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 3000, temperature: 0.7 },
+        }),
+      }
+    );
 
     const data = await response.json();
 
@@ -54,9 +53,12 @@ ${text}`;
       return res.status(500).json({ error: data.error.message });
     }
 
-    const raw = data.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(raw);
+    const raw = data.candidates[0].content.parts[0].text
+      .trim()
+      .replace(/```json|```/g, '')
+      .trim();
 
+    const parsed = JSON.parse(raw);
     return res.status(200).json(parsed);
 
   } catch (err) {
