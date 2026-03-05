@@ -21,13 +21,28 @@
   --muted:#8888a0;
   --muted2:#4a4a60;
   --accent:#e8d5b0;
+  --accent-rgb:232,213,176;
   --green:#4ade80;
   --red:#f87171;
   --r:14px;
   --r-sm:8px;
 }
+html.light{
+  --bg:#f4f1eb;
+  --surface:#fdfcf8;
+  --surface2:#edeae2;
+  --border:#00000011;
+  --border-h:#00000022;
+  --text:#1e1b14;
+  --muted:#7a7060;
+  --muted2:#c0b89e;
+  --accent:#9a7c3f;
+  --accent-rgb:154,124,63;
+  --green:#15803d;
+  --red:#b91c1c;
+}
 html{scroll-behavior:smooth}
-body{font-family:'Geist',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;cursor:none}
+body{font-family:'Geist',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;cursor:none;transition:background .3s,color .3s}
 
 /* ── ATMOSPHERIC BACKGROUND ── */
 body::before{
@@ -42,6 +57,11 @@ body::before{
   mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
   -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
 }
+html.light body::before{
+  background-image:
+    linear-gradient(rgba(154,124,63,0.07) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(154,124,63,0.07) 1px,transparent 1px);
+}
 body::after{
   content:'';
   position:fixed;inset:0;
@@ -52,8 +72,20 @@ body::after{
   pointer-events:none;
   z-index:0;
 }
+html.light body::after{
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(180,150,90,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(154,124,63,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 60% 30%, rgba(100,140,80,0.05) 0%, transparent 50%);
+}
 #root{position:relative;z-index:1}
 
+/* THEME & LANG TOGGLES */
+.thm-tog{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.85rem;cursor:none;display:flex;align-items:center;justify-content:center;transition:border-color .2s,color .2s,background .2s;flex-shrink:0}
+.thm-tog:hover{border-color:var(--border-h);color:var(--text);background:var(--surface)}
+.lang-tog{font-size:0.7rem;font-weight:500;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:5px 12px;cursor:none;letter-spacing:0.04em;transition:all .2s;white-space:nowrap;font-family:'Geist',sans-serif}
+.lang-tog:hover{border-color:var(--border-h);color:var(--text)}
+.lang-tog.hi{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 /* CURSOR */
 #cur{width:8px;height:8px;background:var(--accent);border-radius:50%;position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:difference;transition:width .12s,height .12s}
 #cur-r{width:32px;height:32px;border:1px solid rgba(232,213,176,0.35);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .28s cubic-bezier(.22,1,.36,1),height .28s cubic-bezier(.22,1,.36,1),border-radius .2s}
@@ -61,7 +93,8 @@ body.hov #cur{width:5px;height:5px;opacity:0.5}
 body.hov #cur-r{width:48px;height:48px;border-radius:6px;opacity:0.2}
 
 /* NAV */
-nav{position:fixed;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--border);background:rgba(19,19,26,0.88);backdrop-filter:blur(20px);z-index:100}
+nav{position:fixed;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--border);background:rgba(19,19,26,0.88);backdrop-filter:blur(20px);z-index:100;transition:background .3s,border-color .3s}
+html.light nav{background:rgba(244,241,235,0.92)}
 .logo{font-family:'Instrument Serif',serif;font-size:1.55rem;color:var(--accent);letter-spacing:-0.02em;font-weight:400}
 .nav-r{display:flex;gap:24px;align-items:center}
 .nl{font-size:0.75rem;font-weight:400;color:var(--muted);background:none;border:none;cursor:none;letter-spacing:0.06em;text-transform:uppercase;transition:color .2s;padding:0}
@@ -456,7 +489,7 @@ async function callAI(text,count){
   const r=await fetch('/api/generate',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text,count}),
+    body:JSON.stringify({text,count,lang:lang||'en'}),
   });
   if(!r.ok){
     const e=await r.json().catch(()=>({}));
@@ -775,6 +808,8 @@ function App(){
   useCursor();
   useReveal();
   const[itab,setItab]=useState('text');
+  const[dark,setDark]=useState(true);
+  const[lang,setLang]=useState('en');
   const[notes,setNotes]=useState('');
   const[fn,setFn]=useState('');
   const[pdfTxt,setPdfTxt]=useState('');
@@ -790,6 +825,16 @@ function App(){
   const[drag,setDrag]=useState(false);
   const fref=useRef();
   const tt=useRef();
+
+  function toggleTheme(){
+    setDark(function(d){
+      var next=!d;
+      if(next){document.documentElement.classList.remove('light');}
+      else{document.documentElement.classList.add('light');}
+      return next;
+    });
+  }
+  function toggleLang(){setLang(function(l){return l==='en'?'hi':'en';});}
 
   const usage=getUsage(),pro=isPro();
   function st(m){setToast(m);clearTimeout(tt.current);tt.current=setTimeout(()=>setToast(''),2700)}
@@ -874,6 +919,7 @@ function App(){
         <div className="nav-r">
           <button className="nl" onClick={()=>document.getElementById('ft')?.scrollIntoView({behavior:'smooth'})}>Features</button>
           <button className="nl" onClick={()=>document.getElementById('pr')?.scrollIntoView({behavior:'smooth'})}>Pricing</button>
+          <button className="thm-tog" onClick={toggleTheme} title="Toggle theme">{dark?'☀':'🌙'}</button>
           <button className="np" onClick={scrollApp}>Try free</button>
         </div>
       </nav>
@@ -915,7 +961,7 @@ function App(){
             <button className={`tb${itab==='pdf'?' act':''}`} onClick={()=>setItab('pdf')}>PDF</button>
           </div>
           {itab==='text'?
-            <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder={"Paste your study notes here…\n\nWorks with anything — UPSC answer keys, JEE chapters, NEET diagrams text, CA act excerpts, your own handwritten notes typed out…"}/>
+            <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder={lang==='hi'?'यहाँ अपने नोट्स पेस्ट करें…\n\nUPSC, JEE, NEET, CA — किसी भी विषय के नोट्स चलेंगे।':' Paste your study notes here…\n\nWorks with anything — UPSC answer keys, JEE chapters, NEET diagrams text, CA act excerpts, your own handwritten notes typed out…'}/>
           :(
             <>
               <button className={`upz${drag?' dov':''}`} onClick={()=>fref.current.click()} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);hFile(e.dataTransfer.files[0])}}>
@@ -928,7 +974,10 @@ function App(){
           )}
           <div className="ctrl">
             <div className="cbs">{[5,10,15,20].map(n=><button key={n} className={`cb${cnt===n?' s':''}`} onClick={()=>setCnt(n)}>{n}</button>)}</div>
-            <button className="gb" onClick={gen} disabled={loading||!itxt.trim()}>{loading?'Generating…':'Generate →'}</button>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <button className={`lang-tog${lang==='hi'?' hi':''}`} onClick={toggleLang} title="Switch output language">{lang==='hi'?'हिं':'EN'}</button>
+              <button className="gb" onClick={gen} disabled={loading||!itxt.trim()}>{loading?'Generating…':'Generate →'}</button>
+            </div>
           </div>
           {!pro&&<div className="urow"><div className="ut"><div className="uf" style={{width:`${Math.min(100,usage/CFG.FREE_LIMIT*100)}%`}}/></div><span className="utx">{usage}/{CFG.FREE_LIMIT} today</span></div>}
         </div>
