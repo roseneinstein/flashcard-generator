@@ -449,42 +449,17 @@ function bumpUsage(){localStorage.setItem('fw_u',JSON.stringify({d:new Date().to
 function isPro(){return localStorage.getItem('fw_pro')==='true'}
 
 async function callAI(text,count){
-  const p=`You are an expert study assistant for Indian competitive exams (UPSC, JEE, NEET, CA).
-
-Given these study notes, return ONLY valid JSON (no markdown, no explanation):
-
-{
-  "flashcards": [{"question":"...","answer":"..."}],
-  "quiz": [{"question":"...","options":["...","...","...","..."],"correct":0,"explanation":"..."}]
-}
-
-Rules:
-- Exactly ${count} flashcards. Clear questions, concise answers (2-3 sentences).
-- Exactly 5 MCQ quiz questions. Must be answerable from the flashcards alone.
-- "correct" = 0-indexed position of right answer.
-
-Notes:
-${text.substring(0,3200)}`;
-
-  if(CFG.PROVIDER==='anthropic'){
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':CFG.API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3000,messages:[{role:'user',content:p}]}),
-    });
-    const d=await r.json();
-    if(d.error)throw new Error(d.error.message);
-    return JSON.parse(d.content[0].text.trim().replace(/```json|```/g,'').trim());
-  }else{
-    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${CFG.GROQ_KEY}`},
-      body:JSON.stringify({model:'llama3-70b-8192',messages:[{role:'user',content:p}],max_tokens:3000}),
-    });
-    const d=await r.json();
-    if(d.error)throw new Error(d.error.message);
-    return JSON.parse(d.choices[0].message.content.trim().replace(/```json|```/g,'').trim());
+  // Calls OUR Vercel serverless function — API key stays safe on the server
+  const r=await fetch('/api/generate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text,count}),
+  });
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));
+    throw new Error(e.error||'Server error');
   }
+  return r.json();
 }
 
 function dlPDF(cards,title){
