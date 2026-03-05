@@ -121,6 +121,7 @@ h1 em{font-style:italic;color:var(--accent)}
 .cta{font-family:'Geist',sans-serif;font-size:0.92rem;font-weight:500;color:var(--bg);background:var(--accent);border:none;border-radius:50px;padding:14px 34px;cursor:none;letter-spacing:0.02em;transition:opacity .2s,transform .15s,box-shadow .2s;animation:fu .55s .2s ease both}
 .cta:hover{opacity:0.86;transform:translateY(-2px);box-shadow:0 10px 36px rgba(232,213,176,0.14)}
 @keyframes fu{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}
 
 /* FEATURES — single column rows, float on hover */
 .feat-wrap{padding:80px 24px;max-width:760px;margin:0 auto}
@@ -525,74 +526,180 @@ function HFeat({icon,title,desc}){
   );
 }
 
-function Card({card,idx}){
+function Card({card,idx,total,onPrev,onNext}){
   const[fl,setFl]=useState(false);
-  useEffect(()=>setFl(false),[idx]);
-  const pts = (card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
+  const[anim,setAnim]=useState('in'); // 'in' | 'out-left' | 'out-right'
+  useEffect(()=>{setFl(false);setAnim('in');},[idx]);
+
+  function go(dir){
+    setAnim(dir==='next'?'out-left':'out-right');
+    setTimeout(function(){
+      dir==='next'?onNext():onPrev();
+    },260);
+  }
+
+  const pts=(card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
+
+  const animStyle={
+    transition:'transform .28s cubic-bezier(.4,0,.2,1), opacity .28s ease',
+    transform: anim==='in'?'scale(1)':anim==='out-left'?'scale(0.88) translateX(-40px)':'scale(0.88) translateX(40px)',
+    opacity: anim==='in'?1:0,
+  };
+
   return(
-    <div className="fw" onClick={()=>setFl(f=>!f)}>
-      <div className={`fi${fl?' fl':''}`}>
-        <div className="ff">
-          <div className="fl-lbl">Topic</div>
-          <div className="fl-q">{card.topic||card.question}</div>
-          <div className="fl-hint">tap to study</div>
-        </div>
-        <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'20px'}}>
-          <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:12}}>Key Points</div>
-          <div style={{width:'100%'}}>
-            {pts.map(function(line,i){
-              var t=line.trim();
-              if(!t) return null;
-              var isArrow=t.charAt(0)==='-'||t.charAt(0)==='•';
-              var txt=isArrow?t.slice(1).trim():t;
-              return(
-                <div key={i} style={{display:'flex',gap:7,marginBottom:6,alignItems:'flex-start',textAlign:'left'}}>
-                  <span style={{color:'var(--accent)',fontSize:'0.65rem',marginTop:4,flexShrink:0}}>→</span>
-                  <span style={{fontSize:'0.82rem',lineHeight:1.65,color:'var(--text)',fontWeight:300}}>{txt}</span>
-                </div>
-              );
-            })}
+    <div style={{position:'relative',userSelect:'none'}}>
+      {/* Prev/Next hit areas */}
+      <div style={{position:'absolute',left:0,top:0,bottom:0,width:'20%',zIndex:5,cursor:'none'}}
+        onClick={function(e){e.stopPropagation();if(idx>0)go('prev');}}/>
+      <div style={{position:'absolute',right:0,top:0,bottom:0,width:'20%',zIndex:5,cursor:'none'}}
+        onClick={function(e){e.stopPropagation();if(idx<total-1)go('next');}}/>
+
+      {/* The flip card */}
+      <div className="fw" style={animStyle} onClick={function(){setFl(function(f){return !f;})}}>
+        <div className={fl?'fi fl':'fi'}>
+          <div className="ff">
+            <div className="fl-lbl">Topic</div>
+            <div className="fl-q">{card.topic||card.question}</div>
+            <div className="fl-hint">tap to study</div>
           </div>
-          <div className="fl-hint">tap to flip back</div>
+          <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'20px'}}>
+            <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:12}}>Key Points</div>
+            <div style={{width:'100%'}}>
+              {pts.map(function(line,i){
+                var t=line.trim();
+                if(!t)return null;
+                return(
+                  <div key={i} style={{display:'flex',gap:7,marginBottom:6,alignItems:'flex-start'}}>
+                    <span style={{color:'var(--accent)',fontSize:'0.65rem',marginTop:4,flexShrink:0}}>→</span>
+                    <span style={{fontSize:'0.82rem',lineHeight:1.65,color:'var(--text)',fontWeight:300}}>{t}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="fl-hint">tap to flip back</div>
+          </div>
         </div>
+      </div>
+
+      {/* Dot indicators */}
+      <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:14}}>
+        {Array.from({length:total}).map(function(_,i){
+          return(
+            <div key={i} style={{
+              width: i===idx?18:6,
+              height:6,
+              borderRadius:3,
+              background: i===idx?'var(--accent)':'var(--muted2)',
+              transition:'width .35s cubic-bezier(.22,1,.36,1), background .2s',
+              cursor:'none',
+            }}/>
+          );
+        })}
       </div>
     </div>
   );
 }
+
 function Quiz({qs}){
   const[qi,setQi]=useState(0);
   const[ch,setCh]=useState(null);
   const[sc,setSc]=useState(0);
   const[done,setDone]=useState(false);
+  const[anim,setAnim]=useState('in');
+
+  function goQ(dir){
+    setAnim(dir==='next'?'out-left':'out-right');
+    setTimeout(function(){
+      if(dir==='next'){
+        if(qi===qs.length-1){setDone(true);}
+        else{setQi(function(i){return i+1;});setCh(null);}
+      } else {
+        setQi(function(i){return i-1;});setCh(null);
+      }
+      setAnim('in');
+    },260);
+  }
+
+  useEffect(function(){setAnim('in');},[qi,done]);
 
   if(done){
     const pct=Math.round(sc/qs.length*100);
     return(
-      <div className="qres">
+      <div className="qres" style={{
+        transition:'transform .35s cubic-bezier(.22,1,.36,1),opacity .35s',
+        animation:'scaleIn .35s cubic-bezier(.22,1,.36,1) both',
+      }}>
         <div className="qsb">{pct}%</div>
-        <div className="qrs">{sc} of {qs.length} correct<br/>{pct>=80?'Excellent — the concepts are clear.':pct>=50?'Good effort. Review a few areas.':'Go through the cards once more.'}</div>
-        <button className="rbtn" onClick={()=>{setQi(0);setCh(null);setSc(0);setDone(false)}}>Retry</button>
+        <div className="qrs">{sc} of {qs.length} correct<br/>{pct>=80?'Excellent — concepts are clear.':pct>=50?'Good effort. Review a few areas.':'Go through the cards once more.'}</div>
+        <button className="rbtn" onClick={function(){setQi(0);setCh(null);setSc(0);setDone(false);}}>Retry</button>
       </div>
     );
   }
-  const q=qs[qi],answered=ch!==null;
-  function pick(i){if(answered)return;setCh(i);if(i===q.correct)setSc(s=>s+1)}
-  function next(){if(qi===qs.length-1)setDone(true);else{setQi(i=>i+1);setCh(null)}}
+
+  const q=qs[qi];
+  const answered=ch!==null;
+
+  const animStyle={
+    transition:'transform .26s cubic-bezier(.4,0,.2,1), opacity .26s ease',
+    transform: anim==='in'?'scale(1)':anim==='out-left'?'scale(0.9) translateX(-30px)':'scale(0.9) translateX(30px)',
+    opacity: anim==='in'?1:0,
+  };
+
   return(
     <div className="qw">
-      <div className="qpr"><div className="qtr"><div className="qf" style={{width:`${qi/qs.length*100}%`}}/></div><span className="qst">{qi+1}/{qs.length}</span></div>
-      <div className="qq">{q.question}</div>
-      <div className="og">
-        {q.options.map((o,i)=>(
-          <button key={i} className={`ob${answered?i===q.correct?' cor':i===ch&&ch!==q.correct?' wrg':'':''}`} onClick={()=>pick(i)} disabled={answered}>
-            <span style={{opacity:.35,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}}>{['A','B','C','D'][i]}</span>{o}
-          </button>
-        ))}
+      <div className="qpr">
+        <div className="qtr"><div className="qf" style={{width:(qi/qs.length*100)+'%'}}/></div>
+        <span className="qst">{qi+1}/{qs.length}</span>
       </div>
-      {answered&&<><div className="qex"><strong>{ch===q.correct?'Correct. ':'Incorrect. '}</strong>{q.explanation}</div><button className="nx" onClick={next}>{qi===qs.length-1?'See results':'Next →'}</button></>}
+
+      <div style={animStyle}>
+        <div className="qq">{q.question}</div>
+        <div className="og">
+          {q.options.map(function(o,i){
+            var cls='ob';
+            if(answered){
+              if(i===q.correct)cls+=' cor';
+              else if(i===ch&&ch!==q.correct)cls+=' wrg';
+            }
+            return(
+              <button key={i} className={cls} onClick={function(){
+                if(answered)return;
+                setCh(i);
+                if(i===q.correct)setSc(function(s){return s+1;});
+              }} disabled={answered}>
+                <span style={{opacity:.35,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}}>{['A','B','C','D'][i]}</span>{o}
+              </button>
+            );
+          })}
+        </div>
+        {answered&&(
+          <>
+            <div className="qex"><strong>{ch===q.correct?'Correct. ':'Incorrect. '}</strong>{q.explanation}</div>
+            <button className="nx" onClick={function(){goQ('next');}}>
+              {qi===qs.length-1?'See results':'Next →'}
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Dot indicators */}
+      <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:18}}>
+        {qs.map(function(_,i){
+          return(
+            <div key={i} style={{
+              width: i===qi?18:6,
+              height:6,
+              borderRadius:3,
+              background: i===qi?'var(--accent)':'var(--muted2)',
+              transition:'width .35s cubic-bezier(.22,1,.36,1), background .2s',
+            }}/>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
 
 function PCard({name,price,period,feats,pop,onSel}){
   const r=useRef();
@@ -744,13 +851,14 @@ function App(){
             </div>
             <div className="rbody">
               {rtab==='cards'&&<>
-                <div className="fnr">
-                  <button className="nb" onClick={()=>setCi(i=>i-1)} disabled={ci===0}>←</button>
-                  <span className="fc-ctr">{ci+1} / {cards.length}</span>
-                  <button className="nb" onClick={()=>setCi(i=>i+1)} disabled={ci===cards.length-1}>→</button>
-                </div>
-                <Card card={cards[ci]} idx={ci}/>
-                <div className="fca">
+                <Card
+                  card={cards[ci]}
+                  idx={ci}
+                  total={cards.length}
+                  onNext={()=>setCi(i=>Math.min(i+1,cards.length-1))}
+                  onPrev={()=>setCi(i=>Math.max(i-1,0))}
+                />
+                <div className="fca" style={{marginTop:8}}>
                   <button className="ab" onClick={()=>setCi(0)}>↩ Reset</button>
                   <button className="ab" onClick={()=>setCi(Math.floor(Math.random()*cards.length))}>⇄ Shuffle</button>
                   <button className="ab" onClick={()=>setRtab('quiz')} disabled={!quiz.length}>📝 Quiz</button>
