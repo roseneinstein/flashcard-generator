@@ -528,39 +528,68 @@ function HFeat({icon,title,desc}){
 
 function Card({card,idx,total,onPrev,onNext}){
   const[fl,setFl]=useState(false);
-  const[anim,setAnim]=useState('in'); // 'in' | 'out-left' | 'out-right'
-  useEffect(()=>{setFl(false);setAnim('in');},[idx]);
+  const[anim,setAnim]=useState('in');
+  const txRef=useRef(null);
+  const tyRef=useRef(null);
+  const dragRef=useRef(false);
+  useEffect(function(){setFl(false);setAnim('in');},[idx]);
 
   function go(dir){
     setAnim(dir==='next'?'out-left':'out-right');
     setTimeout(function(){
       dir==='next'?onNext():onPrev();
+      setAnim('in');
     },260);
   }
 
-  const pts=(card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
+  function tStart(e){
+    txRef.current=e.touches[0].clientX;
+    tyRef.current=e.touches[0].clientY;
+    dragRef.current=false;
+  }
+  function tMove(e){
+    if(txRef.current===null)return;
+    var dx=e.touches[0].clientX-txRef.current;
+    var dy=e.touches[0].clientY-tyRef.current;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>10){
+      dragRef.current=true;
+      e.preventDefault();
+    }
+  }
+  function tEnd(e){
+    if(txRef.current===null)return;
+    var dx=e.changedTouches[0].clientX-txRef.current;
+    var dy=e.changedTouches[0].clientY-tyRef.current;
+    var wasDrag=dragRef.current;
+    txRef.current=null; tyRef.current=null; dragRef.current=false;
+    if(!wasDrag&&Math.abs(dx)<30&&Math.abs(dy)<30){
+      setFl(function(f){return !f;}); return;
+    }
+    if(dx<-50&&idx<total-1) go('next');
+    else if(dx>50&&idx>0) go('prev');
+  }
 
-  const animStyle={
-    transition:'transform .28s cubic-bezier(.4,0,.2,1), opacity .28s ease',
-    transform: anim==='in'?'scale(1)':anim==='out-left'?'scale(0.88) translateX(-40px)':'scale(0.88) translateX(40px)',
-    opacity: anim==='in'?1:0,
+  var pts=(card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
+  var animStyle={
+    transition:'transform .28s cubic-bezier(.4,0,.2,1),opacity .28s ease',
+    transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.88) translateX(-40px)':'scale(0.88) translateX(40px)',
+    opacity:anim==='in'?1:0,
   };
 
   return(
-    <div style={{position:'relative',userSelect:'none'}}>
-      {/* Prev/Next hit areas */}
-      <div style={{position:'absolute',left:0,top:0,bottom:0,width:'20%',zIndex:5,cursor:'none'}}
+    <div style={{position:'relative',userSelect:'none',touchAction:'pan-y'}}>
+      <div style={{position:'absolute',left:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'}}
         onClick={function(e){e.stopPropagation();if(idx>0)go('prev');}}/>
-      <div style={{position:'absolute',right:0,top:0,bottom:0,width:'20%',zIndex:5,cursor:'none'}}
+      <div style={{position:'absolute',right:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'}}
         onClick={function(e){e.stopPropagation();if(idx<total-1)go('next');}}/>
-
-      {/* The flip card */}
-      <div className="fw" style={animStyle} onClick={function(){setFl(function(f){return !f;})}}>
+      <div className="fw" style={animStyle}
+        onClick={function(){setFl(function(f){return !f;});}}
+        onTouchStart={tStart} onTouchMove={tMove} onTouchEnd={tEnd}>
         <div className={fl?'fi fl':'fi'}>
           <div className="ff">
             <div className="fl-lbl">Topic</div>
             <div className="fl-q">{card.topic||card.question}</div>
-            <div className="fl-hint">tap to study</div>
+            <div className="fl-hint">tap to study · swipe to navigate</div>
           </div>
           <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'20px'}}>
             <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:12}}>Key Points</div>
@@ -580,18 +609,13 @@ function Card({card,idx,total,onPrev,onNext}){
           </div>
         </div>
       </div>
-
-      {/* Dot indicators */}
       <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:14}}>
         {Array.from({length:total}).map(function(_,i){
           return(
             <div key={i} style={{
-              width: i===idx?18:6,
-              height:6,
-              borderRadius:3,
-              background: i===idx?'var(--accent)':'var(--muted2)',
-              transition:'width .35s cubic-bezier(.22,1,.36,1), background .2s',
-              cursor:'none',
+              width:i===idx?18:6,height:6,borderRadius:3,
+              background:i===idx?'var(--accent)':'var(--muted2)',
+              transition:'width .35s cubic-bezier(.22,1,.36,1),background .2s',
             }}/>
           );
         })}
@@ -599,8 +623,8 @@ function Card({card,idx,total,onPrev,onNext}){
     </div>
   );
 }
-
 function Quiz({qs}){
+  const txRef=useRef(null);
   const[qi,setQi]=useState(0);
   const[ch,setCh]=useState(null);
   const[sc,setSc]=useState(0);
@@ -645,14 +669,32 @@ function Quiz({qs}){
     opacity: anim==='in'?1:0,
   };
 
+  const qTouchStart=useRef(null);
+  const qTouchDx=useRef(0);
+  function onQTouchStart(e){qTouchStart.current=e.touches[0].clientX;qTouchDx.current=0;}
+  function onQTouchMove(e){if(qTouchStart.current===null)return;qTouchDx.current=e.touches[0].clientX-qTouchStart.current;}
+  function onQTouchEnd(){
+    var dx=qTouchDx.current;
+    qTouchStart.current=null;qTouchDx.current=0;
+    if(!answered||Math.abs(dx)<40)return;
+    if(dx<-40)goQ('next');
+    else if(dx>40&&qi>0)goQ('prev');
+  }
+
   return(
-    <div className="qw">
+    <div className="qw" onTouchStart={onQTouchStart} onTouchMove={onQTouchMove} onTouchEnd={onQTouchEnd}>
       <div className="qpr">
         <div className="qtr"><div className="qf" style={{width:(qi/qs.length*100)+'%'}}/></div>
         <span className="qst">{qi+1}/{qs.length}</span>
       </div>
 
-      <div style={animStyle}>
+      <div style={animStyle}
+        onTouchStart={function(e){txRef.current=e.touches[0].clientX;}}
+        onTouchEnd={function(e){
+          var dx=e.changedTouches[0].clientX-txRef.current;
+          if(answered&&dx<-50&&qi<qs.length-1)goQ('next');
+          else if(answered&&dx>50&&qi>0)goQ('prev');
+        }}>
         <div className="qq">{q.question}</div>
         <div className="og">
           {q.options.map(function(o,i){
@@ -752,17 +794,53 @@ function App(){
     finally{setLoading(false)}
   }
 
-  function hFile(file){
-    if(!file)return;
-    if(!file.type.includes('pdf'))return st('PDF files only');
-    if(!pro){setPw(true);return}
+  async async function hFile(file){
+    if(!file) return;
+    if(!file.type.includes('pdf')) return st('PDF files only');
+    if(file.size > 20*1024*1024) return st('PDF too large — keep under 20MB');
     setFn(file.name);
-    var reader=new FileReader();
-    reader.onload=function(e){
-      setPdfTxt('PDF loaded: '+file.name+'\nPaste the text from your PDF here for best results.');
+    setPdfTxt('');
+    st('Reading PDF…');
+    var loadLib = new Promise(function(resolve, reject){
+      if(window.pdfjsLib){ resolve(); return; }
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = function(){
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve();
+      };
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    var reader = new FileReader();
+    reader.onload = function(e){
+      loadLib.then(function(){
+        var typedArray = new Uint8Array(e.target.result);
+        window.pdfjsLib.getDocument({data: typedArray}).promise.then(function(pdf){
+          var maxPages = Math.min(pdf.numPages, 20);
+          var allText = '';
+          var pagesDone = 0;
+          for(var p = 1; p <= maxPages; p++){
+            (function(pageNum){
+              pdf.getPage(pageNum).then(function(page){
+                page.getTextContent().then(function(tc){
+                  allText += tc.items.map(function(item){ return item.str; }).join(' ') + ' ';
+                  pagesDone++;
+                  if(pagesDone === maxPages){
+                    var txt = allText.trim();
+                    if(!txt){ st('No text found — try a text-based PDF'); return; }
+                    setPdfTxt(txt);
+                    st('Extracted ' + maxPages + ' of ' + pdf.numPages + ' pages — ready to generate');
+                  }
+                });
+              });
+            })(p);
+          }
+        }).catch(function(err){ st('Could not read PDF: ' + err.message); });
+      }).catch(function(){ st('PDF library failed to load — check connection'); });
     };
-    reader.readAsText(file);
-    st('PDF loaded — paste its text above');
+    reader.readAsArrayBuffer(file);
   }
   function pay(plan){
     if(CFG.RZP_KEY==='YOUR_RAZORPAY_KEY_HERE')return st('Add Razorpay key to enable payments');
@@ -819,15 +897,15 @@ function App(){
         <div className="icard rev">
           <div className="tbar">
             <button className={`tb${itab==='text'?' act':''}`} onClick={()=>setItab('text')}>Text</button>
-            <button className={`tb${itab==='pdf'?' act':''}`} onClick={()=>setItab('pdf')}>PDF{!pro&&<span style={{fontSize:'0.58rem',opacity:0.45,marginLeft:4}}>PRO</span>}</button>
+            <button className={`tb${itab==='pdf'?' act':''}`} onClick={()=>setItab('pdf')}>PDF</button>
           </div>
           {itab==='text'?
             <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder={"Paste your study notes here…\n\nWorks with anything — UPSC answer keys, JEE chapters, NEET diagrams text, CA act excerpts, your own handwritten notes typed out…"}/>
           :(
             <>
-              <button className={`upz${drag?' dov':''}`} onClick={()=>pro?fref.current.click():setPw(true)} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);hFile(e.dataTransfer.files[0])}}>
+              <button className={`upz${drag?' dov':''}`} onClick={()=>fref.current.click()} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);hFile(e.dataTransfer.files[0])}}>
                 <span className="upz-i">↑</span>
-                {fn?<p><strong>{fn}</strong><br/>Click to replace</p>:<p>Drop PDF here or <strong>click to browse</strong><br/>Requires Pro access</p>}
+                {fn?<p><strong>{fn}</strong><br/>Click to replace</p>:<p>Drop PDF here or <strong>click to browse</strong><br/>Max ~20 pages for best results</p>}
               </button>
               <input type="file" accept=".pdf" ref={fref} onChange={e=>hFile(e.target.files[0])}/>
               {fn&&<textarea value={pdfTxt} onChange={e=>setPdfTxt(e.target.value)} placeholder="Edit extracted text if needed…" style={{borderTop:'1px solid var(--border)'}}/>}
