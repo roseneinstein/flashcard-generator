@@ -794,7 +794,7 @@ function App(){
     finally{setLoading(false)}
   }
 
-  async async function hFile(file){
+  function hFile(file){
     if(!file) return;
     if(!file.type.includes('pdf')) return st('PDF files only');
     if(file.size > 20*1024*1024) return st('PDF too large — keep under 20MB');
