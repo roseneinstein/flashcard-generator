@@ -525,56 +525,10 @@ function HFeat({icon,title,desc}){
   );
 }
 
-function CardLine({text}){
-  const t = text.trim();
-  if(!t) return null;
-  // Flow: A → B → C
-  if(t.includes(' → ')){
-    const parts = t.split(' → ');
-    return (
-      <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:5,marginBottom:7,justifyContent:'center'}}>
-        {parts.map(function(p,j){
-          return (
-            <span key={j} style={{display:'inline-flex',alignItems:'center',gap:5}}>
-              <span style={{background:'rgba(232,213,176,0.08)',borderRadius:6,padding:'3px 9px',fontSize:'0.78rem',color:'var(--text)'}}>{p}</span>
-              {j < parts.length-1 && <span style={{color:'var(--accent)',fontSize:'0.72rem'}}>→</span>}
-            </span>
-          );
-        })}
-      </div>
-    );
-  }
-  // Table row: | cell | cell |
-  if(t.charAt(0) === '|'){
-    const cells = t.split('|').map(function(c){return c.trim()}).filter(function(c){return c && c !== '---'});
-    if(cells.length > 0) return (
-      <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}>
-        {cells.map(function(c,j){
-          return <span key={j} style={{background:'rgba(232,213,176,0.08)',borderRadius:4,padding:'2px 8px',fontSize:'0.78rem',color:'var(--text)'}}>{c}</span>;
-        })}
-      </div>
-    );
-  }
-  // Bullet: starts with - or •
-  const firstChar = t.charAt(0);
-  if(firstChar === '-' || firstChar === '•'){
-    const txt = t.slice(1).trim();
-    return (
-      <div style={{display:'flex',gap:8,marginBottom:5,alignItems:'flex-start',textAlign:'left'}}>
-        <span style={{color:'var(--accent)',fontSize:'0.68rem',marginTop:4,flexShrink:0}}>→</span>
-        <span style={{fontSize:'0.83rem',lineHeight:1.65,color:'var(--text)',fontWeight:300}}>{txt}</span>
-      </div>
-    );
-  }
-  // Plain line
-  return <p style={{fontSize:'0.85rem',lineHeight:1.65,marginBottom:4,color:'var(--text)',fontWeight:300}}>{t}</p>;
-}
-
 function Card({card,idx}){
   const[fl,setFl]=useState(false);
   useEffect(()=>setFl(false),[idx]);
-  const pointsText = card.points || card.answer || '';
-  const lines = pointsText.split('\n').filter(function(l){return l.trim()});
+  const pts = (card.points||card.answer||'').split('\n').filter(function(l){return l.trim();});
   return(
     <div className="fw" onClick={()=>setFl(f=>!f)}>
       <div className={`fi${fl?' fl':''}`}>
@@ -583,10 +537,21 @@ function Card({card,idx}){
           <div className="fl-q">{card.topic||card.question}</div>
           <div className="fl-hint">tap to study</div>
         </div>
-        <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'22px 20px'}}>
-          <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:14}}>Key Points</div>
+        <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'20px'}}>
+          <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:12}}>Key Points</div>
           <div style={{width:'100%'}}>
-            {lines.map(function(line,i){ return <CardLine key={i} text={line}/>; })}
+            {pts.map(function(line,i){
+              var t=line.trim();
+              if(!t) return null;
+              var isArrow=t.charAt(0)==='-'||t.charAt(0)==='•';
+              var txt=isArrow?t.slice(1).trim():t;
+              return(
+                <div key={i} style={{display:'flex',gap:7,marginBottom:6,alignItems:'flex-start',textAlign:'left'}}>
+                  <span style={{color:'var(--accent)',fontSize:'0.65rem',marginTop:4,flexShrink:0}}>→</span>
+                  <span style={{fontSize:'0.82rem',lineHeight:1.65,color:'var(--text)',fontWeight:300}}>{txt}</span>
+                </div>
+              );
+            })}
           </div>
           <div className="fl-hint">tap to flip back</div>
         </div>
@@ -594,7 +559,6 @@ function Card({card,idx}){
     </div>
   );
 }
-
 function Quiz({qs}){
   const[qi,setQi]=useState(0);
   const[ch,setCh]=useState(null);
@@ -681,41 +645,18 @@ function App(){
     finally{setLoading(false)}
   }
 
-  async function hFile(file){
+  function hFile(file){
     if(!file)return;
     if(!file.type.includes('pdf'))return st('PDF files only');
     if(!pro){setPw(true);return}
     setFn(file.name);
-    st('Extracting text from PDF…');
-    try{
-      // Load PDF.js from CDN
-      if(!window.pdfjsLib){
-        await new Promise((res,rej)=>{
-          const s=document.createElement('script');
-          s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-          s.onload=res;s.onerror=rej;
-          document.head.appendChild(s);
-        });
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc=
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      }
-      const ab=await file.arrayBuffer();
-      const pdf=await window.pdfjsLib.getDocument({data:ab}).promise;
-      let fullText='';
-      for(let i=1;i<=Math.min(pdf.numPages,20);i++){
-        const page=await pdf.getPage(i);
-        const tc=await page.getTextContent();
-        fullText+=tc.items.map(it=>it.str).join(' ')+'
-';
-      }
-      setPdfTxt(fullText.trim());
-      st(`PDF extracted — ${pdf.numPages} pages`);
-    }catch(e){
-      st('Could not extract PDF — paste text manually');
-      setPdfTxt('');
-    }
+    var reader=new FileReader();
+    reader.onload=function(e){
+      setPdfTxt('PDF loaded: '+file.name+'\nPaste the text from your PDF here for best results.');
+    };
+    reader.readAsText(file);
+    st('PDF loaded — paste its text above');
   }
-
   function pay(plan){
     if(CFG.RZP_KEY==='YOUR_RAZORPAY_KEY_HERE')return st('Add Razorpay key to enable payments');
     new window.Razorpay({key:CFG.RZP_KEY,amount:plan==='pro'?9900:19900,currency:'INR',name:'FlipWise',description:plan==='pro'?'Pro · ₹99/mo':'Elite · ₹199/mo',theme:{color:'#e8d5b0'},
