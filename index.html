@@ -122,64 +122,69 @@ h1 em{font-style:italic;color:var(--accent)}
 .cta:hover{opacity:0.86;transform:translateY(-2px);box-shadow:0 10px 36px rgba(232,213,176,0.14)}
 @keyframes fu{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 
-/* FEATURES */
-.feat-wrap{padding:90px 24px;max-width:960px;margin:0 auto}
-.fg{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:1px;
-  border:1px solid var(--border);
-  border-radius:var(--r);
-  overflow:visible;
-  background:var(--border);
-  /* allow children to scale out */
-  isolation:isolate;
-}
-@media(max-width:620px){.fg{grid-template-columns:1fr}}
+/* FEATURES — single column rows, float on hover */
+.feat-wrap{padding:80px 24px;max-width:760px;margin:0 auto}
+.feat-eyebrow{font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:10px}
+.feat-heading{font-family:'Instrument Serif',serif;font-size:clamp(1.6rem,3.5vw,2.4rem);text-align:center;margin-bottom:48px;letter-spacing:-0.02em;line-height:1.1}
+.feat-heading em{font-style:italic;color:var(--accent)}
+.fg{display:flex;flex-direction:column;gap:3px}
 .fc{
   background:var(--surface);
-  padding:30px 26px;
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:24px 28px;
   position:relative;
   overflow:hidden;
   cursor:none;
-  /* spring transition for scale + glow */
+  display:flex;
+  align-items:flex-start;
+  gap:20px;
   transition:
-    transform .45s cubic-bezier(.22,1,.36,1),
+    transform .5s cubic-bezier(.22,1,.36,1),
+    box-shadow .5s cubic-bezier(.22,1,.36,1),
     background .22s ease,
-    box-shadow .45s cubic-bezier(.22,1,.36,1),
-    z-index 0s;
+    border-color .22s ease;
   z-index:1;
-  border-radius:0;
-}
-/* rounded corners only on edge cards */
-.fg .fc:first-child{border-radius:var(--r) 0 0 var(--r)}
-.fg .fc:nth-child(3){border-radius:0 var(--r) 0 0}
-.fg .fc:nth-child(4){border-radius:0 0 0 var(--r)}
-.fg .fc:last-child{border-radius:0 var(--r) var(--r) 0}
-@media(max-width:620px){
-  .fg .fc:first-child{border-radius:var(--r) var(--r) 0 0}
-  .fg .fc:nth-child(3){border-radius:0}
-  .fg .fc:nth-child(4){border-radius:0}
-  .fg .fc:last-child{border-radius:0 0 var(--r) var(--r)}
 }
 .fc::before{
   content:'';
   position:absolute;inset:0;
-  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(232,213,176,0.11) 0%,transparent 55%);
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(232,213,176,0.1) 0%,transparent 60%);
   opacity:0;
-  transition:opacity .3s;
+  transition:opacity .35s;
   pointer-events:none;
 }
 .fc:hover{
-  transform:scale(1.045);
+  transform:translateY(-5px) scale(1.018);
   background:var(--surface2);
-  box-shadow:0 8px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(232,213,176,0.12);
+  border-color:rgba(232,213,176,0.18);
+  box-shadow:0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(232,213,176,0.1);
   z-index:10;
 }
 .fc:hover::before{opacity:1}
-.fc-ico{font-size:1.1rem;margin-bottom:16px;display:block;opacity:0.6}
-.fc-t{font-family:'Instrument Serif',serif;font-size:1.1rem;margin-bottom:7px;color:var(--text)}
-.fc-d{font-size:0.8rem;color:var(--muted);line-height:1.72;font-weight:300}
+.fc-ico{
+  font-size:1.1rem;
+  opacity:0.55;
+  flex-shrink:0;
+  margin-top:2px;
+  width:28px;
+  text-align:center;
+}
+.fc-body{flex:1}
+.fc-t{
+  font-family:'Instrument Serif',serif;
+  font-size:1.05rem;
+  color:var(--text);
+  margin-bottom:5px;
+  letter-spacing:-0.01em;
+}
+.fc-d{
+  font-size:0.8rem;
+  color:var(--muted);
+  line-height:1.72;
+  font-weight:300;
+  padding-left:2px;
+}
 
 /* APP */
 .app-wrap{max-width:660px;margin:0 auto;padding:0 20px 110px}
@@ -512,10 +517,56 @@ function HFeat({icon,title,desc}){
   return(
     <div className="fc" ref={r} onMouseMove={e=>{const b=r.current.getBoundingClientRect();r.current.style.setProperty('--mx',((e.clientX-b.left)/b.width*100)+'%');r.current.style.setProperty('--my',((e.clientY-b.top)/b.height*100)+'%')}}>
       <span className="fc-ico">{icon}</span>
-      <div className="fc-t">{title}</div>
-      <p className="fc-d">{desc}</p>
+      <div className="fc-body">
+        <div className="fc-t">{title}</div>
+        <p className="fc-d">{desc}</p>
+      </div>
     </div>
   );
+}
+
+function renderCardContent(text){
+  // Render markdown-like content: **bold**, bullet points, → arrows, tables
+  if(!text)return null;
+  const lines=text.split('\n').filter(l=>l.trim());
+  return lines.map((line,i)=>{
+    const t=line.trim();
+    // Table row
+    if(t.startsWith('|')){
+      const cells=t.split('|').filter(c=>c.trim()&&c.trim()!=='---');
+      if(cells.length>0)return(
+        <div key={i} style={{display:'flex',gap:8,marginBottom:4,flexWrap:'wrap'}}>
+          {cells.map((c,j)=><span key={j} style={{background:'rgba(232,213,176,0.07)',borderRadius:4,padding:'2px 8px',fontSize:'0.78rem',color:'var(--text)'}}>{c.trim()}</span>)}
+        </div>
+      );
+    }
+    // Bullet or arrow point
+    if(t.startsWith('-')||t.startsWith('•')||t.startsWith('→')||t.startsWith('*')){
+      const txt=t.replace(/^[-•→*]\s*/,'').replace(/\*\*(.*?)\*\*/g,'$1');
+      return<div key={i} style={{display:'flex',gap:8,marginBottom:5,alignItems:'flex-start',textAlign:'left'}}>
+        <span style={{color:'var(--accent)',fontSize:'0.7rem',marginTop:3,flexShrink:0}}>→</span>
+        <span style={{fontSize:'0.85rem',lineHeight:1.6,color:'var(--text)',fontWeight:300}}>{txt}</span>
+      </div>;
+    }
+    // Bold heading line
+    if(t.startsWith('**')||t.match(/^\d+\./)){
+      const txt=t.replace(/\*\*(.*?)\*\*/g,'$1').replace(/^\d+\.\s*/,'');
+      return<div key={i} style={{fontSize:'0.78rem',fontWeight:500,color:'var(--accent)',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:8,marginTop:i>0?12:0}}>{txt}</div>;
+    }
+    // Flow line A → B → C
+    if(t.includes(' → ')){
+      const parts=t.split(' → ');
+      return<div key={i} style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:6,marginBottom:6,justifyContent:'center'}}>
+        {parts.map((p,j)=>[
+          <span key={j} style={{background:'rgba(232,213,176,0.09)',borderRadius:6,padding:'3px 10px',fontSize:'0.8rem',color:'var(--text)'}}>{p}</span>,
+          j<parts.length-1&&<span key={j+'a'} style={{color:'var(--accent)',fontSize:'0.75rem'}}>→</span>
+        ])}
+      </div>;
+    }
+    // Normal line
+    const html=t.replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--accent);font-weight:500">$1</strong>');
+    return<p key={i} dangerouslySetInnerHTML={{__html:html}} style={{fontSize:'0.88rem',lineHeight:1.65,marginBottom:5,color:'var(--text)',fontWeight:300}}/>;
+  });
 }
 
 function Card({card,idx}){
@@ -524,8 +575,16 @@ function Card({card,idx}){
   return(
     <div className="fw" onClick={()=>setFl(f=>!f)}>
       <div className={`fi${fl?' fl':''}`}>
-        <div className="ff"><div className="fl-lbl">Question</div><div className="fl-q">{card.question}</div><div className="fl-hint">tap to reveal</div></div>
-        <div className="fb"><div className="fl-lbl">Answer</div><div className="fl-a">{card.answer}</div><div className="fl-hint">tap to flip back</div></div>
+        <div className="ff">
+          <div className="fl-lbl">Topic</div>
+          <div className="fl-q" style={{fontSize:'clamp(1rem,2.8vw,1.4rem)',fontFamily:"'Instrument Serif',serif"}}>{card.topic||card.question}</div>
+          <div className="fl-hint">tap to study</div>
+        </div>
+        <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'22px 20px'}}>
+          <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:14}}>Key Points</div>
+          <div style={{width:'100%'}}>{renderCardContent(card.points||card.answer)}</div>
+          <div className="fl-hint">tap to flip back</div>
+        </div>
       </div>
     </div>
   );
@@ -617,14 +676,39 @@ function App(){
     finally{setLoading(false)}
   }
 
-  function hFile(file){
+  async function hFile(file){
     if(!file)return;
     if(!file.type.includes('pdf'))return st('PDF files only');
     if(!pro){setPw(true);return}
     setFn(file.name);
-    const r=new FileReader();
-    r.onload=()=>setPdfTxt(`[PDF loaded: ${file.name}]\nPaste or edit the key text here for best results.`);
-    r.readAsText(file);st('PDF loaded');
+    st('Extracting text from PDF…');
+    try{
+      // Load PDF.js from CDN
+      if(!window.pdfjsLib){
+        await new Promise((res,rej)=>{
+          const s=document.createElement('script');
+          s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          s.onload=res;s.onerror=rej;
+          document.head.appendChild(s);
+        });
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      const ab=await file.arrayBuffer();
+      const pdf=await window.pdfjsLib.getDocument({data:ab}).promise;
+      let fullText='';
+      for(let i=1;i<=Math.min(pdf.numPages,20);i++){
+        const page=await pdf.getPage(i);
+        const tc=await page.getTextContent();
+        fullText+=tc.items.map(it=>it.str).join(' ')+'
+';
+      }
+      setPdfTxt(fullText.trim());
+      st(`PDF extracted — ${pdf.numPages} pages`);
+    }catch(e){
+      st('Could not extract PDF — paste text manually');
+      setPdfTxt('');
+    }
   }
 
   function pay(plan){
@@ -663,13 +747,15 @@ function App(){
 
       {/* FEATURES */}
       <section id="ft" className="feat-wrap rev">
+        <div className="feat-eyebrow">What you get</div>
+        <h2 className="feat-heading">Built for how<br/><em>Indian students</em> actually study</h2>
         <div className="fg">
-          <HFeat icon="⚡" title="Instant cards" desc="Paste your notes and receive exam-focused flashcards in seconds. No formatting required."/>
-          <HFeat icon="🔄" title="Flip to reveal" desc="Tap any card to see the answer. Clean animation, works perfectly on every phone."/>
-          <HFeat icon="📝" title="Built-in quiz" desc="After your cards, test yourself with 5 MCQs drawn from the same content. Know what sticks."/>
-          <HFeat icon="📄" title="PDF export" desc="Download all your flashcards as a clean printable PDF. Study offline, on paper, anywhere."/>
-          <HFeat icon="📱" title="Mobile first" desc="Designed for phone screens. Study on the bus, in the hostel, between lectures."/>
-          <HFeat icon="🔒" title="No signup" desc="Start immediately. No account needed for the free tier. Your notes never leave your device."/>
+          <HFeat icon="⚡" title="Instant study cards" desc="Paste any notes — UPSC, JEE, NEET, CA. Get precise topic cards with pointers, tables and flows in seconds."/>
+          <HFeat icon="🧠" title="Memory-first flashcards" desc="Cards show topic → key pointers → flowcharts. Built for memorisation, not just reading."/>
+          <HFeat icon="📝" title="Self-test quiz" desc="After your cards, test yourself with MCQs from the same content. Know exactly what sticks."/>
+          <HFeat icon="📄" title="PDF upload & export" desc="Upload your study material as PDF. Download all flashcards as a clean printable PDF too."/>
+          <HFeat icon="📱" title="Mobile first" desc="Designed for phone screens. Study on the bus, in the hostel, between lectures — anywhere."/>
+          <HFeat icon="🔒" title="No signup needed" desc="Start immediately, no account required for free tier. Your notes stay private in your browser."/>
         </div>
       </section>
 
