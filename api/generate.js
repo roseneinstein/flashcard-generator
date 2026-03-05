@@ -5,30 +5,35 @@ export default async function handler(req, res) {
   }
 
   const { text, count } = req.body;
-
   if (!text || !count) {
     return res.status(400).json({ error: 'Missing text or count' });
   }
 
   const apiKey = process.env.GROQ_API_KEY;
-
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key not configured on server' });
+    return res.status(500).json({ error: 'API key not configured' });
   }
 
   const prompt = `You are an expert study assistant for Indian competitive exams (UPSC, JEE, NEET, CA).
 
-Given these study notes, return ONLY valid JSON (no markdown, no explanation):
+Given the study notes below, return ONLY valid JSON with NO markdown fences.
 
+FLASHCARDS: Each card has a "topic" (short title) and "points" (study content).
+For "points", use this format — bullet lines starting with →, flow chains using A → B → C, and **bold** for key terms. Include mini-tables using | col1 | col2 | format where useful. Be precise and scannable — these are MEMORY AIDS not paragraphs.
+
+QUIZ: 5 MCQ questions to test what was learned from the flashcards.
+
+Return exactly this structure:
 {
-  "flashcards": [{"question":"...","answer":"..."}],
+  "flashcards": [{"topic":"...","points":"→ point one\n→ point two\n**Key term**: explanation\nA → B → C"}],
   "quiz": [{"question":"...","options":["...","...","...","..."],"correct":0,"explanation":"..."}]
 }
 
 Rules:
-- Exactly ${count} flashcards. Clear questions, concise answers (2-3 sentences).
-- Exactly 5 MCQ quiz questions. Must be answerable from the flashcards alone.
-- "correct" = 0-indexed position of right answer.
+- Exactly ${count} flashcards
+- Exactly 5 quiz questions
+- "correct" = 0-based index of right answer
+- flashcard points must be scannable, not paragraph prose
 
 Notes:
 ${text}`;
@@ -42,16 +47,14 @@ ${text}`;
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 3000,
+        max_tokens: 3500,
         messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
       }),
     });
 
     const data = await response.json();
-
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message });
-    }
+    if (data.error) return res.status(500).json({ error: data.error.message });
 
     const raw = data.choices[0].message.content
       .trim()
