@@ -14,21 +14,23 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
-  const prompt = `You are an expert study assistant for Indian competitive exams (UPSC, JEE, NEET, CA).
+  const prompt = `You are a study assistant for Indian competitive exams.
 
-Given the study notes below, return ONLY a valid JSON object. No markdown, no code fences, no explanation. Just the raw JSON.
+Return ONLY a JSON object. No markdown. No code fences. No extra text before or after.
 
-The JSON must have exactly this structure:
-{"flashcards":[{"topic":"short title","points":"line1\nline2\nline3"}],"quiz":[{"question":"...","options":["A","B","C","D"],"correct":0,"explanation":"..."}]}
+Schema:
+{"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}]}
 
-Rules:
-- Exactly ${count} flashcards. topic = short title. points = bullet lines separated by \n using only plain ASCII hyphens like - point one
-- Exactly 5 quiz questions. correct = 0-based index.
-- Use ONLY plain ASCII characters. No special quotes, no em-dashes, no unicode bullets.
-- Do not use newlines inside any JSON string value except the literal backslash-n sequence.
+CRITICAL RULES:
+1. Exactly ${count} flashcard objects.
+2. Exactly 5 quiz objects.
+3. All string values must be on ONE line. Never put a real newline inside a string value.
+4. Separate bullet points inside "points" using the pipe character | like this: "point one | point two | point three"
+5. Use only basic ASCII. No special dashes, no curly quotes, no unicode.
+6. correct is a number 0 to 3.
 
-Notes:
-${text.substring(0, 2500)}`;
+Study notes:
+${text.substring(0, 2000)}`;
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -41,7 +43,7 @@ ${text.substring(0, 2500)}`;
         model: 'llama-3.3-70b-versatile',
         max_tokens: 3500,
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
+        temperature: 0.2,
       }),
     });
 
@@ -50,17 +52,19 @@ ${text.substring(0, 2500)}`;
 
     let raw = data.choices[0].message.content.trim();
 
-    // Strip any markdown fences
-    raw = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Strip markdown fences
+    raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
-    // Remove actual newlines and control chars inside string values
-    // Replace literal newlines with \n sequence so JSON.parse works
-    raw = raw.replace(/[\u0000-\u001F\u007F]/g, function(ch) {
-      if (ch === '\n') return '\\n';
-      if (ch === '\r') return '';
-      if (ch === '\t') return ' ';
-      return '';
-    });
+    // Find the JSON object — start at first { end at last }
+    const firstBrace = raw.indexOf('{');
+    const lastBrace = raw.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) {
+      return res.status(500).json({ error: 'AI did not return valid JSON' });
+    }
+    raw = raw.slice(firstBrace, lastBrace + 1);
+
+    // Remove all real control characters (newlines, tabs, etc.)
+    raw = raw.replace(/[\x00-\x1F\x7F]+/g, ' ');
 
     const parsed = JSON.parse(raw);
     return res.status(200).json(parsed);
