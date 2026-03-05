@@ -531,7 +531,8 @@ function Card({card,idx,total,onPrev,onNext}){
   const[anim,setAnim]=useState('in');
   const txRef=useRef(null);
   const tyRef=useRef(null);
-  const dragRef=useRef(false);
+  const isSwipeRef=useRef(false);
+
   useEffect(function(){setFl(false);setAnim('in');},[idx]);
 
   function go(dir){
@@ -539,57 +540,67 @@ function Card({card,idx,total,onPrev,onNext}){
     setTimeout(function(){
       dir==='next'?onNext():onPrev();
       setAnim('in');
-    },260);
+    },270);
   }
 
   function tStart(e){
     txRef.current=e.touches[0].clientX;
     tyRef.current=e.touches[0].clientY;
-    dragRef.current=false;
+    isSwipeRef.current=false;
   }
+
   function tMove(e){
     if(txRef.current===null)return;
-    var dx=e.touches[0].clientX-txRef.current;
-    var dy=e.touches[0].clientY-tyRef.current;
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>10){
-      dragRef.current=true;
-      e.preventDefault();
-    }
+    var dx=Math.abs(e.touches[0].clientX-txRef.current);
+    var dy=Math.abs(e.touches[0].clientY-tyRef.current);
+    // Only a clear horizontal movement counts as swipe
+    if(dx>18&&dx>dy*2) isSwipeRef.current=true;
   }
+
   function tEnd(e){
     if(txRef.current===null)return;
     var dx=e.changedTouches[0].clientX-txRef.current;
-    var dy=e.changedTouches[0].clientY-tyRef.current;
-    var wasDrag=dragRef.current;
-    txRef.current=null; tyRef.current=null; dragRef.current=false;
-    if(!wasDrag&&Math.abs(dx)<30&&Math.abs(dy)<30){
-      setFl(function(f){return !f;}); return;
+    var swipe=isSwipeRef.current;
+    txRef.current=null;
+    tyRef.current=null;
+    isSwipeRef.current=false;
+    if(!swipe){
+      // Pure tap — always flip
+      setFl(function(f){return !f;});
+      return;
     }
+    // Swipe — navigate
     if(dx<-50&&idx<total-1) go('next');
     else if(dx>50&&idx>0) go('prev');
   }
 
   var pts=(card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
   var animStyle={
-    transition:'transform .28s cubic-bezier(.4,0,.2,1),opacity .28s ease',
-    transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.88) translateX(-40px)':'scale(0.88) translateX(40px)',
+    transition:'transform .27s cubic-bezier(.4,0,.2,1),opacity .27s ease',
+    transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.88) translateX(-44px)':'scale(0.88) translateX(44px)',
     opacity:anim==='in'?1:0,
   };
 
   return(
-    <div style={{position:'relative',userSelect:'none',touchAction:'pan-y'}}>
+    <div
+      style={{position:'relative',userSelect:'none',touchAction:'pan-y'}}
+      onTouchStart={tStart}
+      onTouchMove={tMove}
+      onTouchEnd={tEnd}
+    >
+      {/* Desktop edge click zones */}
       <div style={{position:'absolute',left:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'}}
         onClick={function(e){e.stopPropagation();if(idx>0)go('prev');}}/>
       <div style={{position:'absolute',right:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'}}
         onClick={function(e){e.stopPropagation();if(idx<total-1)go('next');}}/>
+
       <div className="fw" style={animStyle}
-        onClick={function(){setFl(function(f){return !f;});}}
-        onTouchStart={tStart} onTouchMove={tMove} onTouchEnd={tEnd}>
+        onClick={function(){if(!isSwipeRef.current)setFl(function(f){return !f;});}}>
         <div className={fl?'fi fl':'fi'}>
           <div className="ff">
             <div className="fl-lbl">Topic</div>
             <div className="fl-q">{card.topic||card.question}</div>
-            <div className="fl-hint">tap to study · swipe to navigate</div>
+            <div className="fl-hint">tap to study</div>
           </div>
           <div className="fb" style={{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'20px'}}>
             <div className="fl-lbl" style={{width:'100%',textAlign:'center',marginBottom:12}}>Key Points</div>
@@ -609,6 +620,7 @@ function Card({card,idx,total,onPrev,onNext}){
           </div>
         </div>
       </div>
+
       <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:14}}>
         {Array.from({length:total}).map(function(_,i){
           return(
@@ -623,13 +635,18 @@ function Card({card,idx,total,onPrev,onNext}){
     </div>
   );
 }
+
 function Quiz({qs}){
-  const txRef=useRef(null);
+  // ALL hooks must come first — no conditional returns before hooks
   const[qi,setQi]=useState(0);
   const[ch,setCh]=useState(null);
   const[sc,setSc]=useState(0);
   const[done,setDone]=useState(false);
   const[anim,setAnim]=useState('in');
+  const txRef=useRef(null);
+  const isSwipeRef=useRef(false);
+
+  useEffect(function(){setAnim('in');},[qi,done]);
 
   function goQ(dir){
     setAnim(dir==='next'?'out-left':'out-right');
@@ -638,63 +655,54 @@ function Quiz({qs}){
         if(qi===qs.length-1){setDone(true);}
         else{setQi(function(i){return i+1;});setCh(null);}
       } else {
-        setQi(function(i){return i-1;});setCh(null);
+        setQi(function(i){return Math.max(0,i-1);});setCh(null);
       }
       setAnim('in');
     },260);
   }
 
-  useEffect(function(){setAnim('in');},[qi,done]);
+  function qTouchStart(e){txRef.current=e.touches[0].clientX;isSwipeRef.current=false;}
+  function qTouchMove(e){
+    if(txRef.current===null)return;
+    if(Math.abs(e.touches[0].clientX-txRef.current)>20) isSwipeRef.current=true;
+  }
+  function qTouchEnd(e){
+    if(txRef.current===null)return;
+    var dx=e.changedTouches[0].clientX-txRef.current;
+    txRef.current=null;
+    if(!isSwipeRef.current||!answered)return;
+    if(dx<-40) goQ('next');
+    else if(dx>40&&qi>0) goQ('prev');
+  }
 
+  // NOW safe to do conditional renders — all hooks are above
   if(done){
-    const pct=Math.round(sc/qs.length*100);
+    var pct=Math.round(sc/qs.length*100);
+    var msg=pct>=80?'Excellent — concepts are clear.':pct>=50?'Good effort. Review a few areas.':'Go through the cards once more.';
     return(
-      <div className="qres" style={{
-        transition:'transform .35s cubic-bezier(.22,1,.36,1),opacity .35s',
-        animation:'scaleIn .35s cubic-bezier(.22,1,.36,1) both',
-      }}>
+      <div className="qres">
         <div className="qsb">{pct}%</div>
-        <div className="qrs">{sc} of {qs.length} correct<br/>{pct>=80?'Excellent — concepts are clear.':pct>=50?'Good effort. Review a few areas.':'Go through the cards once more.'}</div>
-        <button className="rbtn" onClick={function(){setQi(0);setCh(null);setSc(0);setDone(false);}}>Retry</button>
+        <div className="qrs">{sc} out of {qs.length} correct<br/>{msg}</div>
+        <button className="rbtn" onClick={function(){setQi(0);setCh(null);setSc(0);setDone(false);}}>Retry Quiz</button>
       </div>
     );
   }
 
-  const q=qs[qi];
-  const answered=ch!==null;
-
-  const animStyle={
-    transition:'transform .26s cubic-bezier(.4,0,.2,1), opacity .26s ease',
-    transform: anim==='in'?'scale(1)':anim==='out-left'?'scale(0.9) translateX(-30px)':'scale(0.9) translateX(30px)',
-    opacity: anim==='in'?1:0,
+  var q=qs[qi];
+  var answered=ch!==null;
+  var animStyle={
+    transition:'transform .26s cubic-bezier(.4,0,.2,1),opacity .26s ease',
+    transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.9) translateX(-30px)':'scale(0.9) translateX(30px)',
+    opacity:anim==='in'?1:0,
   };
 
-  const qTouchStart=useRef(null);
-  const qTouchDx=useRef(0);
-  function onQTouchStart(e){qTouchStart.current=e.touches[0].clientX;qTouchDx.current=0;}
-  function onQTouchMove(e){if(qTouchStart.current===null)return;qTouchDx.current=e.touches[0].clientX-qTouchStart.current;}
-  function onQTouchEnd(){
-    var dx=qTouchDx.current;
-    qTouchStart.current=null;qTouchDx.current=0;
-    if(!answered||Math.abs(dx)<40)return;
-    if(dx<-40)goQ('next');
-    else if(dx>40&&qi>0)goQ('prev');
-  }
-
   return(
-    <div className="qw" onTouchStart={onQTouchStart} onTouchMove={onQTouchMove} onTouchEnd={onQTouchEnd}>
+    <div className="qw" onTouchStart={qTouchStart} onTouchMove={qTouchMove} onTouchEnd={qTouchEnd}>
       <div className="qpr">
         <div className="qtr"><div className="qf" style={{width:(qi/qs.length*100)+'%'}}/></div>
         <span className="qst">{qi+1}/{qs.length}</span>
       </div>
-
-      <div style={animStyle}
-        onTouchStart={function(e){txRef.current=e.touches[0].clientX;}}
-        onTouchEnd={function(e){
-          var dx=e.changedTouches[0].clientX-txRef.current;
-          if(answered&&dx<-50&&qi<qs.length-1)goQ('next');
-          else if(answered&&dx>50&&qi>0)goQ('prev');
-        }}>
+      <div style={animStyle}>
         <div className="qq">{q.question}</div>
         <div className="og">
           {q.options.map(function(o,i){
@@ -704,36 +712,32 @@ function Quiz({qs}){
               else if(i===ch&&ch!==q.correct)cls+=' wrg';
             }
             return(
-              <button key={i} className={cls} onClick={function(){
+              <button key={i} className={cls} disabled={answered} onClick={function(){
                 if(answered)return;
                 setCh(i);
                 if(i===q.correct)setSc(function(s){return s+1;});
-              }} disabled={answered}>
+              }}>
                 <span style={{opacity:.35,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}}>{['A','B','C','D'][i]}</span>{o}
               </button>
             );
           })}
         </div>
         {answered&&(
-          <>
+          <div>
             <div className="qex"><strong>{ch===q.correct?'Correct. ':'Incorrect. '}</strong>{q.explanation}</div>
             <button className="nx" onClick={function(){goQ('next');}}>
               {qi===qs.length-1?'See results':'Next →'}
             </button>
-          </>
+          </div>
         )}
       </div>
-
-      {/* Dot indicators */}
       <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:18}}>
         {qs.map(function(_,i){
           return(
             <div key={i} style={{
-              width: i===qi?18:6,
-              height:6,
-              borderRadius:3,
-              background: i===qi?'var(--accent)':'var(--muted2)',
-              transition:'width .35s cubic-bezier(.22,1,.36,1), background .2s',
+              width:i===qi?18:6,height:6,borderRadius:3,
+              background:i===qi?'var(--accent)':'var(--muted2)',
+              transition:'width .35s cubic-bezier(.22,1,.36,1),background .2s',
             }}/>
           );
         })}
