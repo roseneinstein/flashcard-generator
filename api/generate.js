@@ -9,20 +9,21 @@ export default async function handler(req, res) {
 
   const prompt = `You are a study assistant for Indian competitive exams.
 
-Return ONLY a valid JSON object. No markdown. No code fences. No extra text.
+Return ONLY a valid JSON object. Absolutely nothing else — no explanation, no markdown, no code fences.
 
-Schema:
+Use this exact schema:
 {"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}]}
 
-STRICT RULES — violations break the parser:
-1. Exactly ${count} flashcard objects in the flashcards array.
-2. Exactly 5 quiz objects in the quiz array.
-3. No newlines or tabs inside any string value — one line only.
-4. Separate points with pipe: "first point | second point | third point"
-5. NO double-quote characters inside string values. Use a comma instead.
-6. NO trailing commas after the last item in any array or object.
-7. NO single quotes anywhere. All keys and values use double quotes.
-8. correct is an integer 0-3.
+RULES:
+1. flashcards array must have exactly ${count} objects.
+2. quiz array must have exactly 5 objects.
+3. Every string value must be on a single line — no newlines or tabs inside strings.
+4. In "points", separate items with " | " (space pipe space).
+5. Inside any string value: do NOT use double-quote characters. Rephrase instead.
+6. Inside any string value: do NOT use backslashes.
+7. NO trailing commas. The last item in every array or object has no comma after it.
+8. All keys must be double-quoted. No single quotes anywhere.
+9. "correct" must be an integer (0, 1, 2, or 3) — not a string.
 
 Study notes:
 ${text.substring(0, 2000)}`;
@@ -36,6 +37,7 @@ ${text.substring(0, 2000)}`;
         max_tokens: 3500,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -44,72 +46,43 @@ ${text.substring(0, 2000)}`;
 
     let raw = data.choices[0].message.content.trim();
 
-    // 1. Strip markdown fences
+    // Strip any accidental markdown fences
     raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
-    // 2. Extract outermost { ... }
+    // Slice to outermost { }
     const first = raw.indexOf('{');
     const last  = raw.lastIndexOf('}');
     if (first === -1 || last === -1) return res.status(500).json({ error: 'AI did not return JSON' });
     raw = raw.slice(first, last + 1);
 
-    // 3. Replace all real whitespace control chars with a space
+    // Collapse real whitespace control chars (newlines/tabs) inside JSON
     raw = raw.replace(/[\r\n\t\x0B\x0C]+/g, ' ');
 
-    // 4. Multi-pass repair
-    raw = repair(raw);
+    // Repair: trailing commas before } or ]
+    raw = raw.replace(/,\s*([}\]])/g, '$1');
 
+    // Parse — if this fails, the model sent something structurally broken
+    // that we cannot safely auto-repair without corrupting content.
     try {
       const parsed = JSON.parse(raw);
+
+      // Validate shape
+      if (!Array.isArray(parsed.flashcards) || !Array.isArray(parsed.quiz)) {
+        return res.status(500).json({ error: 'AI response missing flashcards or quiz array' });
+      }
+
       return res.status(200).json(parsed);
     } catch (e) {
-      return res.status(500).json({ error: 'AI returned malformed JSON: ' + e.message });
+      // Return raw snippet to help debug (first 300 chars around error position)
+      const pos = parseInt((e.message.match(/position (\d+)/) || [])[1]) || 0;
+      const snippet = raw.substring(Math.max(0, pos - 80), pos + 80);
+      return res.status(500).json({
+        error: 'JSON parse failed: ' + e.message,
+        snippet,
+      });
     }
 
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Something went wrong' });
   }
-}
-
-function repair(s) {
-  // --- pass 1: trailing commas before ] or } ---
-  // e.g.  ,"value",}  →  ,"value"}
-  s = s.replace(/,\s*([}\]])/g, '$1');
-
-  // --- pass 2: single-quoted keys/values → double-quoted ---
-  // only fire when a single-quote appears right after { , [ or : (structural positions)
-  s = s.replace(/(['"])(.*?)\1\s*:/g, (match, q, key) => `"${key}":`);
-
-  // --- pass 3: unescaped double-quotes INSIDE string values ---
-  // Walk char by char; when inside a string, escape any " not preceded by \
-  let out = '';
-  let inStr = false;
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (inStr) {
-      if (c === '\\') {
-        out += c + s[++i];          // skip escaped char
-        continue;
-      }
-      if (c === '"') {
-        // Is this a legitimate closing quote?
-        // Next non-space char must be structural: : , ] } or end
-        let j = i + 1;
-        while (j < s.length && s[j] === ' ') j++;
-        const nx = s[j];
-        if (!nx || nx === ':' || nx === ',' || nx === ']' || nx === '}') {
-          inStr = false;
-          out += '"';
-        } else {
-          out += '\\"';             // rogue quote — escape it
-        }
-        continue;
-      }
-      out += c;
-    } else {
-      if (c === '"') { inStr = true; out += '"'; continue; }
-      out += c;
-    }
-  }
-  return out;
 }
