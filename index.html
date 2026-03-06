@@ -95,8 +95,16 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;position:relative;overflow:clip}
 .h-glow{position:absolute;width:800px;height:600px;background:radial-gradient(ellipse,rgba(232,213,176,0.07) 0%,transparent 65%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
 
-.h-line{font-size:clamp(2.4rem,5.5vw,4rem);letter-spacing:-0.03em;font-family:'Instrument Serif',serif;color:var(--accent);margin-bottom:16px;animation:fu .55s ease both;position:relative;z-index:2;font-weight:400;line-height:1}
+.h-line{font-size:clamp(2.4rem,5.5vw,4rem);letter-spacing:-0.03em;font-family:'Instrument Serif',serif;color:var(--accent);margin-bottom:16px;animation:fu .55s ease both;position:relative;z-index:2;font-weight:400;line-height:1.18}
 html.light .h-line{color:var(--accent)}
+html.light html.light html.light html.light html.light @keyframes crown-glow{
+  0%,100%{filter:drop-shadow(0 1px 4px rgba(255,200,40,0.5)) drop-shadow(0 0 2px rgba(255,215,0,0.25));}
+  50%{filter:drop-shadow(0 1px 8px rgba(255,220,60,0.95)) drop-shadow(0 0 6px rgba(255,200,0,0.55));}
+}
+html.light html.light html.light html.light html.light html.light @keyframes crown-glow-red{
+  0%,100%{filter:drop-shadow(0 1px 4px rgba(180,0,0,0.45)) drop-shadow(0 0 2px rgba(200,20,20,0.25));}
+  50%{filter:drop-shadow(0 1px 8px rgba(220,0,0,0.9)) drop-shadow(0 0 6px rgba(180,0,0,0.5));}
+}
 
 /* ── HEADLINE: biggest text users actually read on screen ── */
 h1{
@@ -983,7 +991,9 @@ function App(){
     /* HERO */
     e('section',{className:'hero'},
       e('div',{className:'h-glow'}),
-      e('div',{className:'h-line'},'CogniSwift'),
+      e('div',{className:'h-line'},
+        e('span',{style:{fontWeight:600}},'C'),'ogniSwift'
+      ),
       e('h1',null,'Notes become',e('br'),' ',e('em',null,'flashcards')),
       e('p',{className:'h-sub'},'Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.'),
       e('div',{className:'pill-row'},
