@@ -756,14 +756,22 @@ function App(){
   function selectAllShare(){var init={};cards.forEach(function(_,i){init[i]=true;});setShareSel(init);setShareUrl('');}
   function selectNoneShare(){setShareSel({});setShareUrl('');}
   function encodeCards(arr){
-    var json=JSON.stringify(arr);
-    var b64=btoa(unescape(encodeURIComponent(json)));
+    var compact=arr.map(function(c){
+      var t=(c.topic||'').substring(0,80);
+      var pts=(c.points||'').split('|').slice(0,4).map(function(p){return p.trim();}).join('|');
+      return t+'\x01'+pts;
+    }).join('\x02');
+    var b64=btoa(unescape(encodeURIComponent(compact)));
     return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
   }
   function decodeCards(str){
     var b64=str.replace(/-/g,'+').replace(/_/g,'/');
     while(b64.length%4)b64+='=';
-    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+    var compact=decodeURIComponent(escape(atob(b64)));
+    return compact.split('\x02').map(function(s){
+      var i=s.indexOf('\x01');
+      return {topic:i>=0?s.substring(0,i):s,points:i>=0?s.substring(i+1):''};
+    });
   }
   function buildShareUrl(){
     var sel=cards.filter(function(_,i){return shareSel[i];});
