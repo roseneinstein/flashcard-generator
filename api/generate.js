@@ -15,7 +15,7 @@ Read the study notes carefully. Extract specific, exam-relevant facts — not va
 Return ONLY a valid JSON object. No markdown, no code fences, nothing else.
 
 Schema:
-{"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}]}
+{"flashcards":[{"topic":"string","points":"string"}],"suggested_quiz_counts":[5],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}]}
 
 FLASHCARD RULES — read carefully:
 
@@ -131,11 +131,21 @@ ${text.substring(0, 3500)}`;
       raw = raw.replace(/,\s*([}\]])/g, '$1');
 
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed.flashcards) || !Array.isArray(parsed.quiz)) {
+      if (!Array.isArray(parsed.flashcards) || !Array.isArray(parsed.quiz) || !parsed.quiz.length) {
         lastError = 'Response shape invalid'; continue;
       }
 
       parsed.flashcards = deduplicateTopics(parsed.flashcards);
+      // Normalise suggested_quiz_counts
+      if (!Array.isArray(parsed.suggested_quiz_counts) || !parsed.suggested_quiz_counts.length) {
+        parsed.suggested_quiz_counts = [5];
+      }
+      // Cap to what was actually generated, in multiples of 5
+      const maxQ = parsed.quiz.length;
+      parsed.suggested_quiz_counts = parsed.suggested_quiz_counts
+        .filter(n => Number.isInteger(n) && n >= 5 && n <= maxQ)
+        .sort((a,b) => a-b);
+      if (!parsed.suggested_quiz_counts.length) parsed.suggested_quiz_counts = [Math.min(5, maxQ)];
       return res.status(200).json(parsed);
 
     } catch (err) {
