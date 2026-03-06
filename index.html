@@ -1009,6 +1009,8 @@ function App(){
 
   // ── Pro state ──
   var showWsS=useState(false),setShowWs=showWsS[1];var showWs=showWsS[0];
+  var wsTabS=useState('sets'),setWsTab=wsTabS[1];var wsTab=wsTabS[0];
+  var regenCountS=useState(function(){try{var s=JSON.parse(localStorage.getItem('cs_regen')||'{}');var t=new Date().toDateString();return s.d===t?s.c||0:0;}catch(e){return 0;}}),setRegenCount=regenCountS[1];var regenCount=regenCountS[0];
   var savedSetsS=useState([]),setSavedSets=savedSetsS[1];var savedSets=savedSetsS[0];
   var showSaveS=useState(false),setShowSave=showSaveS[1];var showSave=showSaveS[0];
   var saveNameS=useState(''),setSaveName=saveNameS[1];var saveName=saveNameS[0];
@@ -1352,21 +1354,38 @@ function App(){
     if(speaking){window.speechSynthesis.cancel();setSpeaking(false);}
   },[ci]);
 
-  // ── Pro: regenerate single card ──
+  // ── Pro: regenerate single card (5/day limit, topic-targeted) ──
   async function regenCard(idx){
     if(!isPro()&&!isElite()){setPw(true);return;}
+    if(regenCount>=5){st('Redo limit reached — max 5 per day');return;}
+    var card=cards[idx];
+    if(!card){return;}
     var txt=itab==='text'?notes:pdfTxt;
-    if(!txt.trim()){st('Original notes not available — regenerate all cards instead');return;}
+    if(!txt.trim()){st('Notes not available — paste your notes first, then redo');return;}
     setRegenIdx(idx);
     try{
-      var res=await callAI(txt,1);
-      if(res.flashcards&&res.flashcards.length){
+      // Send a targeted prompt: same topic, different points, from the same source text
+      var r=await fetch('/api/regen-card',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          text:txt.substring(0,getCharLimit()),
+          topic:card.topic,
+          existing_points:card.points,
+        }),
+      });
+      if(!r.ok){var ed=await r.json().catch(function(){return{};});throw new Error(ed.error||'Server error');}
+      var data=await r.json();
+      if(data.topic&&data.points){
         var updated=cards.slice();
-        updated[idx]=res.flashcards[0];
+        updated[idx]={topic:data.topic,points:data.points};
         setCards(updated);
-        st('Card regenerated');
+        var newCount=regenCount+1;
+        setRegenCount(newCount);
+        try{localStorage.setItem('cs_regen',JSON.stringify({d:new Date().toDateString(),c:newCount}));}catch(e){}
+        st('Card refreshed — '+(5-newCount)+' redos left today');
       }
-    }catch(err){st('Regen failed: '+err.message);}
+    }catch(err){st('Redo failed: '+err.message);}
     finally{setRegenIdx(null);}
   }
 
@@ -1414,6 +1433,12 @@ function App(){
                   e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}},user.tier||'free')
                 ),
                 (user.tier==='free')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
+                (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');setShowWs(true);}},
+                  '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
+                ),
+                (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('history');setShowWs(true);}},
+                  '📊 Progress & History'
+                ),
                 e('button',{className:'user-drop-item danger',onClick:logout},'Sign out')
               )
             )
@@ -1481,13 +1506,24 @@ function App(){
               className:'cb cb-custom',
               min:1,
               max:isElite()?50:30,
-              placeholder:'#',
-              title:isElite()?'Type 1–50':'Type 1–30',
-              style:{width:52,textAlign:'center'},
+              placeholder:isElite()?'1-50':'1-30',
+              title:isElite()?'Custom count: 1–50':'Custom count: 1–30',
+              style:{width:64,textAlign:'center'},
+              onKeyDown:function(ev){
+                // block e, +, - keys
+                if(['e','E','+','-'].indexOf(ev.key)>=0)ev.preventDefault();
+              },
+              onBlur:function(ev){
+                var v=parseInt(ev.target.value,10);
+                var mx=isElite()?50:30;
+                if(isNaN(v)||v<1){ev.target.value='';return;}
+                if(v>mx){ev.target.value=mx;setCnt(mx);st('Max '+mx+' cards for your plan');return;}
+                setCnt(v);
+              },
               onChange:function(ev){
                 var v=parseInt(ev.target.value,10);
-                var max=isElite()?50:30;
-                if(v>=1&&v<=max)setCnt(v);
+                var mx=isElite()?50:30;
+                if(!isNaN(v)&&v>=1&&v<=mx)setCnt(v);
               }
             })
           ),
@@ -1615,66 +1651,114 @@ function App(){
     showWs&&e('div',{className:'ws-ov',onClick:function(ev){if(ev.target===ev.currentTarget)setShowWs(false);}},
       e('div',{className:'ws-box'},
         e('div',{className:'ws-head'},
-          e('div',{className:'ws-title'},'My Sets'),
-          e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
+          e('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+            e('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between'}},
+              e('div',{className:'ws-title'},'My Workspace'),
+              e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
+            ),
+            e('div',{style:{display:'flex',gap:6}},
+              ['sets','history','mistakes'].map(function(tab){
+                var labels={sets:'📚 Saved Sets',history:'📊 Quiz History',mistakes:'✗ Mistakes'};
+                var counts={sets:savedSets.length,history:quizHist.length,mistakes:mistakes.length};
+                return e('button',{key:tab,
+                  onClick:function(){setWsTab(tab);},
+                  style:{
+                    padding:'5px 12px',border:'1px solid',borderRadius:'50px',
+                    fontSize:'0.72rem',cursor:'none',fontFamily:'Geist,sans-serif',
+                    background:wsTab===tab?'var(--accent)':'transparent',
+                    color:wsTab===tab?'var(--bg)':'var(--muted)',
+                    borderColor:wsTab===tab?'var(--accent)':'var(--border)',
+                    transition:'all .2s',
+                  }
+                },labels[tab]+(counts[tab]?' ('+counts[tab]+')':''));
+              })
+            )
+          )
         ),
         e('div',{className:'ws-body'},
-          savedSets.length===0&&mistakes.length===0
-            ? e('div',{className:'ws-empty'},
-                e('div',{style:{fontSize:'2rem',marginBottom:12}},'📚'),
-                'No saved sets yet.',e('br'),
-                'Generate cards and click “💾 Save” to keep your work here.'
-              )
-            : e(React.Fragment,null,
-                savedSets.length>0&&e(React.Fragment,null,
-                  e('div',{style:{fontSize:'0.72rem',color:'var(--accent)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:12,fontWeight:500}},'Saved Sets'),
-                  e('div',{className:'ws-grid'},
-                    savedSets.map(function(s){
-                      return e('div',{key:s.id,className:'ws-card'},
-                        e('div',{className:'ws-card-name'},s.name),
-                        e('div',{className:'ws-card-meta'},
-                          e('span',null,(s.cards&&s.cards.length||0)+' cards'),
-                          e('span',null,(s.quiz&&s.quiz.length||0)+' quiz Qs'),
-                          e('span',null,new Date(s.savedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
-                        ),
-                        e('div',{className:'ws-card-actions'},
-                          e('button',{className:'ws-btn',onClick:function(){loadSet(s);}},'Load'),
-                          e('button',{className:'ws-btn del',onClick:function(){deleteSet(s.id);}},'Delete')
-                        )
-                      );
-                    })
-                  )
-                ),
-                mistakes.length>0&&(isPro()||isElite())&&e('div',{className:'mist-section'},
-                  e('div',{className:'mist-head'},
-                    'Mistakes ('+mistakes.length+')',
-                    e('button',{style:{marginLeft:10,fontSize:'0.65rem',color:'var(--muted)',background:'none',border:'none',cursor:'none',textDecoration:'underline'},onClick:clearMistakes},'clear all')
-                  ),
-                  mistakes.slice(0,30).map(function(m){
-                    return e('div',{key:m.id,className:'mist-item'},
-                      e('div',null,
-                        e('div',null,m.question),
-                        e('div',{className:'mist-set'},'from: '+m.setName+' · '+new Date(m.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
-                      )
-                    );
-                  })
-                ),
-                quizHist.length>0&&(isPro()||isElite())&&e('div',{className:'mist-section'},
-                  e('div',{className:'mist-head'},'Quiz History'),
-                  quizHist.slice(0,20).map(function(q){
-                    return e('div',{key:q.id,className:'qh-item'},
-                      e('div',{className:'qh-left'},
-                        e('div',null,q.setName),
-                        e('div',{className:'qh-date'},new Date(q.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}))
+
+          /* ── SETS TAB ── */
+          wsTab==='sets'&&(
+            savedSets.length===0
+              ? e('div',{className:'ws-empty'},
+                  e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📚'),
+                  'No saved sets yet.',e('br'),
+                  e('span',{style:{color:'var(--muted)'}},'Generate cards then click '),
+                  e('strong',{style:{color:'var(--accent)'}},'💾 Save set'),
+                  e('span',{style:{color:'var(--muted)'}},' to store your work here.')
+                )
+              : e('div',{className:'ws-grid'},
+                  savedSets.map(function(s){
+                    return e('div',{key:s.id,className:'ws-card'},
+                      e('div',{className:'ws-card-name'},s.name),
+                      e('div',{className:'ws-card-meta'},
+                        e('span',null,(s.cards&&s.cards.length||0)+' cards'),
+                        e('span',null,'·'),
+                        e('span',null,(s.quiz&&s.quiz.length||0)+' quiz Qs'),
+                        e('span',null,'·'),
+                        e('span',null,new Date(s.savedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}))
                       ),
-                      e('div',{style:{textAlign:'right'}},
-                        e('div',{className:'qh-score'},q.score+'/'+q.total),
-                        e('div',{style:{fontSize:'0.65rem',color:'var(--muted)'}},Math.round(q.score/q.total*100)+'%')
+                      e('div',{className:'ws-card-actions'},
+                        e('button',{className:'ws-btn',onClick:function(){loadSet(s);}},'Load →'),
+                        e('button',{className:'ws-btn del',onClick:function(){deleteSet(s.id);}},'Delete')
                       )
                     );
                   })
                 )
-              )
+          ),
+
+          /* ── HISTORY TAB ── */
+          wsTab==='history'&&(
+            quizHist.length===0
+              ? e('div',{className:'ws-empty'},
+                  e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📊'),
+                  'No quiz history yet.',e('br'),
+                  e('span',{style:{color:'var(--muted)'}},'Complete a quiz and your scores will appear here.')
+                )
+              : e('div',null,
+                  quizHist.map(function(q){
+                    var pct=Math.round(q.score/q.total*100);
+                    var col=pct>=80?'var(--green)':pct>=50?'var(--accent)':'var(--red)';
+                    return e('div',{key:q.id,className:'qh-item'},
+                      e('div',{className:'qh-left'},
+                        e('div',{style:{fontWeight:500,fontSize:'0.82rem'}},q.setName),
+                        e('div',{className:'qh-date'},new Date(q.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}))
+                      ),
+                      e('div',{style:{textAlign:'right',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}},
+                        e('div',{style:{fontSize:'1rem',fontWeight:600,color:col}},pct+'%'),
+                        e('div',{style:{fontSize:'0.68rem',color:'var(--muted)'}},q.score+' / '+q.total+' correct')
+                      )
+                    );
+                  })
+                )
+          ),
+
+          /* ── MISTAKES TAB ── */
+          wsTab==='mistakes'&&(
+            mistakes.length===0
+              ? e('div',{className:'ws-empty'},
+                  e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'✓'),
+                  'No mistakes recorded.',e('br'),
+                  e('span',{style:{color:'var(--muted)'}},'Wrong quiz answers will appear here so you can review them.')
+                )
+              : e('div',null,
+                  e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
+                    e('button',{
+                      onClick:clearMistakes,
+                      style:{fontSize:'0.7rem',color:'var(--muted)',background:'none',border:'1px solid var(--border)',borderRadius:'6px',padding:'5px 10px',cursor:'none',fontFamily:'Geist,sans-serif'}
+                    },'Clear all')
+                  ),
+                  mistakes.map(function(m){
+                    return e('div',{key:m.id,className:'mist-item'},
+                      e('div',{style:{flex:1}},
+                        e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:4}},m.question),
+                        e('div',{className:'mist-set'},'from: '+m.setName+' · '+new Date(m.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
+                      )
+                    );
+                  })
+                )
+          )
+
         )
       )
     ),
