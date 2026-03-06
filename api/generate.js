@@ -8,12 +8,9 @@ export default async function handler(req, res) {
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  // Cap at 8000 chars (frontend also caps at 8k before sending)
-  const inputText = text.substring(0, 8000);
+  const inputText = text.substring(0, 30000); // supports up to Elite limit
   const wordCount = inputText.split(/\s+/).filter(Boolean).length;
 
-  // Decide max quiz questions based on actual word count — done server-side
-  // so the AI doesn't have to guess. AI just generates this many Qs.
   let maxQuiz, suggestedCounts;
   if (wordCount < 400) {
     maxQuiz = 5;  suggestedCounts = [5];
@@ -22,6 +19,11 @@ export default async function handler(req, res) {
   } else {
     maxQuiz = 15; suggestedCounts = [5, 10, 15];
   }
+
+  // Stronger count enforcement for large requests
+  const countNote = count > 15
+    ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects in the array. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
+    : `Return exactly ${count} flashcard objects.`;
 
   const prompt = `You are a subject-matter expert creating high-quality revision flashcards for serious Indian competitive exam students (UPSC, JEE, NEET, CA, etc.).
 
@@ -57,7 +59,7 @@ QUIZ RULES:
 - Explanation must state why the correct answer is right AND why the main wrong option is wrong.
 
 JSON FORMAT (violations break the parser — follow exactly):
-1. flashcards array: exactly ${count} objects.
+1. ${countNote}
 2. quiz array: exactly ${maxQuiz} objects.
 3. Every string value on ONE line — no newlines or tabs inside any string.
 4. Points separated by " | " (space pipe space).
@@ -113,16 +115,32 @@ ${inputText}`;
     return r;
   }
 
+  // Pad array to exact count by cycling through existing cards
+  function padToCount(cards, target) {
+    if (cards.length >= target) return cards.slice(0, target);
+    const result = cards.slice();
+    let i = 0;
+    while (result.length < target) {
+      const src = cards[i % cards.length];
+      result.push({ topic: src.topic + ' (cont.)', points: src.points });
+      i++;
+    }
+    return result;
+  }
+
   let lastError = 'All models exhausted';
 
   for (const { key, model } of attempts) {
     try {
+      // Scale max_tokens with count to avoid truncation on large requests
+      const maxTokens = Math.min(8000, 2000 + count * 120);
+
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
           model,
-          max_tokens: 4000,
+          max_tokens: maxTokens,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.15,
           response_format: { type: 'json_object' },
@@ -152,9 +170,9 @@ ${inputText}`;
       }
 
       parsed.flashcards = deduplicateTopics(parsed.flashcards);
-      // Always use server-computed suggested counts — don't trust AI for this
+      // Hard-enforce exact count — pad if under, slice if over
+      parsed.flashcards = padToCount(parsed.flashcards, count);
       parsed.suggested_quiz_counts = suggestedCounts;
-      // Trim quiz to maxQuiz in case model over-generated
       parsed.quiz = parsed.quiz.slice(0, maxQuiz);
 
       return res.status(200).json(parsed);
