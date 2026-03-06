@@ -972,12 +972,23 @@ function App(){
       return {topic:topic,points:pts};
     });
   }
-  function buildShareUrl(){
+  async function buildShareUrl(){
     var sel=cards.filter(function(_,i){return shareSel[i];});
     if(!sel.length){st('Select at least one card');return;}
-    var payload=encodeCards(sel);
-    var url=window.location.origin+'/#cards='+payload;
-    setShareUrl(url);
+    st('Creating link…');
+    try{
+      // Compact cards for storage — topic + points only
+      var payload=sel.map(function(c){return {topic:c.topic||'',points:c.points||''};});
+      var r=await fetch('/api/share',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({cards:payload})
+      });
+      var data=await r.json();
+      if(data.error)throw new Error(data.error);
+      var url=window.location.origin+'/s/'+data.id;
+      setShareUrl(url);
+    }catch(err){st('Could not create link: '+err.message);}
   }
   function copyShareUrl(){
     if(!shareUrl){buildShareUrl();return;}
@@ -996,25 +1007,44 @@ function App(){
   var usage=getUsage(),pro=isPro();
   function st(m){setToast(m);clearTimeout(tt.current);tt.current=setTimeout(function(){setToast('');},2700);}
 
-  function loadFromHash(){
-    try{
-      var href=window.location.href;
-      var idx=href.indexOf('#cards=');
-      if(idx===-1)return;
-      var raw=href.slice(idx+7);
-      if(!raw)return;
-      var parsed=decodeCards(raw);
-      if(Array.isArray(parsed)&&parsed.length){
-        setCards(parsed);setCi(0);setRtab('cards');
-        setTimeout(function(){var el=document.getElementById('ra');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},400);
-        st(parsed.length+' shared cards loaded');
-      }
-    }catch(err){/* malformed — ignore */}
-  }
+  // Load shared cards — supports new short URLs (/s/XXXXX) and old #cards= hash URLs
   useEffect(function(){
-    loadFromHash();
-    window.addEventListener('hashchange',loadFromHash);
-    return function(){window.removeEventListener('hashchange',loadFromHash);};
+    async function loadShared(){
+      // New short URL: path starts with /s/
+      var path=window.location.pathname;
+      var shortMatch=path.match(/^\/s\/([a-z0-9]+)$/i);
+      if(shortMatch){
+        var id=shortMatch[1];
+        st('Loading shared cards…');
+        try{
+          var r=await fetch('/api/s/'+id);
+          var data=await r.json();
+          if(data.cards&&data.cards.length){
+            setCards(data.cards);setCi(0);setRtab('cards');
+            setTimeout(function(){var el=document.getElementById('ra');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},400);
+            st(data.cards.length+' shared cards loaded');
+          } else {
+            st('Share link not found or expired');
+          }
+        }catch(err){st('Could not load shared cards');}
+        return;
+      }
+      // Legacy: old #cards= hash URL
+      try{
+        var href=window.location.href;
+        var idx=href.indexOf('#cards=');
+        if(idx===-1)return;
+        var raw=href.slice(idx+7);
+        if(!raw)return;
+        var parsed=decodeCards(raw);
+        if(Array.isArray(parsed)&&parsed.length){
+          setCards(parsed);setCi(0);setRtab('cards');
+          setTimeout(function(){var el=document.getElementById('ra');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},400);
+          st(parsed.length+' shared cards loaded');
+        }
+      }catch(err){/* malformed — ignore */}
+    }
+    loadShared();
   },[]);
 
   // On mount: check for OAuth token in URL hash (after Google redirect) OR restore saved token
@@ -1368,7 +1398,7 @@ function App(){
               e('input',{type:'text',readOnly:true,value:shareUrl,onClick:function(ev){ev.target.select();}}),
               e('button',{className:'sh-copy',onClick:copyShareUrl},'Copy')
             )
-          : e('button',{className:'sh-copy',style:{width:'100%',padding:'11px',borderRadius:'var(--r-sm)',marginBottom:'10px'},onClick:buildShareUrl},'Generate link →'),
+          : e('button',{className:'sh-copy',style:{width:'100%',padding:'11px',borderRadius:'var(--r-sm)',marginBottom:'10px'},onClick:buildShareUrl},'Create short link →'),
         e('button',{className:'md',style:{marginTop:4},onClick:function(){setShowShare(false);}}, 'Close')
       )
     ),
