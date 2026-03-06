@@ -8,25 +8,48 @@ export default async function handler(req, res) {
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  const prompt = `You are a study assistant for Indian competitive exams.
+  const prompt = `You are a subject-matter expert creating high-quality revision flashcards for serious Indian competitive exam students (UPSC, JEE, NEET, CA, etc.).
 
-Return ONLY a valid JSON object. Nothing else — no explanation, no markdown, no code fences.
+Read the study notes carefully. Extract specific, exam-relevant facts — not vague summaries.
+
+Return ONLY a valid JSON object. No markdown, no code fences, nothing else.
 
 Schema:
 {"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}]}
 
-RULES:
-1. flashcards array must have exactly ${count} objects.
-2. quiz array must have exactly 5 objects.
-3. Every string value must be on a single line — no newlines or tabs inside strings.
-4. In "points", separate items with " | " (space pipe space).
-5. Inside any string value: do NOT use double-quote characters. Rephrase instead.
-6. NO trailing commas. Last item in every array or object has no comma after it.
-7. All keys must be double-quoted. No single quotes anywhere.
-8. "correct" must be an integer (0, 1, 2, or 3).
+FLASHCARD RULES — read carefully:
+
+topic:
+- Draw the topic name DIRECTLY from the content — use the actual term, article, concept, or sub-heading from the notes.
+- Every card must have a DISTINCT topic name. If the source genuinely needs two cards on the same concept (too much detail for one), append Roman numerals: "Osmosis (I)", "Osmosis (II)". Use Roman numerals ONLY in this case — not for variety.
+- Topics must be specific: NOT "Introduction" or "Overview" or "Key Points" — use the actual concept name.
+
+points (4–6 per card, pipe-separated):
+- Each point must state a SPECIFIC fact, definition, figure, date, name, formula, provision, or mechanism directly from the notes.
+- BAD (too generic): "It plays an important role in governance" — NEVER write this.
+- GOOD (specific): "Article 44 of DPSP directs the state to secure a Uniform Civil Code for citizens across India."
+- Include exact numbers, percentages, years, chemical symbols, statutory references, case names, unit values — whatever is in the source.
+- Preserve ALL technical terms, abbreviations, and domain jargon exactly as written in the source.
+- Match the register of the source: legal text stays formal, science stays precise, history stays factual with dates.
+- If the source contains Hindi transliterations, acronyms, or Latin terms — keep them verbatim in the relevant card.
+
+QUIZ RULES:
+- Test specific facts from the notes only — not general knowledge.
+- Distractors must be plausible alternatives from the same domain.
+- Explanation must state why the correct answer is right AND why the main wrong option is wrong.
+
+JSON FORMAT (violations break the parser):
+1. flashcards array: exactly ${count} objects.
+2. quiz array: exactly 5 objects.
+3. Every string value on ONE line — no newlines or tabs inside strings.
+4. Points separated by " | " (space pipe space).
+5. NO double-quote characters inside any string value — rephrase instead.
+6. NO trailing commas. Last item in every array/object has no comma after it.
+7. All JSON keys double-quoted. No single quotes anywhere.
+8. "correct" is an integer 0–3.
 
 Study notes:
-${text.substring(0, 2000)}`;
+${text.substring(0, 3500)}`;
 
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
@@ -42,19 +65,36 @@ ${text.substring(0, 2000)}`;
   ];
 
   function isRateLimit(status, errObj) {
-    // Catch every form Groq uses to signal quota/rate exhaustion
     if (status === 429 || status === 413) return true;
     if (!errObj) return false;
     const msg  = (errObj.message || '').toLowerCase();
     const code = (errObj.code    || '').toLowerCase();
-    const type = (errObj.type    || '').toLowerCase();
-    return (
-      msg.includes('rate')   || msg.includes('limit')  ||
-      msg.includes('quota')  || msg.includes('tpd')    ||
-      msg.includes('tokens per day') || msg.includes('try again') ||
-      code.includes('rate')  || code.includes('limit') ||
-      code.includes('quota') || type.includes('rate')
-    );
+    return msg.includes('rate')  || msg.includes('limit') || msg.includes('quota') ||
+           msg.includes('tpd')   || msg.includes('tokens per day') || msg.includes('try again') ||
+           code.includes('rate') || code.includes('limit') || code.includes('quota');
+  }
+
+  // Post-process: add Roman numerals to duplicate topic names
+  function deduplicateTopics(flashcards) {
+    const seen = {};
+    return flashcards.map(function(card) {
+      const base = (card.topic || '').replace(/\s*\(I+V?X?\)$/i, '').trim();
+      seen[base] = (seen[base] || 0) + 1;
+      return { ...card, _base: base, _n: seen[base] };
+    }).map(function(card) {
+      const total = seen[card._base];
+      const topic = total > 1
+        ? card._base + ' (' + toRoman(card._n) + ')'
+        : card._base;
+      return { topic, points: card.points };
+    });
+  }
+
+  function toRoman(n) {
+    const map = [[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+    let r = '';
+    for (const [v, s] of map) { while (n >= v) { r += s; n -= v; } }
+    return r;
   }
 
   let lastError = 'All models exhausted';
@@ -66,25 +106,20 @@ ${text.substring(0, 2000)}`;
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
           model,
-          max_tokens: 3000,
+          max_tokens: 3500,
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
+          temperature: 0.15,
           response_format: { type: 'json_object' },
         }),
       });
 
       const data = await groqRes.json();
-
       if (data.error) {
         lastError = data.error.message || JSON.stringify(data.error);
-        if (isRateLimit(groqRes.status, data.error)) {
-          continue; // try next model/key
-        }
-        // Only stop on auth errors; everything else retry
-        if (groqRes.status === 401 || groqRes.status === 403) {
+        if (isRateLimit(groqRes.status, data.error)) continue;
+        if (groqRes.status === 401 || groqRes.status === 403)
           return res.status(500).json({ error: 'Invalid API key — check Vercel env vars' });
-        }
-        continue; // unknown error → still try next
+        continue;
       }
 
       let raw = data.choices[0].message.content.trim();
@@ -100,6 +135,7 @@ ${text.substring(0, 2000)}`;
         lastError = 'Response shape invalid'; continue;
       }
 
+      parsed.flashcards = deduplicateTopics(parsed.flashcards);
       return res.status(200).json(parsed);
 
     } catch (err) {
