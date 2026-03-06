@@ -1069,7 +1069,7 @@ function App(){
           ),
           rtab==='quiz'&&(quiz.length>0
             ? (activeQuiz
-                ? e(Quiz,{qs:activeQuiz,onReset:function(){setActiveQuiz(null);setPickAnim(null);}})
+                ? e(Quiz,{qs:activeQuiz,onReset:quizCounts.length>1?function(){setActiveQuiz(null);setPickAnim(null);}:null})
                 : e('div',{className:'qpick'},
                     e('div',{className:'qpick-lbl'},'How many questions?'),
                     e('div',{className:'qpick-opts'},
