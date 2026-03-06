@@ -1247,12 +1247,32 @@ function App(){
         theme:{color:'#e8d5b0'},
         prefill:{email:user.email},
         handler:async function(response){
-          // Payment captured — webhook will update DB
-          // Optimistically update UI immediately
-          var upgraded={...user,tier:plan};
-          setUser(upgraded);setSession(upgraded);
-          setPw(false);
-          st('🎉 Welcome to '+(plan==='pro'?'Pro':'Elite')+'!');
+          st('Verifying payment…');
+          try{
+            var token=loadToken();
+            var vr=await fetch('/api/verify-payment',{
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({
+                razorpay_order_id:response.razorpay_order_id,
+                razorpay_payment_id:response.razorpay_payment_id,
+                razorpay_signature:response.razorpay_signature,
+                plan:plan,
+                access_token:token,
+              }),
+            });
+            var vd=await vr.json();
+            if(vd.success){
+              var upgraded=Object.assign({},user,{tier:plan});
+              setUser(upgraded);setSession(upgraded);
+              setPw(false);
+              st('🎉 Welcome to '+(plan==='pro'?'Pro':'Elite')+'!');
+            }else{
+              st('Payment received but upgrade failed — share this ID with support: '+response.razorpay_payment_id);
+            }
+          }catch(err){
+            st('Upgrade error — share this ID with support: '+response.razorpay_payment_id);
+          }
         },
         modal:{ondismiss:function(){st('Payment cancelled');}}
       });
