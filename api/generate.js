@@ -8,48 +8,66 @@ export default async function handler(req, res) {
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
+  // Send up to 8000 chars — enough for 3 full newspaper editorials
+  const inputText = text.substring(0, 8000);
+  const wordCount = inputText.split(/\s+/).filter(Boolean).length;
+
+  // Decide max quiz questions based on actual word count — done server-side
+  // so the AI doesn't have to guess. AI just generates this many Qs.
+  let maxQuiz, suggestedCounts;
+  if (wordCount < 350) {
+    maxQuiz = 5;  suggestedCounts = [5];
+  } else if (wordCount < 800) {
+    maxQuiz = 10; suggestedCounts = [5, 10];
+  } else {
+    maxQuiz = 15; suggestedCounts = [5, 10, 15];
+  }
+
   const prompt = `You are a subject-matter expert creating high-quality revision flashcards for serious Indian competitive exam students (UPSC, JEE, NEET, CA, etc.).
 
-Read the study notes carefully. Extract specific, exam-relevant facts — not vague summaries.
+The study notes below may cover MULTIPLE topics or editorials. You must cover ALL of them — do NOT focus only on the first topic. Distribute the ${count} flashcards proportionally across every topic present in the notes.
+
+Read carefully and extract specific, exam-relevant facts — not vague summaries.
 
 Return ONLY a valid JSON object. No markdown, no code fences, nothing else.
 
 Schema:
-{"flashcards":[{"topic":"string","points":"string"}],"suggested_quiz_counts":[5],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}]}
+{"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}]}
 
-FLASHCARD RULES — read carefully:
+FLASHCARD RULES:
 
 topic:
-- Draw the topic name DIRECTLY from the content — use the actual term, article, concept, or sub-heading from the notes.
-- Every card must have a DISTINCT topic name. If the source genuinely needs two cards on the same concept (too much detail for one), append Roman numerals: "Osmosis (I)", "Osmosis (II)". Use Roman numerals ONLY in this case — not for variety.
-- Topics must be specific: NOT "Introduction" or "Overview" or "Key Points" — use the actual concept name.
+- Draw the topic name DIRECTLY from the content. Cover all topics present — if there are 3 editorials, cards must come from all 3.
+- Every card must have a DISTINCT topic name. If one concept genuinely needs two cards, append Roman numerals: "Topic (I)", "Topic (II)". Use Roman numerals ONLY for this — not for variety.
+- Topics must be specific — NOT "Introduction" or "Overview". Use the actual concept, article, or term name.
 
-points (4–6 per card, pipe-separated):
-- Each point must state a SPECIFIC fact, definition, figure, date, name, formula, provision, or mechanism directly from the notes.
-- BAD (too generic): "It plays an important role in governance" — NEVER write this.
-- GOOD (specific): "Article 44 of DPSP directs the state to secure a Uniform Civil Code for citizens across India."
-- Include exact numbers, percentages, years, chemical symbols, statutory references, case names, unit values — whatever is in the source.
-- Preserve ALL technical terms, abbreviations, and domain jargon exactly as written in the source.
-- Match the register of the source: legal text stays formal, science stays precise, history stays factual with dates.
-- If the source contains Hindi transliterations, acronyms, or Latin terms — keep them verbatim in the relevant card.
+points (4-6 per card, pipe-separated " | "):
+- Each point must state a SPECIFIC fact, figure, date, name, formula, provision, case name, or mechanism from the notes.
+- BAD: "It plays an important role" — NEVER write this.
+- GOOD: "Article 44 of DPSP directs the state to secure a Uniform Civil Code for all citizens."
+- Include exact numbers, percentages, years, chemical symbols, statutory references.
+- Preserve ALL technical terms, abbreviations, jargon exactly as in the source.
+- Match the register of the source: legal stays formal, science stays precise, history stays factual with dates.
 
 QUIZ RULES:
-- Test specific facts from the notes only — not general knowledge.
+- Generate exactly ${maxQuiz} quiz questions.
+- Cover ALL topics in the notes — not just the first one.
+- Test specific facts from the notes only, not general knowledge.
 - Distractors must be plausible alternatives from the same domain.
 - Explanation must state why the correct answer is right AND why the main wrong option is wrong.
 
-JSON FORMAT (violations break the parser):
+JSON FORMAT (violations break the parser — follow exactly):
 1. flashcards array: exactly ${count} objects.
-2. quiz array: exactly 5 objects.
-3. Every string value on ONE line — no newlines or tabs inside strings.
+2. quiz array: exactly ${maxQuiz} objects.
+3. Every string value on ONE line — no newlines or tabs inside any string.
 4. Points separated by " | " (space pipe space).
 5. NO double-quote characters inside any string value — rephrase instead.
-6. NO trailing commas. Last item in every array/object has no comma after it.
+6. NO trailing commas anywhere.
 7. All JSON keys double-quoted. No single quotes anywhere.
-8. "correct" is an integer 0–3.
+8. "correct" is an integer 0-3, not a string.
 
 Study notes:
-${text.substring(0, 3500)}`;
+${inputText}`;
 
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
@@ -74,16 +92,14 @@ ${text.substring(0, 3500)}`;
            code.includes('rate') || code.includes('limit') || code.includes('quota');
   }
 
-  // Post-process: add Roman numerals to duplicate topic names
   function deduplicateTopics(flashcards) {
     const seen = {};
-    return flashcards.map(function(card) {
+    return flashcards.map(card => {
       const base = (card.topic || '').replace(/\s*\(I+V?X?\)$/i, '').trim();
       seen[base] = (seen[base] || 0) + 1;
       return { ...card, _base: base, _n: seen[base] };
-    }).map(function(card) {
-      const total = seen[card._base];
-      const topic = total > 1
+    }).map(card => {
+      const topic = seen[card._base] > 1
         ? card._base + ' (' + toRoman(card._n) + ')'
         : card._base;
       return { topic, points: card.points };
@@ -106,7 +122,7 @@ ${text.substring(0, 3500)}`;
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
           model,
-          max_tokens: 3500,
+          max_tokens: 4000,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.15,
           response_format: { type: 'json_object' },
@@ -136,16 +152,11 @@ ${text.substring(0, 3500)}`;
       }
 
       parsed.flashcards = deduplicateTopics(parsed.flashcards);
-      // Normalise suggested_quiz_counts
-      if (!Array.isArray(parsed.suggested_quiz_counts) || !parsed.suggested_quiz_counts.length) {
-        parsed.suggested_quiz_counts = [5];
-      }
-      // Cap to what was actually generated, in multiples of 5
-      const maxQ = parsed.quiz.length;
-      parsed.suggested_quiz_counts = parsed.suggested_quiz_counts
-        .filter(n => Number.isInteger(n) && n >= 5 && n <= maxQ)
-        .sort((a,b) => a-b);
-      if (!parsed.suggested_quiz_counts.length) parsed.suggested_quiz_counts = [Math.min(5, maxQ)];
+      // Always use server-computed suggested counts — don't trust AI for this
+      parsed.suggested_quiz_counts = suggestedCounts;
+      // Trim quiz to maxQuiz in case model over-generated
+      parsed.quiz = parsed.quiz.slice(0, maxQuiz);
+
       return res.status(200).json(parsed);
 
     } catch (err) {
