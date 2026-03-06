@@ -1337,6 +1337,9 @@ function App(){
       e('div',{className:'ft'},'Built for Indian students · 2025')
     ),
 
+    /* AUTH MODAL */
+    showAuth&&e(AuthModal,{onClose:function(){setShowAuth(false);}}),
+
     showShare&&e('div',{className:'sh-ov',onClick:function(ev){if(ev.target===ev.currentTarget)setShowShare(false);}},
       e('div',{className:'sh-mo'},
         e('h3',null,'Share flashcards'),
