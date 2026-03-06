@@ -459,6 +459,45 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 @keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes to2{from{opacity:1}to{opacity:0}}
 
+/* Share modal */
+.sh-ov{position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(14px);z-index:500;display:flex;align-items:center;justify-content:center;animation:fi2 .2s ease;padding:20px}
+.sh-mo{background:var(--surface);border:1px solid var(--border-h);border-radius:var(--r);padding:28px 24px;max-width:480px;width:100%;animation:su .32s cubic-bezier(.34,1.56,.64,1)}
+.sh-mo h3{font-family:'Instrument Serif',serif;font-size:1.4rem;margin-bottom:4px;letter-spacing:-0.02em}
+.sh-mo p{font-size:0.76rem;color:var(--muted);margin-bottom:18px;font-weight:300;line-height:1.6}
+.sh-list{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:18px}
+.sh-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);cursor:none;transition:border-color .15s,background .15s;text-align:left;background:transparent}
+.sh-item.sel{border-color:var(--accent);background:rgba(232,213,176,0.05)}
+.sh-item:hover:not(.sel){border-color:var(--border-h)}
+.sh-cb{width:14px;height:14px;border:1px solid var(--border-h);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.6rem;transition:all .15s}
+.sh-item.sel .sh-cb{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.sh-label{font-size:0.78rem;color:var(--text);font-weight:300;line-height:1.4;text-align:left}
+.sh-url{display:flex;gap:7px;margin-bottom:10px}
+.sh-url input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;font-family:'Geist',sans-serif;font-size:0.75rem;color:var(--muted);outline:none}
+.sh-copy{padding:9px 16px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--r-sm);font-family:'Geist',sans-serif;font-size:0.78rem;font-weight:500;cursor:none;white-space:nowrap;transition:opacity .2s}
+.sh-copy:hover{opacity:0.84}
+.sh-sel-row{display:flex;gap:8px;margin-bottom:12px}
+.sh-sel-btn{font-size:0.7rem;color:var(--muted);background:none;border:none;cursor:none;padding:0;text-decoration:underline;text-underline-offset:2px;transition:color .15s}
+.sh-sel-btn:hover{color:var(--text)}
+/* Testimonials */
+.test-wrap{padding:80px 24px;max-width:760px;margin:0 auto}
+.tg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:640px){.tg{grid-template-columns:1fr}}
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 20px;transition:border-color .2s}
+.tc:hover{border-color:var(--border-h)}
+.tc-q{font-size:0.82rem;color:var(--text);line-height:1.72;font-weight:300;margin-bottom:16px;font-style:italic}
+.tc-q::before{content:'“';font-family:'Instrument Serif',serif;font-size:1.2rem;color:var(--accent);line-height:0;vertical-align:-4px;margin-right:2px}
+.tc-name{font-size:0.72rem;color:var(--accent);font-weight:500;letter-spacing:0.03em}
+.tc-sub{font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:300}
+.disc{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);margin-top:10px}
+.disc-i{font-size:0.75rem;opacity:0.45;flex-shrink:0;margin-top:1px}
+.disc p{font-size:0.7rem;color:var(--muted);line-height:1.65;font-weight:300;margin:0}
+.pdf-disc{padding:8px 14px;border-top:1px solid var(--border);background:var(--surface2)}
+.pdf-disc p{font-size:0.68rem;color:var(--muted2);line-height:1.6;font-weight:300;margin:0;display:flex;align-items:flex-start;gap:6px}
+.pdf-disc p::before{content:'ℹ';font-size:0.65rem;opacity:0.5;flex-shrink:0;margin-top:1px}
+/* Disclaimer */
+.disc{font-size:0.68rem;color:var(--muted2);line-height:1.7;font-weight:300;text-align:center;padding:0 8px;margin-top:10px}
+.disc span{display:inline-flex;align-items:baseline;gap:4px}
+.disc-icon{opacity:0.45;font-size:0.65rem}
 /* Reveal */
 .rev{opacity:0;transform:translateY(20px);transition:opacity .65s ease,transform .65s ease}
 .rev.vis{opacity:1;transform:translateY(0)}
@@ -718,6 +757,36 @@ function App(){
   var dragS=useState(false),setDrag=dragS[1];var drag=dragS[0];
   var fref=useRef(),tt=useRef();
 
+  var showShareS=useState(false),setShowShare=showShareS[1];var showShare=showShareS[0];
+  var shareSelS=useState({}),setShareSel=shareSelS[1];var shareSel=shareSelS[0];
+  var shareUrlS=useState(''),setShareUrl=shareUrlS[1];var shareUrl=shareUrlS[0];
+
+  function openShare(){
+    // pre-select all cards
+    var init={};
+    cards.forEach(function(_,i){init[i]=true;});
+    setShareSel(init);
+    setShareUrl('');
+    setShowShare(true);
+  }
+  function toggleShareCard(i){
+    setShareSel(function(s){var n=Object.assign({},s);n[i]=!n[i];return n;});
+    setShareUrl('');
+  }
+  function selectAllShare(){var init={};cards.forEach(function(_,i){init[i]=true;});setShareSel(init);setShareUrl('');}
+  function selectNoneShare(){setShareSel({});setShareUrl('');}
+  function buildShareUrl(){
+    var sel=cards.filter(function(_,i){return shareSel[i];});
+    if(!sel.length){st('Select at least one card');return;}
+    var payload=btoa(encodeURIComponent(JSON.stringify(sel)));
+    var url=window.location.origin+window.location.pathname+'?cards='+payload;
+    setShareUrl(url);
+  }
+  function copyShareUrl(){
+    if(!shareUrl){buildShareUrl();return;}
+    navigator.clipboard.writeText(shareUrl).then(function(){st('Link copied — share on WhatsApp!');}).catch(function(){st('Copy failed — select the URL manually');});
+  }
+
   function toggleTheme(){
     setDark(function(d){
       var next=!d;
@@ -729,6 +798,20 @@ function App(){
 
   var usage=getUsage(),pro=isPro();
   function st(m){setToast(m);clearTimeout(tt.current);tt.current=setTimeout(function(){setToast('');},2700);}
+
+  useEffect(function(){
+    try{
+      var params=new URLSearchParams(window.location.search);
+      var raw=params.get('cards');
+      if(!raw)return;
+      var parsed=JSON.parse(decodeURIComponent(atob(raw)));
+      if(Array.isArray(parsed)&&parsed.length){
+        setCards(parsed);setCi(0);setRtab('cards');
+        setTimeout(function(){document.getElementById('ra')?.scrollIntoView({behavior:'smooth',block:'start'});},300);
+        st(parsed.length+' shared cards loaded');
+      }
+    }catch(err){/* malformed url param — ignore */}
+  },[]);
 
   async function gen(){
     var txt=itab==='text'?notes:pdfTxt;
@@ -865,6 +948,13 @@ function App(){
           ),
           e('button',{className:'gb',onClick:gen,disabled:loading||!itxt.trim()},loading?'Generating…':'Generate →')
         ),
+        e('div',{className:'disc'},
+          e('span',{className:'disc-i'},'ⓘ'),
+          e('p',null,'Cards are generated directly from the text you provide — the AI works only with your input, not from its own knowledge. Better notes = better cards.')
+        ),
+        itab==='pdf'&&e('div',{className:'pdf-disc'},
+          e('p',null,'Scanned or handwritten PDFs won’t work — only text-based PDFs can be read. If your PDF is a photo or scan, copy-paste the text instead.')
+        ),
         !pro&&e('div',{className:'urow'},
           e('div',{className:'ut'},e('div',{className:'uf',style:{width:Math.min(100,usage/CFG.FREE_LIMIT*100)+'%'}})),
           e('span',{className:'utx'},usage+'/'+CFG.FREE_LIMIT+' today')
@@ -889,7 +979,8 @@ function App(){
               e('button',{className:'ab',onClick:function(){setCi(0);}},'↩ Reset'),
               e('button',{className:'ab',onClick:function(){setCi(Math.floor(Math.random()*cards.length));}},'⇄ Shuffle'),
               e('button',{className:'ab',onClick:function(){setRtab('quiz');},disabled:!quiz.length},'📝 Quiz'),
-              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,'FlipWise Study Cards');}},'↓ PDF')
+              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,'FlipWise Study Cards');}},'↓ PDF'),
+              e('button',{className:'ab',onClick:openShare},'⇪ Share')
             )
           ),
           rtab==='quiz'&&(quiz.length>0?e(Quiz,{qs:quiz}):e('div',{className:'emp'},e('div',{className:'emp-i'},'?'),e('p',null,'No quiz available')))
@@ -909,9 +1000,64 @@ function App(){
       )
     ),
 
+    e('section',{className:'test-wrap'},
+      e('div',{className:'feat-eyebrow rev'},'From students'),
+      e('h2',{className:'feat-heading rev'},'What people ',e('em',null,'actually'),' say'),
+      e('div',{className:'tg rev'},
+        e('div',{className:'tc'},
+          e('p',{className:'tc-q'},'I paste my notes before sleeping and go through the cards on the metro next morning. Simple habit but it actually helps things stick.'),
+          e('div',{className:'tc-name'},'Priya S.'),
+          e('div',{className:'tc-sub'},'UPSC Aspirant, Delhi')
+        ),
+        e('div',{className:'tc'},
+          e('p',{className:'tc-q'},'The quiz at the end is the part I use the most. It forces you to recall instead of just reading through. Good for last-minute chapter revision.'),
+          e('div',{className:'tc-name'},'Arjun M.'),
+          e('div',{className:'tc-sub'},'JEE Aspirant, Kota')
+        ),
+        e('div',{className:'tc'},
+          e('p',{className:'tc-q'},'CA chapters are long and dense. Pasting a section and getting a card set in seconds is genuinely useful when you are pressed for time before a test.'),
+          e('div',{className:'tc-name'},'Sneha R.'),
+          e('div',{className:'tc-sub'},'CA Intermediate, Pune')
+        )
+      )
+    ),
+
     e('footer',null,
       e('div',{className:'fl'},'FlipWise'),
       e('div',{className:'ft'},'Built for Indian students · 2025')
+    ),
+
+    showShare&&e('div',{className:'sh-ov',onClick:function(ev){if(ev.target===ev.currentTarget)setShowShare(false);}},
+      e('div',{className:'sh-mo'},
+        e('h3',null,'Share flashcards'),
+        e('p',null,'Pick the cards to include in your shareable link. Anyone with the link can view them instantly.'),
+        e('div',{className:'sh-sel-row'},
+          e('button',{className:'sh-sel-btn',onClick:selectAllShare},'Select all'),
+          e('button',{className:'sh-sel-btn',onClick:selectNoneShare},'Clear all'),
+          e('span',{style:{fontSize:'0.68rem',color:'var(--muted)',marginLeft:'auto'}},
+            Object.values(shareSel).filter(Boolean).length+' / '+cards.length+' selected'
+          )
+        ),
+        e('div',{className:'sh-list'},
+          cards.map(function(c,i){
+            var sel=!!shareSel[i];
+            return e('button',{key:i,className:'sh-item'+(sel?' sel':''),onClick:function(){toggleShareCard(i);}},
+              e('div',{className:'sh-cb'},sel?'✓':''),
+              e('div',{className:'sh-label'},
+                e('strong',{style:{fontWeight:500,fontSize:'0.78rem'}},c.topic||'Card '+(i+1)),
+                (c.points||'').split('|')[0]&&e('div',{style:{fontSize:'0.7rem',color:'var(--muted)',marginTop:2}},(c.points||'').split('|')[0].trim().substring(0,60)+'…')
+              )
+            );
+          })
+        ),
+        shareUrl
+          ? e('div',{className:'sh-url'},
+              e('input',{type:'text',readOnly:true,value:shareUrl,onClick:function(ev){ev.target.select();}}),
+              e('button',{className:'sh-copy',onClick:copyShareUrl},'Copy')
+            )
+          : e('button',{className:'sh-copy',style:{width:'100%',padding:'11px',borderRadius:'var(--r-sm)',marginBottom:'10px'},onClick:buildShareUrl},'Generate link →'),
+        e('button',{className:'md',style:{marginTop:4},onClick:function(){setShowShare(false);}}, 'Close')
+      )
     ),
 
     pw&&e('div',{className:'ov',onClick:function(ev){if(ev.target===ev.currentTarget)setPw(false);}},
