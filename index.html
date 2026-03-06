@@ -488,6 +488,9 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 .disc-i{font-size:0.75rem;opacity:0.45;flex-shrink:0;margin-top:1px}
 .disc p{font-size:0.7rem;color:var(--muted);line-height:1.65;font-weight:300;margin:0}
 .pdf-disc{padding:8px 14px;border-top:1px solid var(--border);background:var(--surface2)}
+.char-warn{padding:7px 14px;border-top:1px solid var(--border);background:var(--surface2)}
+.char-warn p{font-size:0.68rem;color:var(--accent);line-height:1.6;font-weight:300;margin:0;display:flex;align-items:flex-start;gap:6px;opacity:0.85}
+.char-warn p::before{content:'⚠';font-size:0.65rem;flex-shrink:0;margin-top:1px}
 .pdf-disc p{font-size:0.68rem;color:var(--muted2);line-height:1.6;font-weight:300;margin:0;display:flex;align-items:flex-start;gap:6px}
 .pdf-disc p::before{content:'ℹ';font-size:0.65rem;opacity:0.5;flex-shrink:0;margin-top:1px}
 /* Disclaimer */
@@ -521,7 +524,7 @@ async function callSummary(text){
   var r=await fetch('/api/summary',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text}),
+    body:JSON.stringify({text:text.substring(0,8000)}),
   });
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
@@ -531,14 +534,18 @@ async function callAI(text,count){
   var r=await fetch('/api/generate',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text,count}),
+    body:JSON.stringify({text:text.substring(0,8000),count}),
   });
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
 }
 
 function dlPDF(cards,title){
-  var rows=cards.map(function(c,i){return '<div style="border:1px solid #e4e4e7;border-radius:10px;padding:20px;margin-bottom:16px;page-break-inside:avoid"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#a1a1aa;margin-bottom:8px">Card '+(i+1)+'</div><div style="font-size:15px;margin-bottom:10px;line-height:1.5">'+c.question+'</div><div style="font-size:13px;color:#52525b;line-height:1.6;border-top:1px dashed #e4e4e7;padding-top:10px">'+c.answer+'</div></div>';}).join('');
+  var rows=cards.map(function(c,i){
+    var pts=(c.points||'').split('|').map(function(p){return p.trim();}).filter(Boolean);
+    var ptHtml=pts.map(function(p){return '<li style="margin-bottom:5px;line-height:1.6">'+p+'</li>';}).join('');
+    return '<div style="border:1px solid #e4e4e7;border-radius:10px;padding:20px;margin-bottom:16px;page-break-inside:avoid"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#a1a1aa;margin-bottom:8px">Card '+(i+1)+'</div><div style="font-size:15px;font-weight:600;margin-bottom:10px;line-height:1.5;color:#1e1b14">'+(c.topic||'')+'</div><ul style="margin:0;padding-left:18px;font-size:13px;color:#3a3a3a">'+ptHtml+'</ul></div>';
+  }).join('');
   var w=window.open('','_blank');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>'+title+'</title><style>body{font-family:Georgia,serif;padding:36px;max-width:680px;margin:auto}h1{font-size:20px;margin-bottom:4px}p{color:#a1a1aa;font-size:12px;margin-bottom:28px}</style></head><body><h1>'+title+'</h1><p>'+new Date().toLocaleDateString('en-IN')+' · '+cards.length+' cards</p>'+rows+'</body></html>');
   w.document.close();
@@ -974,7 +981,7 @@ function App(){
       e('div',{className:'h-glow'}),
       e('div',{className:'h-line'},'FlipWise'),
       e('h1',null,'Notes become',e('br'),' ',e('em',null,'flashcards')),
-      e('p',{className:'h-sub'},'Paste any text. Get precise revision cards and a self-test quiz — in seconds.'),
+      e('p',{className:'h-sub'},'Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.'),
       e('div',{className:'pill-row'},
         ['UPSC Prelims','JEE Physics','NEET Bio','CA Law','History','Economics','Current Affairs'].map(function(t){return e('span',{key:t,className:'pill'},t);})
       ),
@@ -1028,6 +1035,9 @@ function App(){
         e('div',{className:'disc'},
           e('span',{className:'disc-i'},'ⓘ'),
           e('p',null,'Cards are generated directly from the text you provide — the AI works only with your input, not from its own knowledge. Better notes = better cards.')
+        ),
+        itxt.length>8000&&e('div',{className:'char-warn'},
+          e('p',null,'Your text is '+itxt.length.toLocaleString('en-IN')+' characters — only the first 8,000 will be used. For best results across all topics, trim your input or paste one topic at a time.')
         ),
         itab==='pdf'&&e('div',{className:'pdf-disc'},
           e('p',null,'Scanned or handwritten PDFs won’t work — only text-based PDFs can be read. If your PDF is a photo or scan, copy-paste the text instead.')
