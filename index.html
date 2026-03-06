@@ -896,7 +896,7 @@ function Quiz(props){
           var cls='ob';
           if(answered){if(i===q.correct)cls+=' cor';else if(i===ch&&ch!==q.correct)cls+=' wrg';}
           return e('button',{key:i,className:cls,disabled:answered,onClick:function(){
-            if(answered)return;setCh(i);if(i===q.correct){setSc(function(s){return s+1;});}else if(onMistake){onMistake(q.question);}
+            if(answered)return;setCh(i);if(i===q.correct){setSc(function(s){return s+1;});}else if(onMistake){onMistake(q);}
           }},
             e('span',{style:{opacity:.35,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}},['A','B','C','D'][i]),
             o
@@ -971,6 +971,63 @@ function AuthModal({onClose}){
       err&&e('p',{style:{color:'var(--red)',fontSize:'0.72rem',marginBottom:12}},err),
       e('button',{className:'auth-close',onClick:onClose},'Maybe later')
     )
+  );
+}
+
+
+function MistakeList(props){
+  var mistakes=props.mistakes||[];
+  var openS=useState({}),setOpen=openS[1];var open=openS[0];
+  function toggle(id){setOpen(function(o){var n=Object.assign({},o);n[id]=!n[id];return n;});}
+  return e(React.Fragment,null,
+    e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
+      e('button',{
+        onClick:props.onClear,
+        style:{fontSize:'0.7rem',color:'var(--muted)',background:'none',border:'1px solid var(--border)',borderRadius:'6px',padding:'5px 10px',cursor:'none',fontFamily:'Geist,sans-serif'}
+      },'Clear all')
+    ),
+    mistakes.map(function(m){
+      var isOpen=!!open[m.id];
+      return e('div',{key:m.id,className:'mist-item',style:{flexDirection:'column',alignItems:'stretch'}},
+        e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
+          e('div',{style:{flex:1}},
+            e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:3,lineHeight:1.5}},m.question),
+            e('div',{className:'mist-set'},'from: '+m.setName+' · '+new Date(m.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
+          ),
+          e('button',{
+            onClick:function(){toggle(m.id);},
+            style:{
+              flexShrink:0,padding:'4px 10px',border:'1px solid var(--border)',borderRadius:'6px',
+              background:'none',color:isOpen?'var(--accent)':'var(--muted)',
+              fontFamily:'Geist,sans-serif',fontSize:'0.68rem',cursor:'none',
+              borderColor:isOpen?'var(--accent)':'var(--border)',transition:'all .15s',whiteSpace:'nowrap'
+            }
+          },isOpen?'Hide':'Solution')
+        ),
+        isOpen&&m.options&&e('div',{style:{marginTop:10,paddingTop:10,borderTop:'1px solid var(--border)'}},
+          e('div',{style:{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.06em'}},'Options'),
+          m.options.map(function(o,i){
+            var isCorrect=i===m.correct;
+            return e('div',{key:i,style:{
+              padding:'6px 10px',borderRadius:'6px',marginBottom:4,fontSize:'0.78rem',
+              background:isCorrect?'rgba(74,222,128,0.08)':'transparent',
+              color:isCorrect?'var(--green)':'var(--text)',
+              border:'1px solid',
+              borderColor:isCorrect?'rgba(74,222,128,0.25)':'var(--border)',
+              display:'flex',alignItems:'center',gap:8,
+            }},
+              e('span',{style:{opacity:.4,fontSize:'0.65rem',letterSpacing:'0.06em'}},['A','B','C','D'][i]),
+              o,
+              isCorrect&&e('span',{style:{marginLeft:'auto',fontSize:'0.65rem',color:'var(--green)',fontWeight:600}},'✓ Correct')
+            );
+          }),
+          m.explanation&&e('div',{style:{
+            marginTop:8,padding:'8px 10px',background:'var(--surface)',borderRadius:'6px',
+            fontSize:'0.75rem',color:'var(--muted)',lineHeight:1.6,borderLeft:'2px solid var(--accent)',paddingLeft:10
+          }},e('strong',{style:{color:'var(--text)',marginRight:5}},'Why:'),m.explanation)
+        )
+      );
+    })
   );
 }
 
@@ -1389,9 +1446,18 @@ function App(){
     finally{setRegenIdx(null);}
   }
 
-  // ── Pro: record mistake from quiz ──
-  function recordMistake(question,setName){
-    var entry={id:Date.now().toString(36),question:question,setName:setName||activeSetName||'Unsaved set',date:new Date().toISOString()};
+  // ── Pro: record mistake — only for saved sets ──
+  function recordMistake(question,options,correct,explanation){
+    if(!activeSetName)return; // only track mistakes from saved sets
+    var entry={
+      id:Date.now().toString(36),
+      question:question,
+      options:options,
+      correct:correct,
+      explanation:explanation,
+      setName:activeSetName,
+      date:new Date().toISOString(),
+    };
     var updated=[entry].concat(mistakes).slice(0,200);
     setMistakes(updated);
     try{localStorage.setItem('cs_mistakes',JSON.stringify(updated));}catch(e){}
@@ -1402,9 +1468,10 @@ function App(){
     st('Mistakes cleared');
   }
 
-  // ── Pro: save quiz result to history ──
-  function saveQuizResult(score,total,setName){
-    var entry={id:Date.now().toString(36),score:score,total:total,setName:setName||activeSetName||'Unsaved set',date:new Date().toISOString()};
+  // ── Pro: save quiz result — only for saved sets ──
+  function saveQuizResult(score,total){
+    if(!activeSetName)return; // only track history from saved sets
+    var entry={id:Date.now().toString(36),score:score,total:total,setName:activeSetName,date:new Date().toISOString()};
     var updated=[entry].concat(quizHist).slice(0,100);
     setQuizHist(updated);
     try{localStorage.setItem('cs_qhist',JSON.stringify(updated));}catch(e){}
@@ -1421,13 +1488,18 @@ function App(){
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Pricing'),
         e('button',{className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
         user
-          ? e('div',{className:'user-menu'},
-              e('button',{className:'auth-btn',onClick:function(){setShowUserMenu(function(v){return !v;})}},
+          ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);}},
+              e('div',{className:'auth-btn'},
                 user.avatar&&e('img',{src:user.avatar,alt:''}),
-                user.name.split(' ')[0],
+                user.name?user.name.split(' ')[0]:user.email.split('@')[0],
                 e('span',{className:'tier-badge '+(user.tier||'free')},user.tier||'free')
               ),
-              showUserMenu&&e('div',{className:'user-drop'},
+              e('div',{className:'user-drop',style:{
+                opacity:showUserMenu?1:0,
+                pointerEvents:showUserMenu?'auto':'none',
+                transform:showUserMenu?'translateY(0)':'translateY(-6px)',
+                transition:'opacity .18s ease, transform .18s ease',
+              }},
                 e('div',{style:{padding:'8px 12px 6px',borderBottom:'1px solid var(--border)',marginBottom:4}},
                   e('div',{style:{fontSize:'0.72rem',color:'var(--muted)',marginBottom:2}},user.email),
                   e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}},user.tier||'free')
@@ -1550,9 +1622,9 @@ function App(){
 
       !loading&&cards.length>0&&e('div',{className:'rev',style:{marginTop:4}},
         e('div',{className:'rtabs'},
-          e('button',{className:'rt'+(rtab==='cards'?' act':''),onClick:function(){setRtab('cards');}},'Flashcards',e('span',{className:'bdg'},cards.length)),
+          e('button',{className:'rt'+(rtab==='cards'?' act':''),onClick:function(){setRtab('cards');}},'Flashcards',e('span',{className:'bdg'},cards.length+' / '+cnt)),
           e('button',{className:'rt'+(rtab==='summary'?' act':''),onClick:function(){setRtab('summary');}},'Summary'),
-          e('button',{className:'rt'+(rtab==='quiz'?' act':''),onClick:function(){setRtab('quiz');}},'Quiz',e('span',{className:'bdg'},quiz.length))
+          e('button',{className:'rt'+(rtab==='quiz'?' act':''),onClick:function(){setRtab('quiz');}},'Quiz',e('span',{className:'bdg'},quizCounts[quizCounts.length-1]+'Q max'))
         ),
         e('div',{className:'rbody'},
           rtab==='cards'&&e(React.Fragment,null,
@@ -1585,7 +1657,7 @@ function App(){
           ),
           rtab==='quiz'&&(quiz.length>0
             ? (activeQuiz
-                ? e(Quiz,{qs:activeQuiz,onReset:quizCounts.length>1?function(){setActiveQuiz(null);setPickAnim(null);}:null,onMistake:(isPro()||isElite())?recordMistake:null,onFinish:(isPro()||isElite())?function(sc,tot){saveQuizResult(sc,tot,activeSetName);}:null})
+                ? e(Quiz,{qs:activeQuiz,onReset:quizCounts.length>1?function(){setActiveQuiz(null);setPickAnim(null);}:null,onMistake:(isPro()||isElite())?function(q){recordMistake(q.question,q.options,q.correct,q.explanation);}:null,onFinish:(isPro()||isElite())?function(sc,tot){saveQuizResult(sc,tot);}:null})
                 : e('div',{className:'qpick'},
                     e('div',{className:'qpick-lbl'},'How many questions?'),
                     e('div',{className:'qpick-opts'},
@@ -1748,14 +1820,7 @@ function App(){
                       style:{fontSize:'0.7rem',color:'var(--muted)',background:'none',border:'1px solid var(--border)',borderRadius:'6px',padding:'5px 10px',cursor:'none',fontFamily:'Geist,sans-serif'}
                     },'Clear all')
                   ),
-                  mistakes.map(function(m){
-                    return e('div',{key:m.id,className:'mist-item'},
-                      e('div',{style:{flex:1}},
-                        e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:4}},m.question),
-                        e('div',{className:'mist-set'},'from: '+m.setName+' · '+new Date(m.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
-                      )
-                    );
-                  })
+                  e(MistakeList,{mistakes:mistakes,onClear:clearMistakes})
                 )
           )
 
