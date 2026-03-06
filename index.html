@@ -1201,19 +1201,19 @@ function App(){
     if(!token)return;
     try{
       // Load usage count from server
-      var ur=await fetch('/api/usage',{headers:authHeader()});
+      var ur=await fetch('/api/data?resource=usage',{headers:authHeader()});
       if(ur.ok){var ud=await ur.json();setUsage(ud.count);setLocalUsage(ud.count);}
     }catch(e){}
     try{
-      var sr=await fetch('/api/sets',{headers:authHeader()});
+      var sr=await fetch('/api/data?resource=sets',{headers:authHeader()});
       if(sr.ok){var sd=await sr.json();setSavedSets(sd.sets||[]);}
     }catch(e){}
     try{
-      var mr=await fetch('/api/mistakes',{headers:authHeader()});
+      var mr=await fetch('/api/data?resource=mistakes',{headers:authHeader()});
       if(mr.ok){var md=await mr.json();setMistakes(md.mistakes||[]);}
     }catch(e){}
     try{
-      var hr=await fetch('/api/history',{headers:authHeader()});
+      var hr=await fetch('/api/data?resource=history',{headers:authHeader()});
       if(hr.ok){var hd=await hr.json();setQuizHist(hd.history||[]);}
     }catch(e){}
   }
@@ -1255,7 +1255,7 @@ function App(){
       setCi(0);setRtab('cards');
       // Bump usage — server for logged-in, localStorage for guests
       if(loadToken()){
-        fetch('/api/usage',{method:'POST',headers:authHeader()})
+        fetch('/api/data?resource=usage',{method:'POST',headers:authHeader()})
           .then(function(r){return r.json();})
           .then(function(d){if(d.count!==undefined){setUsage(d.count);setLocalUsage(d.count);}})
           .catch(function(){bumpUsage();setUsage(getUsage());});
@@ -1403,7 +1403,7 @@ function App(){
     // Persist to server if logged in
     if(loadToken()){
       try{
-        await fetch('/api/sets',{
+        await fetch('/api/data?resource=sets',{
           method:'POST',
           headers:authHeader(),
           body:JSON.stringify({id,name,cards,quiz,summary}),
@@ -1415,7 +1415,7 @@ function App(){
     var updated=savedSets.filter(function(s){return s.id!==id;});
     setSavedSets(updated);
     if(loadToken()){
-      fetch('/api/sets?id='+id,{method:'DELETE',headers:authHeader()}).catch(function(){});
+      fetch('/api/data?resource=sets&id='+id,{method:'DELETE',headers:authHeader()}).catch(function(){});
     }
     st('Set deleted');
   }
@@ -1495,7 +1495,7 @@ function App(){
     var entry={id,question,options:options||[],correct,explanation:explanation||'',set_name:activeSetName,setName:activeSetName,created_at:new Date().toISOString(),date:new Date().toISOString()};
     setMistakes(function(prev){return [entry].concat(prev).slice(0,200);});
     if(loadToken()){
-      fetch('/api/mistakes',{method:'POST',headers:authHeader(),
+      fetch('/api/data?resource=mistakes',{method:'POST',headers:authHeader(),
         body:JSON.stringify({id,set_name:activeSetName,question,options:options||[],correct,explanation:explanation||''})
       }).catch(function(){});
     }
@@ -1503,7 +1503,7 @@ function App(){
   function clearMistakes(){
     setMistakes([]);
     if(loadToken()){
-      fetch('/api/mistakes?all=true',{method:'DELETE',headers:authHeader()}).catch(function(){});
+      fetch('/api/data?resource=mistakes&all=true',{method:'DELETE',headers:authHeader()}).catch(function(){});
     }
     st('Mistakes cleared');
   }
@@ -1515,7 +1515,7 @@ function App(){
     var entry={id,score,total,set_name:activeSetName,setName:activeSetName,completed_at:new Date().toISOString(),date:new Date().toISOString()};
     setQuizHist(function(prev){return [entry].concat(prev).slice(0,100);});
     if(loadToken()){
-      fetch('/api/history',{method:'POST',headers:authHeader(),
+      fetch('/api/data?resource=history',{method:'POST',headers:authHeader(),
         body:JSON.stringify({id,set_name:activeSetName,score,total})
       }).catch(function(){});
     }
