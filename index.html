@@ -107,8 +107,8 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;position:relative;overflow:clip}
 .h-glow{position:absolute;width:800px;height:600px;background:radial-gradient(ellipse,rgba(232,213,176,0.07) 0%,transparent 65%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
 
-.h-line{font-size:clamp(1.5rem,3.5vw,2.4rem);letter-spacing:-0.02em;font-family:'Instrument Serif',serif;color:var(--accent);margin-bottom:20px;display:flex;align-items:center;gap:18px;animation:fu .55s ease both;position:relative;z-index:2;font-weight:400}
-.h-line::before,.h-line::after{content:'';width:44px;height:1px;background:var(--muted2)}
+.h-line{font-size:clamp(2.4rem,5.5vw,4rem);letter-spacing:-0.03em;font-family:'Instrument Serif',serif;color:var(--accent);margin-bottom:16px;animation:fu .55s ease both;position:relative;z-index:2;font-weight:400;line-height:1}
+html.light .h-line{color:var(--accent)}
 
 /* ── HEADLINE: biggest text users actually read on screen ── */
 h1{
@@ -755,10 +755,20 @@ function App(){
   }
   function selectAllShare(){var init={};cards.forEach(function(_,i){init[i]=true;});setShareSel(init);setShareUrl('');}
   function selectNoneShare(){setShareSel({});setShareUrl('');}
+  function encodeCards(arr){
+    var json=JSON.stringify(arr);
+    var b64=btoa(unescape(encodeURIComponent(json)));
+    return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  }
+  function decodeCards(str){
+    var b64=str.replace(/-/g,'+').replace(/_/g,'/');
+    while(b64.length%4)b64+='=';
+    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+  }
   function buildShareUrl(){
     var sel=cards.filter(function(_,i){return shareSel[i];});
     if(!sel.length){st('Select at least one card');return;}
-    var payload=btoa(encodeURIComponent(JSON.stringify(sel)));
+    var payload=encodeCards(sel);
     var url=window.location.origin+'/#cards='+payload;
     setShareUrl(url);
   }
@@ -786,7 +796,7 @@ function App(){
       if(idx===-1)return;
       var raw=href.slice(idx+7);
       if(!raw)return;
-      var parsed=JSON.parse(decodeURIComponent(atob(raw)));
+      var parsed=decodeCards(raw);
       if(Array.isArray(parsed)&&parsed.length){
         setCards(parsed);setCi(0);setRtab('cards');
         setTimeout(function(){var el=document.getElementById('ra');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},400);
@@ -880,7 +890,7 @@ function App(){
     /* HERO */
     e('section',{className:'hero'},
       e('div',{className:'h-glow'}),
-      e('div',{className:'h-line'},'UPSC · JEE · NEET · CA'),
+      e('div',{className:'h-line'},'FlipWise'),
       e('h1',null,'Notes become',e('br'),' ',e('em',null,'flashcards')),
       e('p',{className:'h-sub'},'Paste any text. Get precise revision cards and a self-test quiz — in seconds.'),
       e('div',{className:'pill-row'},
