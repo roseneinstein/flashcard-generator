@@ -53,34 +53,39 @@ body::before{
   content:'';
   position:fixed;inset:0;
   background-image:
-    linear-gradient(rgba(232,213,176,0.028) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(232,213,176,0.028) 1px,transparent 1px);
-  background-size:72px 72px;
+    linear-gradient(rgba(232,213,176,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(232,213,176,0.06) 1px,transparent 1px);
+  background-size:56px 56px;
   pointer-events:none;
   z-index:0;
-  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
-  -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
+  mask-image:radial-gradient(ellipse 100% 100% at 50% 40%,black 10%,transparent 85%);
+  -webkit-mask-image:radial-gradient(ellipse 100% 100% at 50% 40%,black 10%,transparent 85%);
 }
 html.light body::before{
   background-image:
-    linear-gradient(rgba(154,124,63,0.07) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(154,124,63,0.07) 1px,transparent 1px);
+    linear-gradient(rgba(154,124,63,0.1) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(154,124,63,0.1) 1px,transparent 1px);
+  background-size:56px 56px;
 }
 body::after{
   content:'';
   position:fixed;inset:0;
   background:
-    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(140,120,200,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(232,213,176,0.055) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 30% at 60% 30%, rgba(100,160,255,0.04) 0%, transparent 50%);
+    radial-gradient(ellipse 80% 60% at 10% 0%,   rgba(130,100,220,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 90%,  rgba(232,213,176,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 75% 20%,  rgba(70,130,255,0.09)  0%, transparent 50%),
+    radial-gradient(ellipse 40% 35% at 20% 70%,  rgba(210,160,90,0.1)   0%, transparent 45%),
+    radial-gradient(ellipse 30% 25% at 50% 55%,  rgba(180,120,220,0.07) 0%, transparent 40%);
   pointer-events:none;
   z-index:0;
 }
 html.light body::after{
   background:
-    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(180,150,90,0.09) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(154,124,63,0.07) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 30% at 60% 30%, rgba(100,140,80,0.05) 0%, transparent 50%);
+    radial-gradient(ellipse 80% 60% at 10% 0%,   rgba(210,175,100,0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 90%,  rgba(154,124,63,0.16)  0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 70% 15%,  rgba(130,170,100,0.11) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 35% at 15% 65%,  rgba(190,145,75,0.13)  0%, transparent 45%),
+    radial-gradient(ellipse 30% 25% at 55% 50%,  rgba(160,130,80,0.08)  0%, transparent 40%);
 }
 #root{position:relative;z-index:1}
 
