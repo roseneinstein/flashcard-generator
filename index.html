@@ -412,6 +412,16 @@ input[type=file]{display:none}
 .md{width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--muted);font-family:'Geist',sans-serif;font-size:0.8rem;cursor:none;transition:all .15s}
 .md:hover{border-color:var(--border-h);color:var(--text)}
 
+/* Summary */
+.sw{padding:22px 24px}
+.sw-title{font-family:'Instrument Serif',serif;font-size:1.15rem;color:var(--accent);margin-bottom:18px;letter-spacing:-0.01em;line-height:1.3;font-weight:400;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.ss{margin-bottom:18px}
+.ss-h{font-size:0.72rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:9px;opacity:0.8}
+.ss-pts{display:flex;flex-direction:column;gap:6px}
+.ss-pt{display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;color:var(--text);line-height:1.68;font-weight:300}
+.ss-pt::before{content:'→';color:var(--accent);font-size:0.65rem;flex-shrink:0;margin-top:4px;opacity:0.7}
+.ss-ld{padding:48px 24px;text-align:center}
+.ss-ld p{font-size:0.78rem;color:var(--muted);font-weight:300;margin-top:12px}
 /* Empty */
 .emp{padding:52px 24px;text-align:center}
 .emp-i{font-size:1.6rem;opacity:0.1;margin-bottom:10px}
@@ -488,6 +498,16 @@ const CFG={
 function getUsage(){var t=new Date().toDateString();var s=JSON.parse(localStorage.getItem('fw_u')||'{}');return s.d===t?s.c||0:0;}
 function bumpUsage(){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:getUsage()+1}));}
 function isPro(){return localStorage.getItem('fw_pro')==='true';}
+
+async function callSummary(text){
+  var r=await fetch('/api/summary',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text}),
+  });
+  if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
+  return r.json();
+}
 
 async function callAI(text,count){
   var r=await fetch('/api/generate',{
@@ -705,6 +725,27 @@ function PCard(props){
   );
 }
 
+function Summary({data,loading}){
+  if(loading)return e('div',{className:'ss-ld'},
+    e('div',{className:'dots'},e('span'),e('span'),e('span')),
+    e('p',null,'Building summary…')
+  );
+  if(!data)return e('div',{className:'emp'},e('div',{className:'emp-i'},'◻'),e('p',null,'Summary will appear here'));
+  return e('div',{className:'sw'},
+    e('div',{className:'sw-title'},data.title),
+    data.sections.map(function(sec,si){
+      return e('div',{key:si,className:'ss'},
+        e('div',{className:'ss-h'},sec.heading),
+        e('div',{className:'ss-pts'},
+          (sec.points||[]).map(function(pt,pi){
+            return e('div',{key:pi,className:'ss-pt'},pt);
+          })
+        )
+      );
+    })
+  );
+}
+
 function App(){
   useCursor();
   useReveal();
@@ -719,6 +760,8 @@ function App(){
   var quizS=useState([]),setQuiz=quizS[1];var quiz=quizS[0];
   var ciS=useState(0),setCi=ciS[1];var ci=ciS[0];
   var rtabS=useState('cards'),setRtab=rtabS[1];var rtab=rtabS[0];
+  var summaryS=useState(null),setSummary=summaryS[1];var summary=summaryS[0];
+  var sumLoadS=useState(false),setSumLoad=sumLoadS[1];var sumLoad=sumLoadS[0];
   var pwS=useState(false),setPw=pwS[1];var pw=pwS[0];
   var spS=useState('pro'),setSp=spS[1];var sp=spS[0];
   var toastS=useState(''),setToast=toastS[1];var toast=toastS[0];
@@ -810,14 +853,16 @@ function App(){
     var txt=itab==='text'?notes:pdfTxt;
     if(!txt.trim())return st('Paste some notes first');
     if(!pro&&usage>=CFG.FREE_LIMIT){setPw(true);return;}
-    setLoading(true);setCards([]);setQuiz([]);
+    setLoading(true);setCards([]);setQuiz([]);setSummary(null);setSumLoad(true);
     try{
       var res=await callAI(txt,cnt);
       setCards(res.flashcards||[]);setQuiz(res.quiz||[]);
       setCi(0);setRtab('cards');bumpUsage();
       st((res.flashcards||[]).length+' cards ready');
       setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
-    }catch(err){st('Error: '+(err.message||'Check config'));}
+      // Fire summary in background — doesn't block cards from showing
+      callSummary(txt).then(function(s){setSummary(s);}).catch(function(){setSummary(null);}).finally(function(){setSumLoad(false);});
+    }catch(err){st('Error: '+(err.message||'Check config'));setSumLoad(false);}
     finally{setLoading(false);}
   }
 
@@ -958,6 +1003,7 @@ function App(){
       !loading&&cards.length>0&&e('div',{className:'rev',style:{marginTop:4}},
         e('div',{className:'rtabs'},
           e('button',{className:'rt'+(rtab==='cards'?' act':''),onClick:function(){setRtab('cards');}},'Flashcards',e('span',{className:'bdg'},cards.length)),
+          e('button',{className:'rt'+(rtab==='summary'?' act':''),onClick:function(){setRtab('summary');}},'Summary'),
           e('button',{className:'rt'+(rtab==='quiz'?' act':''),onClick:function(){setRtab('quiz');}},'Quiz',e('span',{className:'bdg'},quiz.length))
         ),
         e('div',{className:'rbody'},
@@ -974,6 +1020,7 @@ function App(){
               e('button',{className:'ab',onClick:openShare},'⇪ Share')
             )
           ),
+          rtab==='summary'&&e(Summary,{data:summary,loading:sumLoad}),
           rtab==='quiz'&&(quiz.length>0?e(Quiz,{qs:quiz}):e('div',{className:'emp'},e('div',{className:'emp-i'},'?'),e('p',null,'No quiz available')))
         )
       ),
