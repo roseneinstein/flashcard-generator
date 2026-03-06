@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FlipWise</title>
+<title>CogniSwift</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
@@ -561,7 +561,7 @@ function dlSummaryPDF(data){
     return '<div style="margin-bottom:22px;page-break-inside:avoid"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#9a7c3f;font-weight:600;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #e8e0d0">'+sec.heading+'</div><ul style="margin:0;padding-left:18px">'+pts+'</ul></div>';
   }).join('');
   var w=window.open('','_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>'+data.title+'</title><style>body{font-family:Georgia,serif;padding:40px;max-width:700px;margin:auto;color:#1e1b14}h1{font-size:22px;margin-bottom:4px;font-weight:400;letter-spacing:-0.02em}p.meta{color:#9a9a9a;font-size:12px;margin-bottom:32px}@media print{body{padding:20px}}</style></head><body><h1>'+data.title+'</h1><p class="meta">FlipWise Summary · '+new Date().toLocaleDateString('en-IN')+'</p>'+rows+'</body></html>');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>'+data.title+'</title><style>body{font-family:Georgia,serif;padding:40px;max-width:700px;margin:auto;color:#1e1b14}h1{font-size:22px;margin-bottom:4px;font-weight:400;letter-spacing:-0.02em}p.meta{color:#9a9a9a;font-size:12px;margin-bottom:32px}@media print{body{padding:20px}}</style></head><body><h1>'+data.title+'</h1><p class="meta">CogniSwift Summary · '+new Date().toLocaleDateString('en-IN')+'</p>'+rows+'</body></html>');
   w.document.close();
   setTimeout(function(){w.print();},500);
 }
@@ -830,11 +830,13 @@ function App(){
   function selectAllShare(){var init={};cards.forEach(function(_,i){init[i]=true;});setShareSel(init);setShareUrl('');}
   function selectNoneShare(){setShareSel({});setShareUrl('');}
   function encodeCards(arr){
-    var compact=arr.map(function(c){
-      var t=(c.topic||'').substring(0,80);
-      var pts=(c.points||'').split('|').slice(0,4).map(function(p){return p.trim();}).join('|');
-      return t+'\x01'+pts;
-    }).join('\x02');
+    // Use ASCII control chars as separators (smaller than multi-char delimiters)
+    // Topic: max 40 chars, Points: max 3 segments of 65 chars each
+    var compact=arr.slice(0,5).map(function(c){
+      var t=(c.topic||'').substring(0,40).trimEnd();
+      var pts=(c.points||'').split('|').slice(0,3).map(function(p){return p.trim().substring(0,65);}).join('\x1F');
+      return t+'\x1E'+pts;
+    }).join('\x1D');
     var b64=btoa(unescape(encodeURIComponent(compact)));
     return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
   }
@@ -842,9 +844,11 @@ function App(){
     var b64=str.replace(/-/g,'+').replace(/_/g,'/');
     while(b64.length%4)b64+='=';
     var compact=decodeURIComponent(escape(atob(b64)));
-    return compact.split('\x02').map(function(s){
-      var i=s.indexOf('\x01');
-      return {topic:i>=0?s.substring(0,i):s,points:i>=0?s.substring(i+1):''};
+    return compact.split('\x1D').map(function(s){
+      var i=s.indexOf('\x1E');
+      var topic=i>=0?s.substring(0,i):s;
+      var pts=i>=0?s.substring(i+1).split('\x1F').join(' | '):'';
+      return {topic:topic,points:pts};
     });
   }
   function buildShareUrl(){
@@ -957,7 +961,7 @@ function App(){
 
   function pay(plan){
     if(CFG.RZP_KEY==='YOUR_RAZORPAY_KEY_HERE')return st('Add Razorpay key to enable payments');
-    new window.Razorpay({key:CFG.RZP_KEY,amount:plan==='pro'?9900:19900,currency:'INR',name:'FlipWise',description:plan==='pro'?'Pro · ₹99/mo':'Elite · ₹199/mo',theme:{color:'#e8d5b0'},
+    new window.Razorpay({key:CFG.RZP_KEY,amount:plan==='pro'?9900:19900,currency:'INR',name:'CogniSwift',description:plan==='pro'?'Pro · ₹99/mo':'Elite · ₹199/mo',theme:{color:'#e8d5b0'},
       handler:function(){localStorage.setItem('fw_pro','true');setPw(false);st('Access unlocked');}
     }).open();
   }
@@ -979,7 +983,7 @@ function App(){
     /* HERO */
     e('section',{className:'hero'},
       e('div',{className:'h-glow'}),
-      e('div',{className:'h-line'},'FlipWise'),
+      e('div',{className:'h-line'},'CogniSwift'),
       e('h1',null,'Notes become',e('br'),' ',e('em',null,'flashcards')),
       e('p',{className:'h-sub'},'Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.'),
       e('div',{className:'pill-row'},
@@ -1067,7 +1071,7 @@ function App(){
               e('button',{className:'ab',onClick:function(){setCi(0);}},'↩ Reset'),
               e('button',{className:'ab',onClick:function(){setCi(Math.floor(Math.random()*cards.length));}},'⇄ Shuffle'),
               e('button',{className:'ab',onClick:function(){setRtab('quiz');},disabled:!quiz.length},'📝 Quiz'),
-              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,'FlipWise Study Cards');}},'↓ PDF'),
+              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,'CogniSwift Study Cards');}},'↓ PDF'),
               e('button',{className:'ab',onClick:openShare},'⇪ Share')
             )
           ),
@@ -1133,7 +1137,7 @@ function App(){
     ),
 
     e('footer',null,
-      e('div',{className:'fl'},'FlipWise'),
+      e('div',{className:'fl'},'CogniSwift'),
       e('div',{className:'ft'},'Built for Indian students · 2025')
     ),
 
