@@ -8,16 +8,16 @@ export default async function handler(req, res) {
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  // Send up to 8000 chars — enough for 3 full newspaper editorials
+  // Cap at 8000 chars (frontend also caps at 8k before sending)
   const inputText = text.substring(0, 8000);
   const wordCount = inputText.split(/\s+/).filter(Boolean).length;
 
   // Decide max quiz questions based on actual word count — done server-side
   // so the AI doesn't have to guess. AI just generates this many Qs.
   let maxQuiz, suggestedCounts;
-  if (wordCount < 350) {
+  if (wordCount < 400) {
     maxQuiz = 5;  suggestedCounts = [5];
-  } else if (wordCount < 800) {
+  } else if (wordCount < 900) {
     maxQuiz = 10; suggestedCounts = [5, 10];
   } else {
     maxQuiz = 15; suggestedCounts = [5, 10, 15];
