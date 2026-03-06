@@ -10,7 +10,7 @@ export default async function handler(req, res) {
 
   const prompt = `You are an expert study notes writer for Indian competitive exams (UPSC, JEE, NEET, CA).
 
-Read the study material below and produce a detailed structured summary.
+Read ALL of the study material below. It may cover multiple topics or editorials — your summary MUST cover every topic present, not just the first one. Distribute sections proportionally across all topics.
 
 Return ONLY a valid JSON object. No markdown, no code fences, nothing else.
 
@@ -29,7 +29,7 @@ RULES:
 9. All keys double-quoted. No single quotes.
 
 Study material:
-${text.substring(0, 3000)}`;
+${text.substring(0, 8000)}`;
 
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
