@@ -850,7 +850,7 @@ function Quiz(props){
   function goQ(dir){
     setAnim(dir==='next'?'out-left':'out-right');
     setTimeout(function(){
-      if(dir==='next'){if(qi===qs.length-1){setDone(true);if(onFinish){onFinish(sc+(ch!==null&&ch===qs[qi].correct?0:0),qs.length);}}else{setQi(function(i){return i+1;});setCh(null);}}
+      if(dir==='next'){if(qi===qs.length-1){setDone(true);}else{setQi(function(i){return i+1;});setCh(null);}}
       else{setQi(function(i){return Math.max(0,i-1);});setCh(null);}
       setAnim('in');
     },260);
@@ -865,10 +865,14 @@ function Quiz(props){
     if(dx<-40)goQ('next');else if(dx>40&&qi>0)goQ('prev');
   }
 
+  // Fire onFinish once when quiz completes — must be unconditional hook
+  useEffect(function(){
+    if(done&&onFinish)onFinish(sc,qs.length);
+  },[done]);
+
   if(done){
     var pct=Math.round(sc/qs.length*100);
     var msg=pct>=80?'Excellent — concepts are clear.':pct>=50?'Good effort. Review a few areas.':'Go through the cards once more.';
-    if(onFinish){useEffect(function(){onFinish(sc,qs.length);},[]);}
     return e('div',{className:'qres'},
       e('div',{className:'qsb'},pct+'%'),
       e('div',{className:'qrs'},sc+' out of '+qs.length+' correct — '+msg),
@@ -1524,8 +1528,17 @@ function App(){
               e('button',{className:'ab',onClick:function(){setCi(0);}},'↩ Reset'),
               e('button',{className:'ab',onClick:function(){setCi(Math.floor(Math.random()*cards.length));}},'⇄ Shuffle'),
               e('button',{className:'ab',onClick:function(){setRtab('quiz');},disabled:!quiz.length},'📝 Quiz'),
-              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,'CogniSwift Study Cards');}},'↓ PDF'),
-              e('button',{className:'ab',onClick:openShare},'⇪ Share')
+              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,activeSetName||'CogniSwift Study Cards');}},'↓ PDF'),
+              e('button',{className:'ab',onClick:openShare},'⇪ Share'),
+              (isPro()||isElite())
+                ? e('button',{className:'ab',style:{color:'var(--accent)',borderColor:'var(--accent)'},onClick:openSaveModal},'💾 Save set')
+                : null,
+              (isPro()||isElite())
+                ? e('button',{className:'voice-btn'+(speaking?' active':''),onClick:toggleVoice},speaking?'⏹ Stop':'🔊 Read aloud')
+                : null,
+              (isPro()||isElite())
+                ? e('button',{className:'regen-btn',onClick:function(){regenCard(ci);},disabled:regenIdx!==null},regenIdx===ci?'regenerating…':'↻ Redo this card')
+                : null
             )
           ),
           rtab==='summary'&&e(React.Fragment,null,
