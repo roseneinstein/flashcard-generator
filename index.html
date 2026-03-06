@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
 
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -420,6 +421,26 @@ input[type=file]{display:none}
 .md{width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--muted);font-family:'Geist',sans-serif;font-size:0.8rem;cursor:none;transition:all .15s}
 .md:hover{border-color:var(--border-h);color:var(--text)}
 
+/* Auth */
+.auth-btn{display:flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--border);border-radius:50px;background:transparent;color:var(--text);font-family:'Geist',sans-serif;font-size:0.75rem;cursor:none;transition:all .2s;letter-spacing:0.02em}
+.auth-btn:hover{border-color:var(--border-h);background:var(--surface)}
+.auth-btn img{width:18px;height:18px;border-radius:50%}
+.auth-modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:36px 32px;max-width:360px;width:100%;text-align:center}
+.auth-box h3{font-family:'Instrument Serif',serif;font-size:1.4rem;font-weight:400;margin-bottom:8px;color:var(--text)}
+.auth-box p{font-size:0.78rem;color:var(--muted);margin-bottom:28px;line-height:1.6}
+.auth-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);color:var(--text);font-family:'Geist',sans-serif;font-size:0.85rem;cursor:none;transition:all .2s;margin-bottom:12px}
+.auth-google:hover{border-color:var(--accent);background:var(--surface)}
+.auth-close{font-size:0.72rem;color:var(--muted);background:none;border:none;cursor:none;text-decoration:underline;text-underline-offset:2px}
+.user-menu{position:relative}
+.user-drop{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px;min-width:180px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.user-drop-item{display:block;width:100%;padding:9px 12px;text-align:left;background:none;border:none;color:var(--text);font-family:'Geist',sans-serif;font-size:0.78rem;cursor:none;border-radius:6px;transition:background .15s}
+.user-drop-item:hover{background:var(--surface2)}
+.user-drop-item.danger{color:var(--red)}
+.tier-badge{display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.62rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;margin-left:6px}
+.tier-badge.pro{background:var(--accent);color:var(--bg)}
+.tier-badge.elite{background:linear-gradient(135deg,#ffd700,#e8a800);color:#1e1b14}
+.tier-badge.free{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
 /* Quiz picker */
 .qpick{padding:38px 24px;text-align:center}
 .qpick-lbl{font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;font-weight:400}
@@ -505,10 +526,36 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 .disc{font-size:0.68rem;color:var(--muted2);line-height:1.7;font-weight:300;text-align:center;padding:0 8px;margin-top:10px}
 .disc span{display:inline-flex;align-items:baseline;gap:4px}
 .disc-icon{opacity:0.45;font-size:0.65rem}
+
+/* ── AUTH MODAL ── */
+.auth-modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(4px)}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:32px 28px;max-width:360px;width:90%;text-align:center}
+.auth-box h3{font-family:'Instrument Serif',serif;font-size:1.4rem;color:var(--accent);margin-bottom:8px;font-weight:400}
+.auth-box p{font-size:0.8rem;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.auth-google{width:100%;padding:12px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Geist',sans-serif;font-size:0.84rem;font-weight:500;cursor:none;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .2s,background .2s;margin-bottom:10px}
+.auth-google:hover{border-color:var(--border-h);background:var(--surface)}
+.auth-google:disabled{opacity:0.5}
+.auth-close{background:none;border:none;color:var(--muted);font-size:0.75rem;cursor:none;margin-top:4px;text-decoration:underline;text-underline-offset:2px}
+/* ── USER MENU ── */
+.user-menu{position:relative}
+.auth-btn{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:50px;padding:5px 12px 5px 6px;cursor:none;color:var(--text);font-size:0.78rem;font-family:'Geist',sans-serif;transition:border-color .2s}
+.auth-btn:hover{border-color:var(--border-h)}
+.auth-btn img{width:22px;height:22px;border-radius:50%;object-fit:cover}
+.tier-badge{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.07em;padding:2px 7px;border-radius:50px;font-weight:600}
+.tier-badge.free{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+.tier-badge.pro{background:#7c3aed22;color:#a78bfa;border:1px solid #7c3aed44}
+.tier-badge.elite{background:#b4520022;color:#fb923c;border:1px solid #b4520044}
+.user-drop{position:absolute;top:calc(100% + 8px);right:0;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 0;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.user-drop-item{width:100%;text-align:left;background:none;border:none;padding:9px 14px;font-size:0.78rem;color:var(--text);font-family:'Geist',sans-serif;cursor:none;transition:background .15s}
+.user-drop-item:hover{background:var(--surface2)}
+.user-drop-item.danger{color:var(--red)}
+
 /* Reveal */
 .rev{opacity:0;transform:translateY(20px);transition:opacity .65s ease,transform .65s ease}
 .rev.vis{opacity:1;transform:translateY(0)}
 </style>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 </head>
 <body>
 <div id="cur"></div>
@@ -521,12 +568,46 @@ const e=React.createElement;
 
 const CFG={
   FREE_LIMIT:10,
-  RZP_KEY:'YOUR_RAZORPAY_KEY_HERE',
+  SUPABASE_URL:'https://vnbseesmppljppranukb.supabase.co',
 };
+
+// ── Auth helpers (no Supabase JS SDK needed) ──
+// Token saved to localStorage so user stays logged in after page refresh
+function saveToken(t){try{localStorage.setItem('cs_tok',t);}catch(e){}}
+function loadToken(){try{return localStorage.getItem('cs_tok');}catch(e){return null;}}
+function clearToken(){try{localStorage.removeItem('cs_tok');}catch(e){}}
+
+// Google OAuth: redirect to Supabase, it sends the token back in the URL hash
+function googleLoginUrl(){
+  return CFG.SUPABASE_URL+'/auth/v1/authorize?provider=google'
+    +'&redirect_to='+encodeURIComponent(window.location.origin);
+}
+
+// Fetches user profile from our /api/auth endpoint using stored token
+async function fetchUserProfile(){
+  var token=loadToken();
+  if(!token)return null;
+  try{
+    var r=await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({access_token:token})
+    });
+    if(!r.ok){clearToken();return null;}
+    var data=await r.json();
+    if(data.id)return data;
+    clearToken();return null;
+  }catch(e){return null;}
+}
 
 function getUsage(){var t=new Date().toDateString();var s=JSON.parse(localStorage.getItem('fw_u')||'{}');return s.d===t?s.c||0:0;}
 function bumpUsage(){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:getUsage()+1}));}
-function isPro(){return localStorage.getItem('fw_pro')==='true';}
+var _userCache=null;
+function getSession(){return _userCache;}
+function setSession(u){_userCache=u;}
+function isPro(){return _userCache&&(_userCache.tier==='pro'||_userCache.tier==='elite');}
+function isElite(){return _userCache&&_userCache.tier==='elite';}
+function getTier(){return _userCache?_userCache.tier:'free';}
 
 async function callSummary(text){
   var r=await fetch('/api/summary',{
@@ -794,6 +875,34 @@ function Summary({data,loading}){
   );
 }
 
+function AuthModal({onClose}){
+  var loadingS=useState(false),setLoading=loadingS[1];var loading=loadingS[0];
+  var errS=useState(''),setErr=errS[1];var err=errS[0];
+
+  function loginGoogle(){
+    // Simple redirect — Supabase handles OAuth, token comes back in URL hash
+    window.location.href=googleLoginUrl();
+  }
+
+  return e('div',{className:'auth-modal',onClick:function(ev){if(ev.target===ev.currentTarget)onClose();}},
+    e('div',{className:'auth-box'},
+      e('h3',null,'Sign in to CogniSwift'),
+      e('p',null,'Save your card sets, track progress, and unlock Pro features.'),
+      e('button',{className:'auth-google',onClick:loginGoogle,disabled:loading},
+        e('svg',{width:18,height:18,viewBox:'0 0 24 24'},
+          e('path',{fill:'#4285F4',d:'M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'}),
+          e('path',{fill:'#34A853',d:'M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'}),
+          e('path',{fill:'#FBBC05',d:'M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'}),
+          e('path',{fill:'#EA4335',d:'M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'})
+        ),
+        loading?'Signing in…':'Continue with Google'
+      ),
+      err&&e('p',{style:{color:'var(--red)',fontSize:'0.72rem',marginBottom:12}},err),
+      e('button',{className:'auth-close',onClick:onClose},'Maybe later')
+    )
+  );
+}
+
 function App(){
   useCursor();
   useReveal();
@@ -818,6 +927,10 @@ function App(){
   var toastS=useState(''),setToast=toastS[1];var toast=toastS[0];
   var dragS=useState(false),setDrag=dragS[1];var drag=dragS[0];
   var fref=useRef(),tt=useRef();
+
+  var userS=useState(null),setUser=userS[1];var user=userS[0];
+  var showAuthS=useState(false),setShowAuth=showAuthS[1];var showAuth=showAuthS[0];
+  var showUserMenuS=useState(false),setShowUserMenu=showUserMenuS[1];var showUserMenu=showUserMenuS[0];
 
   var showShareS=useState(false),setShowShare=showShareS[1];var showShare=showShareS[0];
   var shareSelS=useState({}),setShareSel=shareSelS[1];var shareSel=shareSelS[0];
@@ -904,6 +1017,26 @@ function App(){
     return function(){window.removeEventListener('hashchange',loadFromHash);};
   },[]);
 
+  // On mount: check for OAuth token in URL hash (after Google redirect) OR restore saved token
+  useEffect(function(){
+    async function initAuth(){
+      // Supabase redirects back with #access_token=... in the URL fragment
+      var hash=window.location.hash;
+      if(hash&&hash.includes('access_token')){
+        var hashParams=new URLSearchParams(hash.replace('#',''));
+        var urlToken=hashParams.get('access_token');
+        if(urlToken){
+          saveToken(urlToken);
+          // Remove token from address bar for cleanliness
+          window.history.replaceState({},'',window.location.pathname+window.location.search);
+        }
+      }
+      var profile=await fetchUserProfile();
+      if(profile){setUser(profile);setSession(profile);}
+    }
+    initAuth();
+  },[]);
+
   async function gen(){
     var txt=itab==='text'?notes:pdfTxt;
     if(!txt.trim())return st('Paste some notes first');
@@ -967,11 +1100,48 @@ function App(){
     reader.readAsArrayBuffer(file);
   }
 
-  function pay(plan){
-    if(CFG.RZP_KEY==='YOUR_RAZORPAY_KEY_HERE')return st('Add Razorpay key to enable payments');
-    new window.Razorpay({key:CFG.RZP_KEY,amount:plan==='pro'?9900:19900,currency:'INR',name:'CogniSwift',description:plan==='pro'?'Pro · ₹99/mo':'Elite · ₹199/mo',theme:{color:'#e8d5b0'},
-      handler:function(){localStorage.setItem('fw_pro','true');setPw(false);st('Access unlocked');}
-    }).open();
+  async function pay(plan){
+    if(!user){setShowAuth(true);setPw(false);return;}
+    try{
+      st('Creating order…');
+      var token=loadToken();
+      if(!token){setShowAuth(true);setPw(false);return;}
+
+      var r=await fetch('/api/order',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({plan,access_token:token})
+      });
+      var order=await r.json();
+      if(order.error)return st('Error: '+order.error);
+
+      var rzp=new window.Razorpay({
+        key: order.key_id,
+        order_id: order.order_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'CogniSwift',
+        description: plan==='pro'?'Pro · ₹99/mo':'Elite · ₹199/mo',
+        theme:{color:'#e8d5b0'},
+        prefill:{email:user.email},
+        handler:async function(response){
+          // Payment captured — webhook will update DB
+          // Optimistically update UI immediately
+          var upgraded={...user,tier:plan};
+          setUser(upgraded);setSession(upgraded);
+          setPw(false);
+          st('🎉 Welcome to '+(plan==='pro'?'Pro':'Elite')+'!');
+        },
+        modal:{ondismiss:function(){st('Payment cancelled');}}
+      });
+      rzp.open();
+    }catch(err){st('Payment error: '+err.message);}
+  }
+
+  function logout(){
+    clearToken();
+    setUser(null);setSession(null);setShowUserMenu(false);
+    st('Signed out');
   }
 
   var itxt=itab==='text'?notes:pdfTxt;
@@ -984,7 +1154,23 @@ function App(){
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},'Features'),
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Pricing'),
         e('button',{className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
-        e('button',{className:'np',onClick:scrollApp},'Try free')
+        user
+          ? e('div',{className:'user-menu'},
+              e('button',{className:'auth-btn',onClick:function(){setShowUserMenu(function(v){return !v;})}},
+                user.avatar&&e('img',{src:user.avatar,alt:''}),
+                user.name.split(' ')[0],
+                e('span',{className:'tier-badge '+(user.tier||'free')},user.tier||'free')
+              ),
+              showUserMenu&&e('div',{className:'user-drop'},
+                e('div',{style:{padding:'8px 12px 6px',borderBottom:'1px solid var(--border)',marginBottom:4}},
+                  e('div',{style:{fontSize:'0.72rem',color:'var(--muted)',marginBottom:2}},user.email),
+                  e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}},user.tier||'free')
+                ),
+                (user.tier==='free')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
+                e('button',{className:'user-drop-item danger',onClick:logout},'Sign out')
+              )
+            )
+          : e('button',{className:'np',onClick:function(){setShowAuth(true);}},'Sign in')
       )
     ),
 
