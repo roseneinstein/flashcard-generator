@@ -545,7 +545,7 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 .tier-badge.free{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
 .tier-badge.pro{background:#7c3aed22;color:#a78bfa;border:1px solid #7c3aed44}
 .tier-badge.elite{background:#b4520022;color:#fb923c;border:1px solid #b4520044}
-.user-drop{position:absolute;top:calc(100% + 8px);right:0;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 0;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.user-drop{position:absolute;top:calc(100% + 0px);right:0;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 0;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.3);margin-top:0}
 .user-drop-item{width:100%;text-align:left;background:none;border:none;padding:9px 14px;font-size:0.78rem;color:var(--text);font-family:'Geist',sans-serif;cursor:none;transition:background .15s}
 .user-drop-item:hover{background:var(--surface2)}
 .user-drop-item.danger{color:var(--red)}
@@ -662,10 +662,14 @@ async function fetchUserProfile(){
   }catch(e){return null;}
 }
 
+// Generation counter — localStorage for guests, server for logged-in users
 function getUsage(){var t=new Date().toDateString();var s=JSON.parse(localStorage.getItem('fw_u')||'{}');return s.d===t?s.c||0:0;}
-function bumpUsage(){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:getUsage()+1}));}
+function setLocalUsage(n){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:n}));}
+function bumpUsage(){setLocalUsage(getUsage()+1);}
 function getDayLimit(){var t=getTier();return t==='elite'?CFG.ELITE_LIMIT:t==='pro'?CFG.PRO_LIMIT:CFG.FREE_LIMIT;}
 function getCharLimit(){var t=getTier();return t==='elite'?CFG.ELITE_CHARS:t==='pro'?CFG.PRO_CHARS:CFG.FREE_CHARS;}
+// API helpers — all authenticated calls share this
+function authHeader(){return {Authorization:'Bearer '+loadToken(),'Content-Type':'application/json'};}
 var _userCache=null;
 function getSession(){return _userCache;}
 function setSession(u){_userCache=u;}
@@ -992,7 +996,7 @@ function MistakeList(props){
         e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
           e('div',{style:{flex:1}},
             e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:3,lineHeight:1.5}},m.question),
-            e('div',{className:'mist-set'},'from: '+m.setName+' · '+new Date(m.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
+            e('div',{className:'mist-set'},'from: '+(m.set_name||m.setName)+' · '+new Date(m.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
           ),
           e('button',{
             onClick:function(){toggle(m.id);},
@@ -1146,7 +1150,8 @@ function App(){
     });
   }
 
-  var usage=getUsage(),pro=isPro();
+  var usageS=useState(getUsage()),setUsage=usageS[1];var usage=usageS[0];
+  var pro=isPro();
   function st(m){setToast(m);clearTimeout(tt.current);tt.current=setTimeout(function(){setToast('');},2700);}
 
   // Load shared cards — supports new short URLs (/s/XXXXX) and old #cards= hash URLs
@@ -1189,17 +1194,29 @@ function App(){
     loadShared();
   },[]);
 
-  // ── Load Pro data from localStorage on mount ──
-  useEffect(function(){
+  // ── Load server-side Pro data after user logs in ──
+  // Called once after auth resolves, and when workspace opens
+  async function loadProData(){
+    var token=loadToken();
+    if(!token)return;
     try{
-      var ss=JSON.parse(localStorage.getItem('cs_sets')||'[]');
-      setSavedSets(ss);
-      var mm=JSON.parse(localStorage.getItem('cs_mistakes')||'[]');
-      setMistakes(mm);
-      var qh=JSON.parse(localStorage.getItem('cs_qhist')||'[]');
-      setQuizHist(qh);
+      // Load usage count from server
+      var ur=await fetch('/api/usage',{headers:authHeader()});
+      if(ur.ok){var ud=await ur.json();setUsage(ud.count);setLocalUsage(ud.count);}
     }catch(e){}
-  },[]);
+    try{
+      var sr=await fetch('/api/sets',{headers:authHeader()});
+      if(sr.ok){var sd=await sr.json();setSavedSets(sd.sets||[]);}
+    }catch(e){}
+    try{
+      var mr=await fetch('/api/mistakes',{headers:authHeader()});
+      if(mr.ok){var md=await mr.json();setMistakes(md.mistakes||[]);}
+    }catch(e){}
+    try{
+      var hr=await fetch('/api/history',{headers:authHeader()});
+      if(hr.ok){var hd=await hr.json();setQuizHist(hd.history||[]);}
+    }catch(e){}
+  }
 
   // On mount: check for OAuth token in URL hash (after Google redirect) OR restore saved token
   useEffect(function(){
@@ -1216,7 +1233,7 @@ function App(){
         }
       }
       var profile=await fetchUserProfile();
-      if(profile){setUser(profile);setSession(profile);}
+      if(profile){setUser(profile);setSession(profile);loadProData();}
     }
     initAuth();
   },[]);
@@ -1235,7 +1252,17 @@ function App(){
       // If only one option, auto-select it
       setActiveQuiz(counts.length===1?res.quiz.slice(0,counts[0]):null);
       setPickAnim(null);
-      setCi(0);setRtab('cards');bumpUsage();
+      setCi(0);setRtab('cards');
+      // Bump usage — server for logged-in, localStorage for guests
+      if(loadToken()){
+        fetch('/api/usage',{method:'POST',headers:authHeader()})
+          .then(function(r){return r.json();})
+          .then(function(d){if(d.count!==undefined){setUsage(d.count);setLocalUsage(d.count);}})
+          .catch(function(){bumpUsage();setUsage(getUsage());});
+      }else{
+        bumpUsage();setUsage(getUsage());
+      }
+      setActiveSetName(''); // clear set name on fresh generation
       st((res.flashcards||[]).length+' cards ready');
       setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
       // Fire summary in background — doesn't block cards from showing
@@ -1354,27 +1381,42 @@ function App(){
     if(!isPro()&&!isElite()){setPw(true);return;}
     setSaveName('');setShowSave(true);
   }
-  function confirmSave(){
+  async function confirmSave(){
     var name=saveName.trim();
     if(!name){st('Enter a name for this set');return;}
+    var id=Date.now().toString(36);
     var entry={
-      id:Date.now().toString(36),
+      id:id,
       name:name,
       cards:cards,
       quiz:quiz,
       summary:summary,
+      saved_at:new Date().toISOString(),
       savedAt:new Date().toISOString(),
     };
+    // Update UI immediately
     var updated=[entry].concat(savedSets);
     setSavedSets(updated);
-    try{localStorage.setItem('cs_sets',JSON.stringify(updated));}catch(e){}
+    setActiveSetName(name); // track so quiz history + mistakes record against this set
     setShowSave(false);
     st('Saved as "'+name+'"');
+    // Persist to server if logged in
+    if(loadToken()){
+      try{
+        await fetch('/api/sets',{
+          method:'POST',
+          headers:authHeader(),
+          body:JSON.stringify({id,name,cards,quiz,summary}),
+        });
+      }catch(e){/* server save failed — data still in memory */}
+    }
   }
   function deleteSet(id){
     var updated=savedSets.filter(function(s){return s.id!==id;});
     setSavedSets(updated);
-    try{localStorage.setItem('cs_sets',JSON.stringify(updated));}catch(e){}
+    if(loadToken()){
+      fetch('/api/sets?id='+id,{method:'DELETE',headers:authHeader()}).catch(function(){});
+    }
     st('Set deleted');
   }
   function loadSet(entry){
@@ -1448,33 +1490,35 @@ function App(){
 
   // ── Pro: record mistake — only for saved sets ──
   function recordMistake(question,options,correct,explanation){
-    if(!activeSetName)return; // only track mistakes from saved sets
-    var entry={
-      id:Date.now().toString(36),
-      question:question,
-      options:options,
-      correct:correct,
-      explanation:explanation,
-      setName:activeSetName,
-      date:new Date().toISOString(),
-    };
-    var updated=[entry].concat(mistakes).slice(0,200);
-    setMistakes(updated);
-    try{localStorage.setItem('cs_mistakes',JSON.stringify(updated));}catch(e){}
+    if(!activeSetName)return;
+    var id=Date.now().toString(36);
+    var entry={id,question,options:options||[],correct,explanation:explanation||'',set_name:activeSetName,setName:activeSetName,created_at:new Date().toISOString(),date:new Date().toISOString()};
+    setMistakes(function(prev){return [entry].concat(prev).slice(0,200);});
+    if(loadToken()){
+      fetch('/api/mistakes',{method:'POST',headers:authHeader(),
+        body:JSON.stringify({id,set_name:activeSetName,question,options:options||[],correct,explanation:explanation||''})
+      }).catch(function(){});
+    }
   }
   function clearMistakes(){
     setMistakes([]);
-    try{localStorage.removeItem('cs_mistakes');}catch(e){}
+    if(loadToken()){
+      fetch('/api/mistakes?all=true',{method:'DELETE',headers:authHeader()}).catch(function(){});
+    }
     st('Mistakes cleared');
   }
 
   // ── Pro: save quiz result — only for saved sets ──
   function saveQuizResult(score,total){
-    if(!activeSetName)return; // only track history from saved sets
-    var entry={id:Date.now().toString(36),score:score,total:total,setName:activeSetName,date:new Date().toISOString()};
-    var updated=[entry].concat(quizHist).slice(0,100);
-    setQuizHist(updated);
-    try{localStorage.setItem('cs_qhist',JSON.stringify(updated));}catch(e){}
+    if(!activeSetName)return;
+    var id=Date.now().toString(36);
+    var entry={id,score,total,set_name:activeSetName,setName:activeSetName,completed_at:new Date().toISOString(),date:new Date().toISOString()};
+    setQuizHist(function(prev){return [entry].concat(prev).slice(0,100);});
+    if(loadToken()){
+      fetch('/api/history',{method:'POST',headers:authHeader(),
+        body:JSON.stringify({id,set_name:activeSetName,score,total})
+      }).catch(function(){});
+    }
   }
 
   var itxt=itab==='text'?notes:pdfTxt;
@@ -1488,7 +1532,7 @@ function App(){
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Pricing'),
         e('button',{className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
         user
-          ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);}},
+          ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);},style:{paddingBottom:8}},
               e('div',{className:'auth-btn'},
                 user.avatar&&e('img',{src:user.avatar,alt:''}),
                 user.name?user.name.split(' ')[0]:user.email.split('@')[0],
@@ -1505,7 +1549,7 @@ function App(){
                   e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}},user.tier||'free')
                 ),
                 (user.tier==='free')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
-                (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');setShowWs(true);}},
+                (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');loadProData();setShowWs(true);}},
                   '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
                 ),
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('history');setShowWs(true);}},
@@ -1793,7 +1837,7 @@ function App(){
                     var col=pct>=80?'var(--green)':pct>=50?'var(--accent)':'var(--red)';
                     return e('div',{key:q.id,className:'qh-item'},
                       e('div',{className:'qh-left'},
-                        e('div',{style:{fontWeight:500,fontSize:'0.82rem'}},q.setName),
+                        e('div',{style:{fontWeight:500,fontSize:'0.82rem'}},q.set_name||q.setName),
                         e('div',{className:'qh-date'},new Date(q.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}))
                       ),
                       e('div',{style:{textAlign:'right',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}},
