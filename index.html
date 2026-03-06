@@ -94,9 +94,8 @@ body.hov #cur{width:5px;height:5px;opacity:0.5}
 body.hov #cur-r{width:48px;height:48px;border-radius:6px;opacity:0.2}
 
 /* NAV */
-nav{position:fixed;top:0;left:0;right:0;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--border);background:rgba(19,19,26,0.88);backdrop-filter:blur(20px);z-index:100;transition:background .3s,border-color .3s}
+nav{position:fixed;top:0;left:0;right:0;height:62px;display:flex;align-items:center;justify-content:flex-end;padding:0 28px;border-bottom:1px solid var(--border);background:rgba(19,19,26,0.88);backdrop-filter:blur(20px);z-index:100;transition:background .3s,border-color .3s}
 html.light nav{background:rgba(244,241,235,0.92)}
-html.light .hero-wordmark{-webkit-text-stroke:1.5px rgba(154,124,63,0.18);text-stroke:1.5px rgba(154,124,63,0.18);}
 .logo{font-family:'Instrument Serif',serif;font-size:1.9rem;color:var(--accent);letter-spacing:-0.02em;font-weight:400}
 .nav-r{display:flex;gap:24px;align-items:center}
 .nl{font-size:0.75rem;font-weight:400;color:var(--muted);background:none;border:none;cursor:none;letter-spacing:0.06em;text-transform:uppercase;transition:color .2s;padding:0}
@@ -108,32 +107,8 @@ html.light .hero-wordmark{-webkit-text-stroke:1.5px rgba(154,124,63,0.18);text-s
 .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;position:relative;overflow:clip}
 .h-glow{position:absolute;width:800px;height:600px;background:radial-gradient(ellipse,rgba(232,213,176,0.07) 0%,transparent 65%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
 
-/* ── WATERMARK: full viewport width, dead centre, never clips ── */
-.hero-wordmark{
-  position:absolute;
-  top:50%;
-  left:0;
-  right:0;
-  transform:translateY(-50%);
-  font-family:'Instrument Serif',serif;
-  font-size:clamp(5rem, 22vw, 22vw);
-  font-weight:400;
-  letter-spacing:-0.03em;
-  color:transparent;
-  -webkit-text-stroke:1.5px rgba(232,213,176,0.13);
-  white-space:nowrap;
-  pointer-events:none;
-  user-select:none;
-  line-height:1;
-  text-align:center;
-  width:100%;
-  padding:0;
-  margin:0;
-  animation:fu 1s ease both;
-}
-
-.h-line{font-size:0.68rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:28px;display:flex;align-items:center;gap:14px;animation:fu .55s ease both;position:relative;z-index:2}
-.h-line::before,.h-line::after{content:'';width:36px;height:1px;background:var(--muted2)}
+.h-line{font-size:clamp(1.5rem,3.5vw,2.4rem);letter-spacing:-0.02em;font-family:'Instrument Serif',serif;color:var(--accent);margin-bottom:20px;display:flex;align-items:center;gap:18px;animation:fu .55s ease both;position:relative;z-index:2;font-weight:400}
+.h-line::before,.h-line::after{content:'';width:44px;height:1px;background:var(--muted2)}
 
 /* ── HEADLINE: biggest text users actually read on screen ── */
 h1{
@@ -784,7 +759,7 @@ function App(){
     var sel=cards.filter(function(_,i){return shareSel[i];});
     if(!sel.length){st('Select at least one card');return;}
     var payload=btoa(encodeURIComponent(JSON.stringify(sel)));
-    var base=window.location.origin+window.location.pathname.replace(/\/$/,'');var url=base+'#cards='+payload;
+    var url=window.location.origin+'/#cards='+payload;
     setShareUrl(url);
   }
   function copyShareUrl(){
@@ -894,7 +869,6 @@ function App(){
   return e(React.Fragment,null,
     /* NAV */
     e('nav',null,
-      e('div',{className:'logo'},'FlipWise'),
       e('div',{className:'nav-r'},
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},'Features'),
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Pricing'),
@@ -906,7 +880,6 @@ function App(){
     /* HERO */
     e('section',{className:'hero'},
       e('div',{className:'h-glow'}),
-      e('div',{className:'hero-wordmark','aria-hidden':'true'},'FlipWise'),
       e('div',{className:'h-line'},'UPSC · JEE · NEET · CA'),
       e('h1',null,'Notes become',e('br'),' ',e('em',null,'flashcards')),
       e('p',{className:'h-sub'},'Paste any text. Get precise revision cards and a self-test quiz — in seconds.'),
