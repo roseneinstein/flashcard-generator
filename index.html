@@ -412,6 +412,24 @@ input[type=file]{display:none}
 .md{width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--muted);font-family:'Geist',sans-serif;font-size:0.8rem;cursor:none;transition:all .15s}
 .md:hover{border-color:var(--border-h);color:var(--text)}
 
+/* Quiz picker */
+.qpick{padding:38px 24px;text-align:center}
+.qpick-lbl{font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;font-weight:400}
+.qpick-opts{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.qpick-btn{
+  font-family:'Geist',sans-serif;font-size:1rem;font-weight:500;
+  width:64px;height:64px;border-radius:50%;
+  border:1.5px solid var(--border-h);
+  background:var(--surface2);color:var(--text);
+  cursor:none;
+  transition:border-color .2s,background .2s,color .2s,transform .32s cubic-bezier(.34,1.56,.64,1),opacity .28s ease;
+}
+.qpick-btn:hover{border-color:var(--accent);background:var(--surface);color:var(--accent)}
+.qpick-btn.chosen{
+  background:var(--accent);color:var(--bg);border-color:var(--accent);
+  transform:scale(1.22);opacity:0;
+}
+.qpick-btn.fading{opacity:0;transform:scale(0.88);}
 /* Summary */
 .sw{padding:22px 24px}
 .sw-title{font-family:'Instrument Serif',serif;font-size:1.15rem;color:var(--accent);margin-bottom:18px;letter-spacing:-0.01em;line-height:1.3;font-weight:400;padding-bottom:14px;border-bottom:1px solid var(--border)}
@@ -691,7 +709,8 @@ function Quiz(props){
     return e('div',{className:'qres'},
       e('div',{className:'qsb'},pct+'%'),
       e('div',{className:'qrs'},sc+' out of '+qs.length+' correct — '+msg),
-      e('button',{className:'rbtn',onClick:function(){setQi(0);setCh(null);setSc(0);setDone(false);}},'Retry Quiz')
+      e('button',{className:'rbtn',style:{marginRight:8},onClick:function(){setQi(0);setCh(null);setSc(0);setDone(false);}},'Retry'),
+      props.onReset&&e('button',{className:'rbtn',onClick:props.onReset},'Change count')
     );
   }
 
@@ -776,6 +795,9 @@ function App(){
   var rtabS=useState('cards'),setRtab=rtabS[1];var rtab=rtabS[0];
   var summaryS=useState(null),setSummary=summaryS[1];var summary=summaryS[0];
   var sumLoadS=useState(false),setSumLoad=sumLoadS[1];var sumLoad=sumLoadS[0];
+  var quizCountsS=useState([5]),setQuizCounts=quizCountsS[1];var quizCounts=quizCountsS[0];
+  var activeQuizS=useState(null),setActiveQuiz=activeQuizS[1];var activeQuiz=activeQuizS[0];
+  var pickAnimS=useState(null),setPickAnim=pickAnimS[1];var pickAnim=pickAnimS[0];
   var pwS=useState(false),setPw=pwS[1];var pw=pwS[0];
   var spS=useState('pro'),setSp=spS[1];var sp=spS[0];
   var toastS=useState(''),setToast=toastS[1];var toast=toastS[0];
@@ -871,6 +893,11 @@ function App(){
     try{
       var res=await callAI(txt,cnt);
       setCards(res.flashcards||[]);setQuiz(res.quiz||[]);
+      var counts=res.suggested_quiz_counts||[5];
+      setQuizCounts(counts);
+      // If only one option, auto-select it
+      setActiveQuiz(counts.length===1?res.quiz.slice(0,counts[0]):null);
+      setPickAnim(null);
       setCi(0);setRtab('cards');bumpUsage();
       st((res.flashcards||[]).length+' cards ready');
       setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
@@ -1040,7 +1067,23 @@ function App(){
               e('button',{className:'ab pr',onClick:function(){dlSummaryPDF(summary);}},'↓ PDF')
             )
           ),
-          rtab==='quiz'&&(quiz.length>0?e(Quiz,{qs:quiz}):e('div',{className:'emp'},e('div',{className:'emp-i'},'?'),e('p',null,'No quiz available')))
+          rtab==='quiz'&&(quiz.length>0
+            ? (activeQuiz
+                ? e(Quiz,{qs:activeQuiz,onReset:function(){setActiveQuiz(null);setPickAnim(null);}})
+                : e('div',{className:'qpick'},
+                    e('div',{className:'qpick-lbl'},'How many questions?'),
+                    e('div',{className:'qpick-opts'},
+                      quizCounts.map(function(n){
+                        var cls='qpick-btn'+(pickAnim===n?' chosen':pickAnim!==null?' fading':'');
+                        return e('button',{key:n,className:cls,onClick:function(){
+                          setPickAnim(n);
+                          setTimeout(function(){setActiveQuiz(quiz.slice(0,n));setPickAnim(null);},380);
+                        }},n);
+                      })
+                    )
+                  )
+              )
+            : e('div',{className:'emp'},e('div',{className:'emp-i'},'?'),e('p',null,'No quiz available')))
         )
       ),
       !loading&&cards.length===0&&e('div',{className:'emp rev',style:{marginTop:14}},e('div',{className:'emp-i'},'◻'),e('p',null,'Your flashcards will appear here'))
