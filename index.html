@@ -527,6 +527,20 @@ function dlPDF(cards,title){
   setTimeout(function(){w.print();},500);
 }
 
+function dlSummaryPDF(data){
+  if(!data)return;
+  var rows=data.sections.map(function(sec){
+    var pts=sec.points.map(function(p){
+      return '<li style="margin-bottom:6px;line-height:1.6;font-size:13px;color:#3a3a3a">'+p+'</li>';
+    }).join('');
+    return '<div style="margin-bottom:22px;page-break-inside:avoid"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#9a7c3f;font-weight:600;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #e8e0d0">'+sec.heading+'</div><ul style="margin:0;padding-left:18px">'+pts+'</ul></div>';
+  }).join('');
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>'+data.title+'</title><style>body{font-family:Georgia,serif;padding:40px;max-width:700px;margin:auto;color:#1e1b14}h1{font-size:22px;margin-bottom:4px;font-weight:400;letter-spacing:-0.02em}p.meta{color:#9a9a9a;font-size:12px;margin-bottom:32px}@media print{body{padding:20px}}</style></head><body><h1>'+data.title+'</h1><p class="meta">FlipWise Summary · '+new Date().toLocaleDateString('en-IN')+'</p>'+rows+'</body></html>');
+  w.document.close();
+  setTimeout(function(){w.print();},500);
+}
+
 function useCursor(){
   useEffect(function(){
     var dot=document.getElementById('cur'),ring=document.getElementById('cur-r');
@@ -1020,7 +1034,12 @@ function App(){
               e('button',{className:'ab',onClick:openShare},'⇪ Share')
             )
           ),
-          rtab==='summary'&&e(Summary,{data:summary,loading:sumLoad}),
+          rtab==='summary'&&e(React.Fragment,null,
+            e(Summary,{data:summary,loading:sumLoad}),
+            summary&&!sumLoad&&e('div',{className:'fca'},
+              e('button',{className:'ab pr',onClick:function(){dlSummaryPDF(summary);}},'↓ PDF')
+            )
+          ),
           rtab==='quiz'&&(quiz.length>0?e(Quiz,{qs:quiz}):e('div',{className:'emp'},e('div',{className:'emp-i'},'?'),e('p',null,'No quiz available')))
         )
       ),
