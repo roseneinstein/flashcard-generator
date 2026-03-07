@@ -1,16 +1,27 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { text } = req.body;
+  const { text, depth } = req.body;
   if (!text) return res.status(400).json({ error: 'Missing text' });
 
   const apiKey  = process.env.GROQ_API_KEY;
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
+  // Depth-specific instructions
+  const depthInstructions = {
+    concise:   'Write a CONCISE summary. Limit to 3-4 sections. Each section has 2-3 sharp, high-density points. Strip all redundancy — only the most important facts survive.',
+    standard:  'Write a STANDARD summary. Use 4-6 sections, each with 3-5 points. Balance coverage and brevity.',
+    detailed:  'Write a DETAILED summary. Use 5-8 sections, each with 4-7 points. Include supporting facts, context, dates, figures, and mechanisms. Nothing important should be omitted.',
+    'deep dive': 'Write an EXHAUSTIVE deep dive. Use 6-10 sections, each with 5-8 points. Cover every sub-topic, nuance, case reference, formula, provision, and example present in the text. This is a full study document, not a quick review.',
+  };
+  const depthNote = depthInstructions[depth] || depthInstructions['standard'];
+
   const prompt = `You are an expert study notes writer for Indian competitive exams (UPSC, JEE, NEET, CA).
 
 Read ALL of the study material below. It may cover multiple topics or editorials — your summary MUST cover every topic present, not just the first one. Distribute sections proportionally across all topics.
+
+DEPTH INSTRUCTION: ${depthNote}
 
 Return ONLY a valid JSON object. No markdown, no code fences, nothing else.
 
@@ -19,17 +30,15 @@ Schema:
 
 RULES:
 1. "title" — a short descriptive title for the overall topic (max 8 words).
-2. "sections" — 4 to 8 sections, each covering a distinct sub-topic or theme from the text.
-3. Each section has a "heading" (3-6 words) and "points" — an array of 3-7 strings.
-4. Each point in "points" must be a complete, self-contained fact or explanation (not a one-liner heading). Include specific figures, dates, names, technical terms wherever present in the source text.
-5. Do NOT omit technical jargon, key terms, or domain-specific vocabulary — include them naturally within the points.
-6. Every string must be on ONE line. No newlines or tabs inside any string.
-7. Do NOT use double-quote characters inside string values. Rephrase instead.
-8. NO trailing commas anywhere.
-9. All keys double-quoted. No single quotes.
+2. Each section has a "heading" (3-6 words) and "points" array.
+3. Each point must be a complete, self-contained fact or explanation. Include specific figures, dates, names, technical terms wherever present in the source text.
+4. Do NOT omit technical jargon, key terms, or domain-specific vocabulary.
+5. Every string must be on ONE line. No newlines or tabs inside any string.
+6. Do NOT use double-quote characters inside string values. Rephrase instead.
+7. NO trailing commas. All keys double-quoted. No single quotes.
 
 Study material:
-${text.substring(0, 8000)}`;
+${text.substring(0, 30000)}`;
 
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
@@ -47,35 +56,34 @@ ${text.substring(0, 8000)}`;
   function isRateLimit(status, errObj) {
     if (status === 429 || status === 413) return true;
     if (!errObj) return false;
-    const msg  = (errObj.message || '').toLowerCase();
-    const code = (errObj.code    || '').toLowerCase();
-    return msg.includes('rate') || msg.includes('limit') || msg.includes('quota') ||
-           msg.includes('tpd')  || msg.includes('tokens per day') || msg.includes('try again') ||
-           code.includes('rate')|| code.includes('limit') || code.includes('quota');
+    const msg = (errObj.message || '').toLowerCase();
+    return msg.includes('rate') || msg.includes('limit') || msg.includes('quota') || msg.includes('try again');
   }
+
+  // Scale tokens with depth
+  const tokensByDepth = { concise: 1500, standard: 2000, detailed: 3000, 'deep dive': 4000 };
+  const maxTokens = tokensByDepth[depth] || 2000;
 
   let lastError = 'All models exhausted';
 
   for (const { key, model } of attempts) {
     try {
-      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
           model,
-          max_tokens: 3000,
+          max_tokens: maxTokens,
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
+          temperature: 0.15,
           response_format: { type: 'json_object' },
         }),
       });
 
-      const data = await groqRes.json();
+      const data = await r.json();
       if (data.error) {
         lastError = data.error.message || JSON.stringify(data.error);
-        if (isRateLimit(groqRes.status, data.error)) continue;
-        if (groqRes.status === 401 || groqRes.status === 403)
-          return res.status(500).json({ error: 'Invalid API key' });
+        if (isRateLimit(r.status, data.error)) continue;
         continue;
       }
 
@@ -83,21 +91,17 @@ ${text.substring(0, 8000)}`;
       raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
       const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
       if (fi === -1 || la === -1) { lastError = 'No JSON'; continue; }
-      raw = raw.slice(fi, la + 1);
-      raw = raw.replace(/[\r\n\t]+/g, ' ');
-      raw = raw.replace(/,\s*([}\]])/g, '$1');
+      raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g,' ').replace(/,\s*([}\]])/g,'$1');
 
       const parsed = JSON.parse(raw);
-      if (!parsed.title || !Array.isArray(parsed.sections)) {
-        lastError = 'Response shape invalid'; continue;
-      }
-      return res.status(200).json(parsed);
+      if (!parsed.title || !Array.isArray(parsed.sections)) { lastError = 'Bad shape'; continue; }
 
+      return res.status(200).json(parsed);
     } catch (err) {
       lastError = err.message || 'Unknown';
       continue;
     }
   }
 
-  return res.status(503).json({ error: 'All models are at their daily limit. Try again in a few hours.' });
+  return res.status(503).json({ error: 'All models at limit. Try again shortly.' });
 }
