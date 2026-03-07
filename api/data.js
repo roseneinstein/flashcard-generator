@@ -90,6 +90,16 @@ export default async function handler(req, res) {
       if (error) return res.status(500).json({ error: error.message });
       return res.status(200).json({ ok: true });
     }
+
+    if (req.method === 'DELETE') {
+      const { set_name } = req.query;
+      if (set_name) {
+        const { error } = await supabase.from('quiz_history')
+          .delete().eq('user_id', user.id).eq('set_name', set_name);
+        if (error) return res.status(500).json({ error: error.message });
+      }
+      return res.status(200).json({ ok: true });
+    }
   }
 
   // ── MISTAKES ───────────────────────────────────────────────────────────────
@@ -115,9 +125,13 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const { all, id } = req.query;
+      const { all, id, set_name } = req.query;
       if (all) {
         const { error } = await supabase.from('mistakes').delete().eq('user_id', user.id);
+        if (error) return res.status(500).json({ error: error.message });
+      } else if (set_name) {
+        const { error } = await supabase.from('mistakes')
+          .delete().eq('user_id', user.id).eq('set_name', set_name);
         if (error) return res.status(500).json({ error: error.message });
       } else if (id) {
         const { error } = await supabase.from('mistakes')
