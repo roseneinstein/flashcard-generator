@@ -300,8 +300,8 @@ input[type=file]{display:none}
 .fi{position:relative;width:100%;min-height:280px;transform-style:preserve-3d;transition:transform .58s cubic-bezier(.4,.2,.2,1)}
 .fi.fl{transform:rotateY(180deg)}
 .ff,.fb{position:absolute;inset:0;border-radius:var(--r);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;min-height:280px}
-.ff{background:var(--surface2);border:1px solid var(--border)}
-.fb{background:var(--card-back-bg);border:1px solid var(--card-back-border);transform:rotateY(180deg)}
+.ff{background:var(--th-ff-bg,var(--surface2));border:1px solid var(--th-ff-brd,var(--border));color:var(--th-topic,var(--text))}
+.fb{background:var(--th-fb-bg,var(--card-back-bg));border:1px solid var(--th-fb-brd,var(--card-back-border));transform:rotateY(180deg)}
 .fl-lbl{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;opacity:0.38;margin-bottom:16px}
 .fl-q{font-family:'Instrument Serif',serif;font-size:clamp(1.1rem,3vw,1.45rem);line-height:1.5;color:var(--text);font-weight:400}
 .fl-a{font-size:0.88rem;line-height:1.75;color:var(--green);font-weight:300}
@@ -615,6 +615,55 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 /* cb-custom */
 .cb-custom{appearance:none;-moz-appearance:textfield}
 .cb-custom::-webkit-outer-spin-button,.cb-custom::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+/* ELITE: Deck Themes */
+:root,[data-theme="default"]{--th-ff-bg:var(--surface2);--th-ff-brd:var(--border);--th-fb-bg:var(--card-back-bg);--th-fb-brd:var(--card-back-border);--th-topic:var(--text);--th-pts:var(--text)}
+[data-theme="slate"]{--th-ff-bg:#1a2030;--th-ff-brd:#2d3f5e;--th-fb-bg:#111827;--th-fb-brd:#1e3a5f;--th-topic:#c8d8f0;--th-pts:#9ab4d4}
+[data-theme="newspaper"]{--th-ff-bg:#f8f4ed;--th-ff-brd:#d4c9b0;--th-fb-bg:#faf7f2;--th-fb-brd:#c8b89a;--th-topic:#1a1208;--th-pts:#2d2416}
+[data-theme="neon"]{--th-ff-bg:#0a0a14;--th-ff-brd:#7c3aed44;--th-fb-bg:#070710;--th-fb-brd:#7c3aed66;--th-topic:#e879f9;--th-pts:#a5b4fc}
+.theme-bar{display:flex;gap:8px;align-items:center;padding:8px 22px;border-bottom:1px solid var(--border)}
+.theme-dot{width:22px;height:22px;border-radius:50%;cursor:none;border:2px solid transparent;transition:transform .15s,border-color .15s;flex-shrink:0}
+.theme-dot:hover{transform:scale(1.15)}
+.theme-dot.act{border-color:var(--accent);transform:scale(1.2)}
+.theme-dot[data-t="default"]{background:conic-gradient(#322e4a 0%,#0e1912 50%)}
+.theme-dot[data-t="slate"]{background:conic-gradient(#1a2030 0%,#111827 50%)}
+.theme-dot[data-t="newspaper"]{background:conic-gradient(#f8f4ed 0%,#faf7f2 50%)}
+.theme-dot[data-t="neon"]{background:conic-gradient(#0a0a14 0%,#7c3aed 50%)}
+.theme-lbl{font-size:0.62rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase}
+.fs-ctrl{display:flex;align-items:center;gap:6px;margin-left:auto}
+.fs-btn{width:24px;height:24px;border:1px solid var(--border);border-radius:5px;background:none;color:var(--muted);font-size:0.75rem;cursor:none;display:flex;align-items:center;justify-content:center;transition:color .15s,border-color .15s}
+.fs-btn:hover{color:var(--text);border-color:var(--border-h)}
+.sr-banner{background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sr-banner-txt{font-size:0.78rem;color:var(--muted)}
+.sr-banner-txt strong{color:var(--text)}
+.sr-rate-btns{display:flex;gap:6px}
+.sr-btn{padding:5px 12px;border-radius:6px;border:1px solid;background:none;font-size:0.72rem;cursor:none;font-family:Geist,sans-serif;transition:all .15s}
+.sr-btn.ok{color:var(--green);border-color:var(--green)}
+.sr-btn.ok:hover{background:rgba(74,222,128,0.1)}
+.sr-btn.again{color:var(--red);border-color:var(--red)}
+.sr-btn.again:hover{background:rgba(248,113,113,0.1)}
+.streak-wrap{padding:4px 0 16px}
+.streak-head{font-size:0.72rem;color:var(--accent);text-transform:uppercase;letter-spacing:0.07em;font-weight:500;margin-bottom:14px}
+.heatmap{display:flex;gap:3px;flex-wrap:wrap}
+.hm-cell{width:11px;height:11px;border-radius:2px;transition:background .2s}
+.streak-stats{display:flex;gap:24px;margin-top:14px}
+.streak-stat{font-size:0.72rem;color:var(--muted)}
+.streak-stat strong{color:var(--text);font-size:0.88rem;display:block;margin-bottom:1px}
+.weak-wrap{padding:4px 0 16px}
+.weak-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.weak-topic{font-size:0.75rem;color:var(--text);width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.weak-bar-bg{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.weak-bar-fill{height:100%;border-radius:3px;background:var(--red);transition:width .6s ease}
+.weak-count{font-size:0.68rem;color:var(--muted);width:28px;text-align:right}
+.fav-btn{position:absolute;top:10px;right:10px;z-index:10;background:none;border:none;font-size:1rem;cursor:none;opacity:0.4;transition:opacity .15s,transform .15s;line-height:1}
+.fav-btn:hover,.fav-btn.on{opacity:1}
+.fav-btn.on{transform:scale(1.2)}
+.card-note-area{width:100%;resize:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:Geist,sans-serif;font-size:0.72rem;padding:7px 10px;margin-top:8px;line-height:1.6;cursor:none}
+.card-note-area:focus{outline:none;border-color:var(--border-h)}
+.depth-row{display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.depth-lbl{font-size:0.7rem;color:var(--muted);margin-right:4px;white-space:nowrap}
+.depth-btn{padding:4px 11px;border:1px solid var(--border);border-radius:50px;background:none;color:var(--muted);font-size:0.7rem;cursor:none;font-family:Geist,sans-serif;transition:all .15s}
+.depth-btn.act{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 </style>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
@@ -694,11 +743,11 @@ function isPro(){return _userCache&&(_userCache.tier==='pro'||_userCache.tier===
 function isElite(){return _userCache&&_userCache.tier==='elite';}
 function getTier(){return _userCache?_userCache.tier:'free';}
 
-async function callSummary(text){
+async function callSummary(text,depth){
   var r=await fetch('/api/summary',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text:text.substring(0,getCharLimit())}),
+    body:JSON.stringify({text:text.substring(0,getCharLimit()),depth:depth||'standard'}),
   });
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
@@ -786,7 +835,7 @@ function HFeat(props){
 }
 
 function Card(props){
-  var card=props.card,idx=props.idx,total=props.total,onPrev=props.onPrev,onNext=props.onNext;
+  var card=props.card,idx=props.idx,total=props.total,onPrev=props.onPrev,onNext=props.onNext,fontSz=props.fontSz||1,fav=props.fav,note=props.note||'',onFav=props.onFav,onNote=props.onNote;
   var fl=useState(false),setFl=fl[1];fl=fl[0];
   var animS=useState('in'),setAnim=animS[1];var anim=animS[0];
   var tx=useRef(null),ty=useRef(null),didSwipe=useRef(false),didFlip=useRef(false);
@@ -828,8 +877,9 @@ function Card(props){
     e('div',{className:'fw',style:animStyle,onClick:handleClick},
       e('div',{className:fl?'fi fl':'fi'},
         e('div',{className:'ff'},
+          onFav&&e('button',{className:'fav-btn'+(fav?' on':''),onClick:function(ev){ev.stopPropagation();onFav();}},fav?'♥':'♡'),
           e('div',{className:'fl-lbl'},'Topic'),
-          e('div',{className:'fl-q'},card.topic||card.question),
+          e('div',{className:'fl-q',style:{fontSize:(1.25*fontSz)+'rem'}},card.topic||card.question),
           e('div',{className:'fl-hint'},'tap to study')
         ),
         e('div',{className:'fb',style:{alignItems:'flex-start',textAlign:'left',overflowY:'auto',padding:'20px'}},
@@ -839,11 +889,15 @@ function Card(props){
               var t=line.trim();if(!t)return null;
               return e('div',{key:i,style:{display:'flex',gap:7,marginBottom:6,alignItems:'flex-start'}},
                 e('span',{style:{color:'var(--accent)',fontSize:'0.65rem',marginTop:4,flexShrink:0}},'→'),
-                e('span',{style:{fontSize:'0.88rem',lineHeight:1.7,color:'var(--text)',fontWeight:300}},t)
+                e('span',{style:{fontSize:(0.88*fontSz)+'rem',lineHeight:1.7,color:'var(--th-pts,var(--text))',fontWeight:300}},t)
               );
             })
           ),
-          e('div',{className:'fl-hint'},'tap to flip back')
+          e('div',{className:'fl-hint'},'tap to flip back'),
+          onNote&&e('textarea',{className:'card-note-area',placeholder:'Add a note…',value:note,rows:2,
+            onClick:function(ev){ev.stopPropagation();},
+            onChange:function(ev){onNote(ev.target.value);}
+          })
         )
       )
     ),
@@ -865,6 +919,7 @@ function Quiz(props){
   var doneS=useState(false),setDone=doneS[1];var done=doneS[0];
   var animS=useState('in'),setAnim=animS[1];var anim=animS[0];
   var txRef=useRef(null),isSwipeRef=useRef(false);
+  var wrongRef=useRef([]);
 
   useEffect(function(){setAnim('in');},[qi,done]);
 
@@ -893,12 +948,14 @@ function Quiz(props){
 
   if(done){
     var pct=Math.round(sc/qs.length*100);
+    var wrongQs=wrongRef.current;
     var msg=pct>=80?'Excellent — concepts are clear.':pct>=50?'Good effort. Review a few areas.':'Go through the cards once more.';
     return e('div',{className:'qres'},
       e('div',{className:'qsb'},pct+'%'),
       e('div',{className:'qrs'},sc+' out of '+qs.length+' correct — '+msg),
-      e('button',{className:'rbtn',style:{marginRight:8},onClick:function(){setQi(0);setCh(null);setSc(0);setDone(false);}},'Retry'),
-      props.onReset&&e('button',{className:'rbtn',onClick:props.onReset},'Change count')
+      e('button',{className:'rbtn',style:{marginRight:8},onClick:function(){setQi(0);setCh(null);setSc(0);setDone(false);wrongQs.length=0;}},'Retry'),
+      props.onReset&&e('button',{className:'rbtn',onClick:props.onReset},'Change count'),
+      props.onReview&&wrongQs.length>0&&e('button',{className:'rbtn',style:{borderColor:'rgba(124,58,237,0.5)',color:'#a78bfa'},onClick:function(){props.onReview(wrongQs);}},'🧠 Review '+wrongQs.length+' weak card'+(wrongQs.length!==1?'s':''))
     );
   }
 
@@ -917,7 +974,7 @@ function Quiz(props){
           var cls='ob';
           if(answered){if(i===q.correct)cls+=' cor';else if(i===ch&&ch!==q.correct)cls+=' wrg';}
           return e('button',{key:i,className:cls,disabled:answered,onClick:function(){
-            if(answered)return;setCh(i);if(i===q.correct){setSc(function(s){return s+1;});}else if(onMistake){onMistake(q);}
+            if(answered)return;setCh(i);if(i===q.correct){setSc(function(s){return s+1;});}else{if(onMistake)onMistake(q);if(wrongRef.current.indexOf(q)<0)wrongRef.current.push(q);}
           }},
             e('span',{style:{opacity:.35,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}},['A','B','C','D'][i]),
             o
@@ -1098,6 +1155,16 @@ function App(){
   var quizHistS=useState([]),setQuizHist=quizHistS[1];var quizHist=quizHistS[0];
   var showQHisS=useState(false),setShowQHis=showQHisS[1];var showQHis=showQHisS[0];
   var activeSetNameS=useState(''),setActiveSetName=activeSetNameS[1];var activeSetName=activeSetNameS[0];
+  // Elite state
+  var deckThemeS=useState('default'),setDeckTheme=deckThemeS[1];var deckTheme=deckThemeS[0];
+  var fontSzS=useState(1),setFontSz=fontSzS[1];var fontSz=fontSzS[0];
+  var summaryDepthS=useState('standard'),setSummaryDepth=summaryDepthS[1];var summaryDepth=summaryDepthS[0];
+  var favsS=useState({}),setFavs=favsS[1];var favs=favsS[0];
+  var notesMapS=useState({}),setNotesMap=notesMapS[1];var notesMap=notesMapS[0];
+  var srQueueS=useState([]),setSrQueue=srQueueS[1];var srQueue=srQueueS[0];
+  var srModeS=useState(false),setSrMode=srModeS[1];var srMode=srModeS[0];
+  var srIdxS=useState(0),setSrIdx=srIdxS[1];var srIdx=srIdxS[0];
+  var streakDataS=useState(function(){try{return JSON.parse(localStorage.getItem('cs_streak')||'{}');}catch(e){return {};}}),setStreakData=streakDataS[1];var streakData=streakDataS[0];
 
   function openShare(){
     // pre-select all cards
@@ -1169,6 +1236,28 @@ function App(){
 
   var usageS=useState(getUsage()),setUsage=usageS[1];var usage=usageS[0];
   var pro=isPro();
+  useEffect(function(){document.documentElement.setAttribute('data-theme',deckTheme);},[deckTheme]);
+  function bumpStreak(){
+    var today=new Date().toISOString().slice(0,10);
+    var d=Object.assign({},streakData);d[today]=(d[today]||0)+1;
+    setStreakData(d);try{localStorage.setItem('cs_streak',JSON.stringify(d));}catch(e){}
+  }
+  function toggleFav(idx){setFavs(function(f){var n=Object.assign({},f);n[idx]=!n[idx];return n;});}
+  function setNote(idx,val){setNotesMap(function(m){var n=Object.assign({},m);n[idx]=val;return n;});}
+  function startSrMode(){
+    if(!isElite()){setPw(true);return;}
+    var weak=cards.filter(function(c){
+      return mistakes.some(function(m){
+        var mn=m.set_name||m.setName||'';
+        var ct=(c.topic||'').toLowerCase().substring(0,12);
+        return mn===activeSetName&&typeof m.question==='string'&&m.question.toLowerCase().indexOf(ct)>=0;
+      });
+    });
+    var queue=weak.length>0?weak:cards.slice();
+    setSrQueue(queue);setSrIdx(0);setSrMode(true);
+    st('Review mode: '+queue.length+' card'+(queue.length!==1?'s':''));
+  }
+  function srRate(){var next=srIdx+1;if(next>=srQueue.length){setSrMode(false);st('Review complete!');}else{setSrIdx(next);}}
   function st(m){setToast(m);clearTimeout(tt.current);tt.current=setTimeout(function(){setToast('');},2700);}
 
   // Load shared cards — supports new short URLs (/s/XXXXX) and old #cards= hash URLs
@@ -1280,10 +1369,11 @@ function App(){
         bumpUsage();setUsage(getUsage());
       }
       setActiveSetName(''); // clear set name on fresh generation
+      if(isElite())bumpStreak();
       st((res.flashcards||[]).length+' cards ready');
       setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
       // Fire summary in background — doesn't block cards from showing
-      callSummary(txt).then(function(s){setSummary(s);}).catch(function(){setSummary(null);}).finally(function(){setSumLoad(false);});
+      callSummary(txt,isElite()?summaryDepth:'standard').then(function(s){setSummary(s);}).catch(function(){setSummary(null);}).finally(function(){setSumLoad(false);});
     }catch(err){st('Error: '+(err.message||'Check config'));setSumLoad(false);}
     finally{setLoading(false);}
   }
@@ -1580,8 +1670,8 @@ function App(){
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');loadProData();setShowWs(true);}},
                   '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
                 ),
-                (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('history');setShowWs(true);}},
-                  '📊 Progress & History'
+                (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab(isElite()?'streak':'history');loadProData();setShowWs(true);}},
+                  isElite()?'📊 Progress & Stats':'📊 Quiz History'
                 ),
                 e('button',{className:'user-drop-item danger',onClick:logout},'Sign out')
               )
@@ -1671,6 +1761,12 @@ function App(){
               }
             })
           ),
+          isElite()&&e('div',{className:'depth-row'},
+            e('span',{className:'depth-lbl'},'Summary depth:'),
+            ['concise','standard','detailed','deep dive'].map(function(d){
+              return e('button',{key:d,className:'depth-btn'+(summaryDepth===d?' act':''),onClick:function(){setSummaryDepth(d);}},d[0].toUpperCase()+d.slice(1));
+            })
+          ),
           e('button',{className:'gb',onClick:gen,disabled:loading||!itxt.trim()},loading?'Generating…':'Generate →')
         ),
         e('div',{className:'disc'},
@@ -1698,11 +1794,37 @@ function App(){
           e('button',{className:'rt'+(rtab==='summary'?' act':''),onClick:function(){setRtab('summary');}},'Summary'),
           e('button',{className:'rt'+(rtab==='quiz'?' act':''),onClick:function(){setRtab('quiz');}},'Quiz',e('span',{className:'bdg'},quizCounts[quizCounts.length-1]+'Q max'))
         ),
+        isElite()&&rtab==='cards'&&e('div',{className:'theme-bar'},
+          e('span',{className:'theme-lbl'},'Theme'),
+          ['default','slate','newspaper','neon'].map(function(t){
+            return e('button',{key:t,'data-t':t,className:'theme-dot'+(deckTheme===t?' act':''),onClick:function(){setDeckTheme(t);},title:t[0].toUpperCase()+t.slice(1)});
+          }),
+          e('div',{className:'fs-ctrl'},
+            e('span',{className:'theme-lbl'},'Size'),
+            e('button',{className:'fs-btn',onClick:function(){setFontSz(function(s){return Math.max(0.8,+(s-0.1).toFixed(1));});}},'A−'),
+            e('button',{className:'fs-btn',onClick:function(){setFontSz(function(s){return Math.min(1.4,+(s+0.1).toFixed(1));});}},'A+')
+          )
+        ),
         e('div',{className:'rbody'},
           rtab==='cards'&&e(React.Fragment,null,
-            e(Card,{card:cards[ci],idx:ci,total:cards.length,
-              onNext:function(){setCi(function(i){return Math.min(i+1,cards.length-1);});},
-              onPrev:function(){setCi(function(i){return Math.max(i-1,0);});}
+            srMode&&e('div',{className:'sr-banner'},
+              e('div',{className:'sr-banner-txt'},e('strong',null,'Review mode'),' — card '+(srIdx+1)+' of '+srQueue.length),
+              e('div',{className:'sr-rate-btns'},
+                e('button',{className:'sr-btn again',onClick:srRate},'Again'),
+                e('button',{className:'sr-btn ok',onClick:srRate},'✓ Got it')
+              )
+            ),
+            e(Card,{
+              card:srMode?srQueue[srIdx]:cards[ci],
+              idx:srMode?srIdx:ci,
+              total:srMode?srQueue.length:cards.length,
+              fontSz:fontSz,
+              fav:favs[srMode?srIdx:ci],
+              note:notesMap[srMode?srIdx:ci],
+              onFav:isElite()?function(){toggleFav(srMode?srIdx:ci);}:null,
+              onNote:isElite()?function(v){setNote(srMode?srIdx:ci,v);}:null,
+              onNext:function(){if(srMode){srRate();}else{setCi(function(i){return Math.min(i+1,cards.length-1);});}},
+              onPrev:function(){if(srMode){setSrIdx(function(i){return Math.max(i-1,0);});}else{setCi(function(i){return Math.max(i-1,0);});}}
             }),
             e('div',{className:'fca',style:{marginTop:8}},
               e('button',{className:'ab',onClick:function(){setCi(0);}},'↩ Reset'),
@@ -1718,6 +1840,12 @@ function App(){
                 : null,
               (isPro()||isElite())
                 ? e('button',{className:'regen-btn',onClick:function(){regenCard(ci);},disabled:regenIdx!==null},regenIdx===ci?'regenerating…':'↻ Redo this card')
+                : null,
+              isElite()&&!srMode&&mistakes.length>0
+                ? e('button',{className:'regen-btn',style:{color:'#a78bfa',borderColor:'rgba(124,58,237,0.4)'},onClick:startSrMode},'🧠 Review weak')
+                : null,
+              isElite()&&srMode
+                ? e('button',{className:'regen-btn',style:{color:'var(--red)',borderColor:'var(--red)'},onClick:function(){setSrMode(false);st('Review mode off');}},'✕ Exit review')
                 : null
             )
           ),
@@ -1729,7 +1857,15 @@ function App(){
           ),
           rtab==='quiz'&&(quiz.length>0
             ? (activeQuiz
-                ? e(Quiz,{qs:activeQuiz,onReset:quizCounts.length>1?function(){setActiveQuiz(null);setPickAnim(null);}:null,onMistake:(isPro()||isElite())?function(q){recordMistake(q.question,q.options,q.correct,q.explanation);}:null,onFinish:(isPro()||isElite())?function(sc,tot){saveQuizResult(sc,tot);}:null})
+                ? e(Quiz,{qs:activeQuiz,
+                    onReset:quizCounts.length>1?function(){setActiveQuiz(null);setPickAnim(null);}:null,
+                    onMistake:(isPro()||isElite())?function(q){recordMistake(q.question,q.options,q.correct,q.explanation);}:null,
+                    onFinish:(isPro()||isElite())?function(sc,tot){saveQuizResult(sc,tot);}:null,
+                    onReview:isElite()?function(wqs){
+                      setSrQueue(wqs.map(function(q){return {topic:q.question,points:(q.options||[]).join(' | ')};}));
+                      setSrIdx(0);setSrMode(true);setRtab('cards');
+                    }:null
+                  })
                 : e('div',{className:'qpick'},
                     e('div',{className:'qpick-lbl'},'How many questions?'),
                     e('div',{className:'qpick-opts'},
@@ -1828,9 +1964,9 @@ function App(){
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6}},
-              ['sets','history','mistakes'].map(function(tab){
-                var labels={sets:'📚 Saved Sets',history:'📊 Quiz History',mistakes:'✗ Mistakes'};
-                var counts={sets:savedSets.length,history:quizHist.length,mistakes:mistakes.length};
+              (isElite()?['sets','history','mistakes','streak','weak']:['sets','history','mistakes']).map(function(tab){
+                var labels={sets:'📚 Saved Sets',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
+                var counts={sets:savedSets.length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
                 return e('button',{key:tab,
                   onClick:function(){setWsTab(tab);},
                   style:{
@@ -1905,6 +2041,53 @@ function App(){
           ),
 
           /* ── MISTAKES TAB ── */
+          wsTab==='streak'&&isElite()&&(function(){
+            var days=90,cells=[];
+            var today=new Date();
+            for(var d=days-1;d>=0;d--){
+              var dt=new Date(today);dt.setDate(dt.getDate()-d);
+              var key=dt.toISOString().slice(0,10);
+              var cnt=streakData[key]||0;
+              var col=cnt===0?'var(--surface2)':cnt===1?'rgba(232,213,176,0.3)':cnt<=3?'rgba(232,213,176,0.6)':'var(--accent)';
+              cells.push(e('div',{key:key,className:'hm-cell',style:{background:col},title:key+': '+cnt}));
+            }
+            var streak=0,check=new Date(today);
+            for(var i=0;i<365;i++){var k=check.toISOString().slice(0,10);if(!streakData[k])break;streak++;check.setDate(check.getDate()-1);}
+            var totalDays=Object.keys(streakData).length;
+            var totalGens=Object.values(streakData).reduce(function(a,b){return a+b;},0);
+            return e('div',{className:'streak-wrap'},
+              e('div',{className:'streak-head'},'Generation activity — last 90 days'),
+              e('div',{className:'heatmap'},cells),
+              e('div',{className:'streak-stats'},
+                e('div',{className:'streak-stat'},e('strong',null,streak),' day streak'),
+                e('div',{className:'streak-stat'},e('strong',null,totalDays),' active days'),
+                e('div',{className:'streak-stat'},e('strong',null,totalGens),' total generations')
+              )
+            );
+          })(),
+
+          wsTab==='weak'&&isElite()&&(function(){
+            var topicCounts={};
+            mistakes.forEach(function(m){var t=m.set_name||m.setName||'Unknown';topicCounts[t]=(topicCounts[t]||0)+1;});
+            var sorted=Object.keys(topicCounts).sort(function(a,b){return topicCounts[b]-topicCounts[a];}).slice(0,12);
+            if(!sorted.length)return e('div',{className:'ws-empty'},
+              e('div',{style:{fontSize:'2rem',marginBottom:12}},'📉'),
+              'No mistake data yet.',e('br'),
+              e('span',{style:{color:'var(--muted)'}},'Complete quizzes from saved sets to see your weak areas.')
+            );
+            var max=topicCounts[sorted[0]]||1;
+            return e('div',{className:'weak-wrap'},
+              e('div',{className:'streak-head'},'Sets with most mistakes'),
+              sorted.map(function(t){
+                return e('div',{key:t,className:'weak-bar-row'},
+                  e('div',{className:'weak-topic',title:t},t),
+                  e('div',{className:'weak-bar-bg'},e('div',{className:'weak-bar-fill',style:{width:(topicCounts[t]/max*100)+'%'}})),
+                  e('div',{className:'weak-count'},topicCounts[t])
+                );
+              })
+            );
+          })(),
+
           wsTab==='mistakes'&&(
             mistakes.length===0
               ? e('div',{className:'ws-empty'},
