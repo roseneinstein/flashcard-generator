@@ -759,7 +759,7 @@ async function callAI(text,count){
   var r=await fetch('/api/generate',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text:text.substring(0,getCharLimit()),count}),
+    body:JSON.stringify({text:text.substring(0,12000),count}),
   });
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
