@@ -61,8 +61,9 @@ ${text.substring(0, 30000)}`;
   }
 
   // Scale tokens with depth
-  const tokensByDepth = { concise: 1500, standard: 2000, detailed: 3000, 'deep dive': 4000 };
-  const maxTokens = tokensByDepth[depth] || 2000;
+  // Always cap at 2000 — Groq free tier can reject higher values on some models.
+  // Depth controls prompt verbosity, not max_tokens.
+  const maxTokens = 2000;
 
   let lastError = 'All models exhausted';
 
