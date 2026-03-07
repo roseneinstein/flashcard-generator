@@ -9,56 +9,47 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
   const depthInstructions = {
-    concise:      'Write a CONCISE summary. 3-4 sections, 2-3 points each. Only the most important facts.',
-    standard:     'Write a STANDARD summary. 4-6 sections, 3-5 points each. Balance coverage and brevity.',
-    detailed:     'Write a DETAILED summary. 5-7 sections, 4-6 points each. Include facts, context, and mechanisms.',
-    'deep dive':  'Write a DETAILED summary. 6-8 sections, 5-7 points each. Cover every sub-topic and key term.',
+    concise:     'Write a CONCISE summary: 3-4 sections, 2-3 bullet points each.',
+    standard:    'Write a STANDARD summary: 4-6 sections, 3-5 bullet points each.',
+    detailed:    'Write a DETAILED summary: 5-7 sections, 4-6 bullet points each.',
+    'deep dive': 'Write a THOROUGH summary: 6-8 sections, 5-7 bullet points each.',
   };
-  const depthNote = depthInstructions[depth] || depthInstructions['standard'];
+  const depthNote = depthInstructions[depth] || depthInstructions.standard;
 
-  // 8,000 chars ~ 2,000 tokens of input. Groq fast models handle ~6k token context.
-  // Prompt overhead ~400 tokens + 1,500 output = ~3,900 total — well within limits.
-  const safeText = text.substring(0, 8000);
+  // Hard cap at 6000 chars (~1500 tokens). Total prompt ~2200 tokens + 1200 output = ~3400.
+  // Stays well inside every Groq model's per-request and per-minute token budget.
+  const safeText = (text || '').substring(0, 6000);
 
-  const prompt = `You are a study notes writer for Indian competitive exams (UPSC, JEE, NEET, CA).
+  const prompt = `You are a study notes writer for Indian exams (UPSC, JEE, NEET, CA). ${depthNote}
 
-${depthNote}
+Return ONLY a JSON object. No markdown, no backticks. Schema:
+{"title":"string","sections":[{"heading":"string","points":["string"]}]}
 
-Return ONLY valid JSON, no markdown, no code fences.
-Schema: {"title":"string","sections":[{"heading":"string","points":["string"]}]}
-
-Rules:
-- title: max 8 words
-- heading: 3-6 words per section
-- Each point: one complete fact with specific details from the text
-- No double-quotes inside strings (rephrase instead)
-- No trailing commas
+Rules: title max 8 words. heading 3-6 words. Each point = one complete fact with specific details. No double-quotes inside strings. No trailing commas.
 
 Study material:
 ${safeText}`;
 
-  // Fast models first (high TPM) then capable models
-  const attempts = [
-    { key: apiKey,  model: 'llama-3.1-8b-instant'    },
-    { key: apiKey,  model: 'gemma2-9b-it'             },
-    { key: apiKey,  model: 'llama-3.3-70b-versatile'  },
-    ...(apiKey2 ? [
-      { key: apiKey2, model: 'llama-3.1-8b-instant'   },
-      { key: apiKey2, model: 'gemma2-9b-it'            },
-      { key: apiKey2, model: 'llama-3.3-70b-versatile' },
-    ] : []),
+  // Fast small models first — they have the highest TPM quota on Groq free tier
+  const models = [
+    'llama-3.1-8b-instant',
+    'gemma2-9b-it',
+    'llama-3.3-70b-versatile',
   ];
 
-  let lastError = 'All models exhausted';
+  const keys = [apiKey, ...(apiKey2 ? [apiKey2] : [])];
+  const attempts = keys.flatMap(k => models.map(m => ({ key: k, model: m })));
+
+  let errors = [];
 
   for (const { key, model } of attempts) {
     try {
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify({
           model,
-          max_tokens: 1500,
+          max_tokens: 1200,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
           response_format: { type: 'json_object' },
@@ -68,26 +59,28 @@ ${safeText}`;
       const data = await r.json();
 
       if (data.error) {
-        lastError = data.error.message || JSON.stringify(data.error);
-        // Rate limit or context error → try next model
+        errors.push(`${model}: ${data.error.message || data.error.type || JSON.stringify(data.error)}`);
         continue;
       }
 
       let raw = (data.choices?.[0]?.message?.content || '').trim();
-      raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
+      raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
       const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
-      if (fi === -1 || la === -1) { lastError = 'No JSON in response'; continue; }
-      raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g,' ').replace(/,\s*([}\]])/g,'$1');
+      if (fi < 0 || la < 0) { errors.push(`${model}: no JSON`); continue; }
+      raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
 
       const parsed = JSON.parse(raw);
-      if (!parsed.title || !Array.isArray(parsed.sections)) { lastError = 'Unexpected JSON shape'; continue; }
+      if (!parsed.title || !Array.isArray(parsed.sections)) { errors.push(`${model}: bad shape`); continue; }
 
       return res.status(200).json(parsed);
     } catch (err) {
-      lastError = err.message || 'Unknown error';
+      errors.push(`${model}: ${err.message}`);
       continue;
     }
   }
 
-  return res.status(503).json({ error: `Summary unavailable: ${lastError}` });
+  // Return all errors so we can actually debug what Groq is saying
+  return res.status(503).json({
+    error: `Summary failed. Details: ${errors.slice(0, 3).join(' | ')}`,
+  });
 }
