@@ -8,7 +8,9 @@ export default async function handler(req, res) {
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  const inputText = text.substring(0, 30000); // supports up to Elite limit
+  // Cap at 12,000 chars (~3,000 tokens). With prompt overhead and output tokens
+  // this stays within every Groq model's context window and TPM budget.
+  const inputText = text.substring(0, 12000);
   const wordCount = inputText.split(/\s+/).filter(Boolean).length;
 
   let maxQuiz, suggestedCounts;
@@ -132,8 +134,8 @@ ${inputText}`;
 
   for (const { key, model } of attempts) {
     try {
-      // Scale max_tokens with count to avoid truncation on large requests
-      const maxTokens = Math.min(8000, 2000 + count * 120);
+      // Output tokens: enough for count cards + quiz, but not so large it pushes total over context limit
+      const maxTokens = Math.min(4000, 1500 + count * 80);
 
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -184,6 +186,6 @@ ${inputText}`;
   }
 
   return res.status(503).json({
-    error: 'All models are at their daily limit right now. Please try again in a few hours.',
+    error: `All models unavailable: ${lastError}`,
   });
 }
