@@ -17,6 +17,10 @@ export default async function handler(req, res) {
   };
   const depthNote = depthInstructions[depth] || depthInstructions['standard'];
 
+  // Cap at 12,000 chars — ~3,000 tokens. Groq models have ~8k token context;
+  // the prompt adds ~500 tokens and output needs ~2,000. This leaves safe headroom.
+  const safeText = text.substring(0, 12000);
+
   const prompt = `You are an expert study notes writer for Indian competitive exams (UPSC, JEE, NEET, CA).
 
 Read ALL of the study material below. It may cover multiple topics or editorials — your summary MUST cover every topic present, not just the first one. Distribute sections proportionally across all topics.
@@ -38,7 +42,7 @@ RULES:
 7. NO trailing commas. All keys double-quoted. No single quotes.
 
 Study material:
-${text}`;
+${safeText}`;
 
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
