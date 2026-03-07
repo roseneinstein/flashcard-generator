@@ -301,9 +301,9 @@ input[type=file]{display:none}
 .fi.fl{transform:rotateY(180deg)}
 .ff,.fb{position:absolute;inset:0;border-radius:var(--r);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;min-height:280px}
 .ff{background:var(--th-ff-bg,var(--surface2));border:1px solid var(--th-ff-brd,var(--border));color:var(--th-topic,var(--text))}
-.fb{background:var(--th-fb-bg,var(--card-back-bg));border:1px solid var(--th-fb-brd,var(--card-back-border));transform:rotateY(180deg)}
-.fl-lbl{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;opacity:0.38;margin-bottom:16px}
-.fl-q{font-family:'Instrument Serif',serif;font-size:clamp(1.1rem,3vw,1.45rem);line-height:1.5;color:var(--text);font-weight:400}
+.fb{background:var(--th-fb-bg,var(--card-back-bg));border:1px solid var(--th-fb-brd,var(--card-back-border));transform:rotateY(180deg);color:var(--th-pts,var(--text))}
+.fl-lbl{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;opacity:0.45;margin-bottom:16px;color:inherit}
+.fl-q{font-family:'Instrument Serif',serif;font-size:clamp(1.1rem,3vw,1.45rem);line-height:1.5;color:inherit;font-weight:400}
 .fl-a{font-size:0.88rem;line-height:1.75;color:var(--green);font-weight:300}
 .fl-hint{position:absolute;bottom:12px;right:16px;font-size:0.62rem;color:var(--muted2);letter-spacing:0.04em}
 .fca{display:flex;gap:7px;padding:14px 18px;border-top:1px solid var(--border);flex-wrap:wrap}
@@ -1009,6 +1009,7 @@ function Summary({data,loading}){
     e('p',null,'Building summary…')
   );
   if(!data)return e('div',{className:'emp'},e('div',{className:'emp-i'},'◻'),e('p',null,'Summary will appear here'));
+  if(data._error)return e('div',{className:'emp'},e('div',{className:'emp-i'},'⚠'),e('p',null,'Summary unavailable — '+data._error));
   return e('div',{className:'sw'},
     e('div',{className:'sw-title'},data.title),
     data.sections.map(function(sec,si){
@@ -1373,7 +1374,7 @@ function App(){
       st((res.flashcards||[]).length+' cards ready');
       setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
       // Fire summary in background — doesn't block cards from showing
-      callSummary(txt,isElite()?summaryDepth:'standard').then(function(s){setSummary(s);}).catch(function(){setSummary(null);}).finally(function(){setSumLoad(false);});
+      callSummary(txt,isElite()?summaryDepth:'standard').then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
     }catch(err){st('Error: '+(err.message||'Check config'));setSumLoad(false);}
     finally{setLoading(false);}
   }
@@ -1522,18 +1523,22 @@ function App(){
     }
   }
   function deleteSet(id){
-    // Find the set name before removing
     var target=savedSets.find(function(s){return s.id===id;});
     var updated=savedSets.filter(function(s){return s.id!==id;});
     setSavedSets(updated);
-    // Also purge quiz history and mistakes that belong to this set
     if(target){
-      setQuizHist(function(prev){return prev.filter(function(q){return q.set_id!==id&&(q.set_name||q.setName)!==(target.name);});});
-      setMistakes(function(prev){return prev.filter(function(m){return m.set_id!==id&&(m.set_name||m.setName)!==(target.name);});});
+      // Purge history + mistakes from local state immediately
+      setQuizHist(function(prev){return prev.filter(function(q){return (q.set_name||q.setName)!==target.name;});});
+      setMistakes(function(prev){return prev.filter(function(m){return (m.set_name||m.setName)!==target.name;});});
     }
     if(loadToken()){
+      // Delete the set (server cascade handles history/mistakes via FK if set_id was saved)
       fetch('/api/data?resource=sets&id='+id,{method:'DELETE',headers:authHeader()}).catch(function(){});
-      // Supabase cascade will delete history/mistakes via FK — nothing extra needed server-side
+      // Also delete history and mistakes by set name (belt-and-suspenders: set_id may be null)
+      if(target){
+        fetch('/api/data?resource=history&set_name='+encodeURIComponent(target.name),{method:'DELETE',headers:authHeader()}).catch(function(){});
+        fetch('/api/data?resource=mistakes&set_name='+encodeURIComponent(target.name),{method:'DELETE',headers:authHeader()}).catch(function(){});
+      }
     }
     st('Set deleted');
   }
