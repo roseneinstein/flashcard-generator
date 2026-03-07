@@ -745,10 +745,11 @@ function isElite(){return _userCache&&_userCache.tier==='elite';}
 function getTier(){return _userCache?_userCache.tier:'free';}
 
 async function callSummary(text,depth){
+  // Summary only needs 8000 chars max — beyond that Groq hits context limits
   var r=await fetch('/api/summary',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text:text.substring(0,getCharLimit()),depth:depth||'standard'}),
+    body:JSON.stringify({text:text.substring(0,8000),depth:depth||'standard'}),
   });
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
