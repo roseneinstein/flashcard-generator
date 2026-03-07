@@ -415,6 +415,11 @@ input[type=file]{display:none}
 .mp-p{font-family:'Instrument Serif',serif;font-size:1.6rem;color:var(--accent);margin-bottom:3px;letter-spacing:-0.02em}
 .mp-p sup{font-size:0.8rem}
 .mp-s{font-size:0.7rem;color:var(--muted);margin-bottom:8px}
+.mo-wide{max-width:520px}
+.mp-feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;margin-top:10px;text-align:left}
+.mp-feat-row{font-size:0.69rem;color:var(--muted);padding:3px 0;display:flex;align-items:baseline;gap:5px;line-height:1.4}
+.mp-feat-head{grid-column:1/-1;font-size:0.72rem;color:var(--text);font-weight:500;padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:2px}
+.mp-feat-check{color:var(--accent);font-size:0.6rem;flex-shrink:0;margin-top:1px}
 .mp-pk{font-size:0.72rem;color:var(--muted);line-height:1.65;font-weight:300}
 .pb{width:100%;padding:13px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--r-sm);font-family:'Geist',sans-serif;font-size:0.85rem;font-weight:500;cursor:none;letter-spacing:0.02em;transition:opacity .2s;margin-bottom:9px}
 .pb:hover{opacity:0.84}
@@ -1427,10 +1432,18 @@ function App(){
     }
   }
   function deleteSet(id){
+    // Find the set name before removing
+    var target=savedSets.find(function(s){return s.id===id;});
     var updated=savedSets.filter(function(s){return s.id!==id;});
     setSavedSets(updated);
+    // Also purge quiz history and mistakes that belong to this set
+    if(target){
+      setQuizHist(function(prev){return prev.filter(function(q){return q.set_id!==id&&(q.set_name||q.setName)!==(target.name);});});
+      setMistakes(function(prev){return prev.filter(function(m){return m.set_id!==id&&(m.set_name||m.setName)!==(target.name);});});
+    }
     if(loadToken()){
       fetch('/api/data?resource=sets&id='+id,{method:'DELETE',headers:authHeader()}).catch(function(){});
+      // Supabase cascade will delete history/mistakes via FK — nothing extra needed server-side
     }
     st('Set deleted');
   }
@@ -1741,9 +1754,36 @@ function App(){
       e('div',{className:'ey rev'},'Pricing'),
       e('h2',{className:'st rev'},'Start free.',e('br'),e('em',null,'Upgrade anytime.')),
       e('div',{className:'plans rev'},
-        e(PCard,{name:'Free',price:'0',period:'forever',feats:['10 generations/day','Text paste','Flashcard flip','PDF export'],onSel:scrollApp}),
-        e(PCard,{name:'Pro',price:'99',period:'per month',pop:true,feats:['Unlimited generations','PDF upload','All Free features','Priority access'],onSel:function(){setPw(true);}}),
-        e(PCard,{name:'Elite',price:'199',period:'per month',feats:['Everything in Pro','Anki export','Saved card sets','Batch generation'],onSel:function(){setPw(true);}})
+        e(PCard,{name:'Free',price:'0',period:'forever',feats:[
+          '10 generations per day',
+          'Up to 8,000 characters per input',
+          'AI flashcards with flip animation',
+          'Structured summary of your notes',
+          'Self-test quiz with explanations',
+          'PDF export of your cards',
+          'Short link sharing',
+        ],onSel:scrollApp}),
+        e(PCard,{name:'Pro',price:'99',period:'per month',pop:true,feats:[
+          '20 generations per day',
+          'Up to 20,000 characters per input',
+          'Save sets to your account (cloud-synced)',
+          'Mistake tracker — review wrong quiz answers',
+          'Voice readout of every card',
+          'Regenerate any single card (5/day)',
+          'Quiz history across all saved sets',
+          'Custom card count up to 30',
+        ],onSel:function(){if(user&&(user.tier==='pro'||user.tier==='elite')){setSp('elite');setPw(true);}else{setSp('pro');setPw(true);}}}),
+        e(PCard,{name:'Elite',price:'199',period:'per month',feats:[
+          '40 generations per day',
+          'Up to 30,000 characters per input',
+          'Everything in Pro',
+          'Spaced repetition for weak cards',
+          'Weak area report & progress analytics',
+          'Study streak calendar & heatmap',
+          'Custom deck themes',
+          'Summary depth control (4 levels)',
+          'Custom card count up to 50',
+        ],onSel:function(){setSp('elite');setPw(true);}})
       )
     ),
 
@@ -1937,36 +1977,65 @@ function App(){
 
     pw&&(function(){
       var isProUser=user&&user.tier==='pro';
-      // Plans to show: Elite-only if already Pro, both if Free
+      // Pro users see Elite-only. Free/guest see both.
+      var eliteFeats=[
+        'Everything in Pro, plus:',
+        '40 generations per day',
+        '30,000 characters per input',
+        'Spaced repetition for weak cards',
+        'Weak area report & analytics',
+        'Study streak calendar & heatmap',
+        'Custom deck themes',
+        'Summary depth control (4 levels)',
+        'Custom card count up to 50',
+      ];
+      var proFeats=[
+        '20 generations per day',
+        '20,000 characters per input',
+        'Save sets to your account',
+        'Mistake tracker with solutions',
+        'Voice readout of cards',
+        'Regenerate any single card',
+        'Quiz history across saved sets',
+        'Custom card count up to 30',
+      ];
       var plans=isProUser
-        ? [{id:'elite',n:'Elite',p:'199',s:'per month',
-            feats:['Everything in Pro, plus:','Spaced repetition (SRS algorithm)','Weak area report & analytics','Study streak + heatmap calendar','Custom deck themes (minimal, neon…)','Font size control on cards','Favourites & notes on any card','40 generations per day','30,000 character input limit','Summary depth control (4 levels)']}]
+        ? [{id:'elite',n:'Elite',p:'199',s:'per month',feats:eliteFeats}]
         : [
-            {id:'pro',n:'Pro',p:'99',s:'per month',
-             feats:['Save sets to your account (cloud)','Mistake tracker with solutions','Voice readout of every card','Regenerate any single card','Quiz history across saved sets','20 generations per day','20,000 character input limit','Custom card count up to 30']},
-            {id:'elite',n:'Elite',p:'199',s:'per month',
-             feats:['Everything in Pro, plus:','Spaced repetition algorithm','Weak area report & analytics','Study streak + heatmap calendar','Custom deck themes','Font size control','Favourites & notes on cards','40 generations per day','30,000 character input limit','Summary depth control (4 levels)']}
+            {id:'pro',n:'Pro',p:'99',s:'per month',feats:proFeats},
+            {id:'elite',n:'Elite',p:'199',s:'per month',feats:eliteFeats},
           ];
+      // Auto-correct sp: if only elite is shown, sp must be 'elite'
+      var activeSp=(isProUser&&sp!=='elite')?'elite':sp;
+      var activePrice=activeSp==='elite'?'199':'99';
       return e('div',{className:'ov',onClick:function(ev){if(ev.target===ev.currentTarget)setPw(false);}},
-        e('div',{className:'mo'},
+        e('div',{className:'mo mo-wide'},
           e('div',{className:'mo-ey'},isProUser?'Upgrade to Elite':'Upgrade'),
-          e('h2',null,isProUser?'Unlock Elite features':'Unlock full access'),
+          e('h2',null,isProUser?'Unlock Elite':'Unlock full access'),
           e('p',{className:'mo-s'},isProUser
             ? 'You’re on Pro. Upgrade to Elite for spaced repetition, analytics, themes and more.'
             : 'You’ve used your free generations for today. Pick a plan — no interruptions, no limits.'),
           e('div',{className:'mo-plans'},
             plans.map(function(x){
-              return e('div',{key:x.id,className:'mp'+(sp===x.id?' sel':''),onClick:function(){setSp(x.id);}},
+              var isSel=(isProUser?activeSp:sp)===x.id;
+              return e('div',{key:x.id,className:'mp'+(isSel?' sel':''),onClick:function(){setSp(x.id);}},
                 e('div',{className:'mp-n'},x.n),
                 e('div',{className:'mp-p'},e('sup',null,'₹'),x.p),
                 e('div',{className:'mp-s'},x.s),
-                e('ul',{className:'mp-feat-list'},
-                  x.feats.map(function(f,i){return e('li',{key:i},f);})
+                e('div',{className:'mp-feat-grid'},
+                  x.feats.map(function(f,i){
+                    return e('div',{key:i,className:'mp-feat-row'+(i===0?' mp-feat-head':'')},
+                      i>0&&e('span',{className:'mp-feat-check'},'✓'),
+                      f
+                    );
+                  })
                 )
               );
             })
           ),
-          e('button',{className:'pb',onClick:function(){pay(sp);}},'Pay ₹'+(sp==='pro'?'99':'199')+' via Razorpay →'),
+          e('button',{className:'pb',onClick:function(){pay(isProUser?'elite':activeSp);}},
+            'Pay ₹'+activePrice+' via Razorpay →'
+          ),
           e('button',{className:'md',onClick:function(){setPw(false);}},isProUser?'Maybe later':'Continue tomorrow')
         )
       );
