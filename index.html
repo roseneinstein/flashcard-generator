@@ -298,7 +298,9 @@ input[type=file]{display:none}
 .fc-ctr{font-size:0.75rem;color:var(--muted);letter-spacing:0.06em}
 .fw{perspective:1400px;padding:22px;cursor:none}
 .fi{position:relative;width:100%;min-height:280px;transform-style:preserve-3d;transition:transform .58s cubic-bezier(.4,.2,.2,1)}
-.fi.fl{transform:rotateY(180deg)}
+.fi.fl{transform:rotateY(180deg);height:auto}
+.fi.fl .ff{visibility:hidden}
+.fi.fl .fb{position:relative;inset:auto;transform:none;height:auto;min-height:280px;overflow:visible}
 .ff,.fb{position:absolute;inset:0;border-radius:var(--r);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;min-height:280px}
 .ff{background:var(--th-ff-bg,var(--surface2));border:1px solid var(--th-ff-brd,var(--border));color:var(--th-topic,var(--text))}
 .fb{background:var(--th-fb-bg,var(--card-back-bg));border:1px solid var(--th-fb-brd,var(--card-back-border));transform:rotateY(180deg);color:var(--th-pts,var(--text))}
@@ -655,11 +657,12 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 .weak-bar-bg{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
 .weak-bar-fill{height:100%;border-radius:3px;background:var(--red);transition:width .6s ease}
 .weak-count{font-size:0.68rem;color:var(--muted);width:28px;text-align:right}
-.fav-btn{position:absolute;top:10px;right:10px;z-index:10;background:none;border:none;font-size:1rem;cursor:none;opacity:0.4;transition:opacity .15s,transform .15s;line-height:1}
+.fav-btn{position:absolute;top:10px;left:12px;z-index:20;background:none;border:none;font-size:1.1rem;cursor:none;opacity:0.5;transition:opacity .15s,transform .15s;line-height:1;padding:4px}
 .fav-btn:hover,.fav-btn.on{opacity:1}
 .fav-btn.on{transform:scale(1.2)}
-.card-note-area{width:100%;resize:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:Geist,sans-serif;font-size:0.72rem;padding:7px 10px;margin-top:8px;line-height:1.6;cursor:none}
-.card-note-area:focus{outline:none;border-color:var(--border-h)}
+.card-note-area{width:100%;resize:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:Geist,sans-serif;font-size:0.7rem;padding:5px 9px;margin-top:10px;line-height:1.5;cursor:none;height:26px;transition:height .2s;flex-shrink:0}
+.card-note-area:focus{outline:none;border-color:var(--border-h);height:64px}
+.card-note-area::placeholder{font-style:italic;opacity:0.5}
 .depth-row{display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 .depth-lbl{font-size:0.7rem;color:var(--muted);margin-right:4px;white-space:nowrap}
 .depth-btn{padding:4px 11px;border:1px solid var(--border);border-radius:50px;background:none;color:var(--muted);font-size:0.7rem;cursor:none;font-family:Geist,sans-serif;transition:all .15s}
@@ -872,7 +875,7 @@ function Card(props){
   var animStyle={transition:'transform .27s cubic-bezier(.4,0,.2,1),opacity .27s ease',transform:anim==='in'?'scale(1)':anim==='out-left'?'scale(0.88) translateX(-44px)':'scale(0.88) translateX(44px)',opacity:anim==='in'?1:0};
 
   return e('div',{style:{position:'relative',userSelect:'none',touchAction:'pan-y'},onTouchStart:tStart,onTouchMove:tMove,onTouchEnd:tEnd},
-    e('div',{style:{position:'absolute',left:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'},onClick:function(ev){ev.stopPropagation();if(idx>0)go('prev');}}),
+    e('div',{style:{position:'absolute',left:0,top:44,bottom:0,width:'18%',zIndex:5,cursor:'none'},onClick:function(ev){ev.stopPropagation();if(idx>0)go('prev');}}),
     e('div',{style:{position:'absolute',right:0,top:0,bottom:0,width:'18%',zIndex:5,cursor:'none'},onClick:function(ev){ev.stopPropagation();if(idx<total-1)go('next');}}),
     e('div',{className:'fw',style:animStyle,onClick:handleClick},
       e('div',{className:fl?'fi fl':'fi'},
@@ -1675,6 +1678,9 @@ function App(){
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');loadProData();setShowWs(true);}},
                   '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
                 ),
+                isElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('favs');setShowWs(true);}},
+                  '♥ Favourites'+(Object.values(favs).filter(Boolean).length?' ('+Object.values(favs).filter(Boolean).length+')':'')
+                ),
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab(isElite()?'streak':'history');loadProData();setShowWs(true);}},
                   isElite()?'📊 Progress & Stats':'📊 Quiz History'
                 ),
@@ -1827,7 +1833,7 @@ function App(){
               fav:favs[srMode?srIdx:ci],
               note:notesMap[srMode?srIdx:ci],
               onFav:isElite()?function(){toggleFav(srMode?srIdx:ci);}:null,
-              onNote:isElite()?function(v){setNote(srMode?srIdx:ci,v);}:null,
+              onNote:isElite()&&!srMode?function(v){setNote(ci,v);}:null,
               onNext:function(){if(srMode){srRate();}else{setCi(function(i){return Math.min(i+1,cards.length-1);});}},
               onPrev:function(){if(srMode){setSrIdx(function(i){return Math.max(i-1,0);});}else{setCi(function(i){return Math.max(i-1,0);});}}
             }),
@@ -1845,9 +1851,6 @@ function App(){
                 : null,
               (isPro()||isElite())
                 ? e('button',{className:'regen-btn',onClick:function(){regenCard(ci);},disabled:regenIdx!==null},regenIdx===ci?'regenerating…':'↻ Redo this card')
-                : null,
-              isElite()&&!srMode&&mistakes.length>0
-                ? e('button',{className:'regen-btn',style:{color:'#a78bfa',borderColor:'rgba(124,58,237,0.4)'},onClick:startSrMode},'🧠 Review weak')
                 : null,
               isElite()&&srMode
                 ? e('button',{className:'regen-btn',style:{color:'var(--red)',borderColor:'var(--red)'},onClick:function(){setSrMode(false);st('Review mode off');}},'✕ Exit review')
@@ -1969,9 +1972,9 @@ function App(){
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6}},
-              (isElite()?['sets','history','mistakes','streak','weak']:['sets','history','mistakes']).map(function(tab){
-                var labels={sets:'📚 Saved Sets',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
-                var counts={sets:savedSets.length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
+              (isElite()?['sets','favs','history','mistakes','streak','weak']:['sets','history','mistakes']).map(function(tab){
+                var labels={sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
+                var counts={sets:savedSets.length,favs:Object.values(favs).filter(Boolean).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
                 return e('button',{key:tab,
                   onClick:function(){setWsTab(tab);},
                   style:{
@@ -2046,6 +2049,41 @@ function App(){
           ),
 
           /* ── MISTAKES TAB ── */
+          wsTab==='favs'&&isElite()&&(function(){
+            var favIdxs=Object.keys(favs).filter(function(k){return favs[k];}).map(Number);
+            var favCards=cards.filter(function(_,i){return favIdxs.indexOf(i)>=0;});
+            if(!favCards.length)return e('div',{className:'ws-empty'},
+              e('div',{style:{fontSize:'2rem',marginBottom:12}},'♡'),
+              'No favourites yet.',e('br'),
+              e('span',{style:{color:'var(--muted)'}},'Tap the ♥ on any card front to save it here.')
+            );
+            return e('div',null,
+              e('div',{className:'streak-head'},favCards.length+' favourite card'+(favCards.length!==1?'s':'')),
+              favCards.map(function(card,i){
+                var origIdx=favIdxs[i];
+                var pts=(card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
+                return e('div',{key:i,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--r-sm)',padding:'12px 14px',marginBottom:10}},
+                  e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}},
+                    e('div',{style:{fontFamily:"'Instrument Serif',serif",fontSize:'0.95rem',color:'var(--text)',lineHeight:1.5,flex:1}},card.topic||card.question),
+                    e('button',{style:{background:'none',border:'none',color:'var(--muted)',cursor:'none',fontSize:'0.85rem',flexShrink:0},
+                      onClick:function(){toggleFav(origIdx);}},'\u2716')
+                  ),
+                  pts.length>0&&e('div',{style:{marginTop:8,paddingTop:8,borderTop:'1px solid var(--border)'}},
+                    pts.map(function(pt,pi){
+                      return e('div',{key:pi,style:{display:'flex',gap:6,marginBottom:4,fontSize:'0.75rem',color:'var(--muted)',lineHeight:1.6}},
+                        e('span',{style:{color:'var(--accent)',flexShrink:0}},'\u2192'),
+                        e('span',null,pt)
+                      );
+                    })
+                  ),
+                  notesMap[origIdx]&&e('div',{style:{marginTop:6,fontSize:'0.72rem',color:'var(--muted)',fontStyle:'italic',borderTop:'1px solid var(--border)',paddingTop:6}},
+                    e('span',{style:{color:'var(--accent)',marginRight:4}},'\u270f'),notesMap[origIdx]
+                  )
+                );
+              })
+            );
+          })(),
+
           wsTab==='streak'&&isElite()&&(function(){
             var days=90,cells=[];
             var today=new Date();
