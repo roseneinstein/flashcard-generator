@@ -38,7 +38,7 @@ RULES:
 7. NO trailing commas. All keys double-quoted. No single quotes.
 
 Study material:
-${text.substring(0, 30000)}`;
+${text}`;
 
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
