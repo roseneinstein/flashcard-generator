@@ -670,6 +670,18 @@ function getDayLimit(){var t=getTier();return t==='elite'?CFG.ELITE_LIMIT:t==='p
 function getCharLimit(){var t=getTier();return t==='elite'?CFG.ELITE_CHARS:t==='pro'?CFG.PRO_CHARS:CFG.FREE_CHARS;}
 // API helpers — all authenticated calls share this
 function authHeader(){return {Authorization:'Bearer '+loadToken(),'Content-Type':'application/json'};}
+// Parse any date field — handles ISO strings, Postgres timestamps, local 'date' fallback
+function safeDate(obj){
+  var raw=obj.saved_at||obj.savedAt||obj.completed_at||obj.created_at||obj.date||null;
+  if(!raw)return null;
+  var d=new Date(raw);
+  return isNaN(d.getTime())?null:d;
+}
+function fmtDate(obj,opts){
+  var d=safeDate(obj);
+  if(!d)return '—';
+  return d.toLocaleDateString('en-IN',opts||{day:'numeric',month:'short',year:'2-digit'});
+}
 var _userCache=null;
 function getSession(){return _userCache;}
 function setSession(u){_userCache=u;}
@@ -986,7 +998,7 @@ function MistakeList(props){
   return e(React.Fragment,null,
     e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
       e('button',{
-        onClick:props.onClear,
+        onClick:function(){if(window.confirm('Clear all mistakes? This cannot be undone.'))props.onClear();},
         style:{fontSize:'0.7rem',color:'var(--muted)',background:'none',border:'1px solid var(--border)',borderRadius:'6px',padding:'5px 10px',cursor:'none',fontFamily:'Geist,sans-serif'}
       },'Clear all')
     ),
@@ -996,7 +1008,7 @@ function MistakeList(props){
         e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
           e('div',{style:{flex:1}},
             e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:3,lineHeight:1.5}},m.question),
-            e('div',{className:'mist-set'},'from: '+(m.set_name||m.setName)+' · '+new Date(m.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
+            e('div',{className:'mist-set'},'from: '+(m.set_name||m.setName)+' · '+fmtDate(m,{day:'numeric',month:'short'}))
           ),
           e('button',{
             onClick:function(){toggle(m.id);},
@@ -1314,6 +1326,9 @@ function App(){
 
   async function pay(plan){
     if(!user){setShowAuth(true);setPw(false);return;}
+    // Block if already on that plan or higher
+    if(plan==='pro'&&(user.tier==='pro'||user.tier==='elite')){st('You are already on '+user.tier+' — no charge needed');setPw(false);return;}
+    if(plan==='elite'&&user.tier==='elite'){st('You are already on Elite');setPw(false);return;}
     try{
       st('Creating order…');
       var token=loadToken();
@@ -1812,11 +1827,11 @@ function App(){
                         e('span',null,'·'),
                         e('span',null,(s.quiz&&s.quiz.length||0)+' quiz Qs'),
                         e('span',null,'·'),
-                        e('span',null,new Date(s.savedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}))
+                        e('span',null,fmtDate(s,{day:'numeric',month:'short',year:'2-digit'}))
                       ),
                       e('div',{className:'ws-card-actions'},
                         e('button',{className:'ws-btn',onClick:function(){loadSet(s);}},'Load →'),
-                        e('button',{className:'ws-btn del',onClick:function(){deleteSet(s.id);}},'Delete')
+                        e('button',{className:'ws-btn del',onClick:function(){if(window.confirm('Delete "'+s.name+'"? This cannot be undone.'))deleteSet(s.id);}},'Delete')
                       )
                     );
                   })
@@ -1838,7 +1853,7 @@ function App(){
                     return e('div',{key:q.id,className:'qh-item'},
                       e('div',{className:'qh-left'},
                         e('div',{style:{fontWeight:500,fontSize:'0.82rem'}},q.set_name||q.setName),
-                        e('div',{className:'qh-date'},new Date(q.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}))
+                        e('div',{className:'qh-date'},fmtDate(q,{day:'numeric',month:'short',year:'numeric'}))
                       ),
                       e('div',{style:{textAlign:'right',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}},
                         e('div',{style:{fontSize:'1rem',fontWeight:600,color:col}},pct+'%'),
@@ -1858,12 +1873,6 @@ function App(){
                   e('span',{style:{color:'var(--muted)'}},'Wrong quiz answers will appear here so you can review them.')
                 )
               : e('div',null,
-                  e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
-                    e('button',{
-                      onClick:clearMistakes,
-                      style:{fontSize:'0.7rem',color:'var(--muted)',background:'none',border:'1px solid var(--border)',borderRadius:'6px',padding:'5px 10px',cursor:'none',fontFamily:'Geist,sans-serif'}
-                    },'Clear all')
-                  ),
                   e(MistakeList,{mistakes:mistakes,onClear:clearMistakes})
                 )
           )
@@ -1926,25 +1935,42 @@ function App(){
       )
     ),
 
-    pw&&e('div',{className:'ov',onClick:function(ev){if(ev.target===ev.currentTarget)setPw(false);}},
-      e('div',{className:'mo'},
-        e('div',{className:'mo-ey'},'Upgrade'),
-        e('h2',null,'Unlock full access'),
-        e('p',{className:'mo-s'},"You've used your free generations for today. Pick a plan — no interruptions, no limits."),
-        e('div',{className:'mo-plans'},
-          [{id:'pro',n:'Pro',p:'99',s:'per month',pk:'Save sets · Mistake tracker · Voice readout · 20/day'},{id:'elite',n:'Elite',p:'199',s:'per month',pk:'Everything in Pro · Spaced repetition · Themes · 40/day'}].map(function(x){
-            return e('div',{key:x.id,className:'mp'+(sp===x.id?' sel':''),onClick:function(){setSp(x.id);}},
-              e('div',{className:'mp-n'},x.n),
-              e('div',{className:'mp-p'},e('sup',null,'₹'),x.p),
-              e('div',{className:'mp-s'},x.s),
-              e('div',{className:'mp-pk'},x.pk)
-            );
-          })
-        ),
-        e('button',{className:'pb',onClick:function(){pay(sp);}},'Pay ₹'+(sp==='pro'?'99':'199')+' via Razorpay →'),
-        e('button',{className:'md',onClick:function(){setPw(false);}},'Continue tomorrow')
-      )
-    ),
+    pw&&(function(){
+      var isProUser=user&&user.tier==='pro';
+      // Plans to show: Elite-only if already Pro, both if Free
+      var plans=isProUser
+        ? [{id:'elite',n:'Elite',p:'199',s:'per month',
+            feats:['Everything in Pro, plus:','Spaced repetition (SRS algorithm)','Weak area report & analytics','Study streak + heatmap calendar','Custom deck themes (minimal, neon…)','Font size control on cards','Favourites & notes on any card','40 generations per day','30,000 character input limit','Summary depth control (4 levels)']}]
+        : [
+            {id:'pro',n:'Pro',p:'99',s:'per month',
+             feats:['Save sets to your account (cloud)','Mistake tracker with solutions','Voice readout of every card','Regenerate any single card','Quiz history across saved sets','20 generations per day','20,000 character input limit','Custom card count up to 30']},
+            {id:'elite',n:'Elite',p:'199',s:'per month',
+             feats:['Everything in Pro, plus:','Spaced repetition algorithm','Weak area report & analytics','Study streak + heatmap calendar','Custom deck themes','Font size control','Favourites & notes on cards','40 generations per day','30,000 character input limit','Summary depth control (4 levels)']}
+          ];
+      return e('div',{className:'ov',onClick:function(ev){if(ev.target===ev.currentTarget)setPw(false);}},
+        e('div',{className:'mo'},
+          e('div',{className:'mo-ey'},isProUser?'Upgrade to Elite':'Upgrade'),
+          e('h2',null,isProUser?'Unlock Elite features':'Unlock full access'),
+          e('p',{className:'mo-s'},isProUser
+            ? 'You’re on Pro. Upgrade to Elite for spaced repetition, analytics, themes and more.'
+            : 'You’ve used your free generations for today. Pick a plan — no interruptions, no limits.'),
+          e('div',{className:'mo-plans'},
+            plans.map(function(x){
+              return e('div',{key:x.id,className:'mp'+(sp===x.id?' sel':''),onClick:function(){setSp(x.id);}},
+                e('div',{className:'mp-n'},x.n),
+                e('div',{className:'mp-p'},e('sup',null,'₹'),x.p),
+                e('div',{className:'mp-s'},x.s),
+                e('ul',{className:'mp-feat-list'},
+                  x.feats.map(function(f,i){return e('li',{key:i},f);})
+                )
+              );
+            })
+          ),
+          e('button',{className:'pb',onClick:function(){pay(sp);}},'Pay ₹'+(sp==='pro'?'99':'199')+' via Razorpay →'),
+          e('button',{className:'md',onClick:function(){setPw(false);}},isProUser?'Maybe later':'Continue tomorrow')
+        )
+      );
+    })(),
     toast&&e('div',{className:'toast'},toast)
   );
 }
