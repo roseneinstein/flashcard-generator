@@ -849,9 +849,10 @@ function Card(props){
   var card=props.card,idx=props.idx,total=props.total,onPrev=props.onPrev,onNext=props.onNext,fontSz=props.fontSz||1,fav=props.fav,note=props.note||'',onFav=props.onFav,onNote=props.onNote;
   var fl=useState(false),setFl=fl[1];fl=fl[0];
   var animS=useState('in'),setAnim=animS[1];var anim=animS[0];
-  var tx=useRef(null),ty=useRef(null),didSwipe=useRef(false),didFlip=useRef(false);
+  var tx=useRef(null),ty=useRef(null),didSwipe=useRef(false),didFlip=useRef(false),fbRef=useRef(null),scrolling=useRef(false);
 
-  useEffect(function(){setFl(false);setAnim('in');},[idx]);
+  useEffect(function(){setFl(false);setAnim('in');if(fbRef.current)fbRef.current.scrollTop=0;},[idx]);
+  useEffect(function(){if(fl&&fbRef.current)fbRef.current.scrollTop=0;},[fl]);
 
   function go(dir){
     setAnim(dir==='next'?'out-left':'out-right');
@@ -861,17 +862,20 @@ function Card(props){
   function tMove(ev){
     if(tx.current===null)return;
     var dx=Math.abs(ev.touches[0].clientX-tx.current),dy=Math.abs(ev.touches[0].clientY-ty.current);
-    if(dx>16&&dx>dy*1.8)didSwipe.current=true;
+    if(dx>16&&dx>dy*1.8){didSwipe.current=true;scrolling.current=false;}
+    // If clearly scrolling vertically (not a horizontal swipe), mark as scroll
+    else if(dy>10&&dy>dx*1.5){scrolling.current=true;}
   }
   function tEnd(ev){
     if(tx.current===null)return;
-    var endX=ev.changedTouches[0].clientX,dx=endX-tx.current,swipe=didSwipe.current;
-    tx.current=null;ty.current=null;
+    var endX=ev.changedTouches[0].clientX,dx=endX-tx.current,swipe=didSwipe.current,wasScrolling=scrolling.current;
+    tx.current=null;ty.current=null;scrolling.current=false;
     if(swipe){
       didSwipe.current=false;didFlip.current=true;
       if(dx<-50&&idx<total-1)go('next');
       else if(dx>50&&idx>0)go('prev');
-    } else {
+    } else if(!wasScrolling){
+      // Only flip if user wasn't scrolling vertically inside the card back
       didSwipe.current=false;didFlip.current=true;
       setFl(function(f){return !f;});
     }
@@ -896,7 +900,7 @@ function Card(props){
           e('div',{className:'fl-q',style:{fontSize:(1.25*fontSz)+'rem'}},card.topic||card.question),
           e('div',{className:'fl-hint'},'tap to study')
         ),
-        e('div',{className:'fb'},
+        e('div',{className:'fb',ref:fbRef},
           e('div',{className:'fl-lbl',style:{width:'100%',textAlign:'center',marginBottom:12}},'Key Points'),
           e('div',{style:{width:'100%'}},
             pts.map(function(line,i){
@@ -910,6 +914,9 @@ function Card(props){
           e('div',{className:'fl-hint'},'tap to flip back'),
           onNote&&e('textarea',{className:'card-note-area',placeholder:'Add a note…',value:note,rows:2,
             onClick:function(ev){ev.stopPropagation();},
+            onTouchStart:function(ev){ev.stopPropagation();},
+            onTouchMove:function(ev){ev.stopPropagation();},
+            onTouchEnd:function(ev){ev.stopPropagation();},
             onChange:function(ev){onNote(ev.target.value);}
           })
         )
