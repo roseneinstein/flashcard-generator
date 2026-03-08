@@ -1729,7 +1729,7 @@ function App(){
     e('nav',null,
       e('div',{className:'nav-r'},
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},'Features'),
-        e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Pricing'),
+        e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Plans'),
         e('button',{className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
         user
           ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);},style:{paddingBottom:8}},
@@ -1969,7 +1969,7 @@ function App(){
 
     /* PRICING */
     e('section',{id:'pr',className:'pr-wrap'},
-      e('div',{className:'ey rev'},'Pricing'),
+      e('div',{className:'ey rev'},'Plans'),
       e('h2',{className:'st rev'},'Start free.',e('br'),e('em',null,'Upgrade anytime.')),
       e('div',{className:'plans rev'},
         e(PCard,{name:'Free',price:'0',period:'forever',feats:[
