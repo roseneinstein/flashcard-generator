@@ -306,11 +306,12 @@ input[type=file]{display:none}
 .nb:disabled{opacity:0.18}
 .fc-ctr{font-size:0.75rem;color:var(--muted);letter-spacing:0.06em}
 .fw{perspective:1400px;padding:22px;cursor:none}
-.fi{position:relative;width:100%;min-height:280px;transform-style:preserve-3d;transition:transform .58s cubic-bezier(.4,.2,.2,1)}
+.fi{position:relative;width:100%;height:360px;transform-style:preserve-3d;transition:transform .58s cubic-bezier(.4,.2,.2,1)}
 .fi.fl{transform:rotateY(180deg)}
-.ff,.fb{position:absolute;inset:0;border-radius:var(--r);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 24px;text-align:center;min-height:280px}
+.ff,.fb{position:absolute;inset:0;border-radius:var(--r);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 24px;text-align:center}
 .ff{background:var(--th-ff-bg,var(--surface2));border:1px solid var(--th-ff-brd,var(--border));color:var(--th-topic,var(--text))}
-.fb{background:var(--th-fb-bg,var(--card-back-bg));border:1px solid var(--th-fb-brd,var(--card-back-border));transform:rotateY(180deg);color:var(--th-pts,var(--text));align-items:flex-start;text-align:left;overflow-y:auto;padding:20px 24px;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.fb{background:var(--th-fb-bg,var(--card-back-bg));border:1px solid var(--th-fb-brd,var(--card-back-border));transform:rotateY(180deg);color:var(--th-pts,var(--text));align-items:flex-start;text-align:left;overflow:hidden;padding:0}
+.fb-scroll{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;padding:20px 24px;box-sizing:border-box;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .fl-lbl{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;opacity:0.45;margin-bottom:16px;color:inherit}
 .fl-q{font-family:'Instrument Serif',serif;font-size:clamp(1.1rem,3vw,1.45rem);line-height:1.5;color:inherit;font-weight:400}
 .fl-a{font-size:0.88rem;line-height:1.75;color:var(--green);font-weight:300}
@@ -875,8 +876,8 @@ function Card(props){
   function tMove(ev){
     if(tx.current===null)return;
     var dx=Math.abs(ev.touches[0].clientX-tx.current),dy=Math.abs(ev.touches[0].clientY-ty.current);
+    if(fl){scrolling.current=true;return;}// card is flipped — all movement is scroll, never swipe
     if(dx>16&&dx>dy*1.8){didSwipe.current=true;scrolling.current=false;}
-    // If clearly scrolling vertically (not a horizontal swipe), mark as scroll
     else if(dy>10&&dy>dx*1.5){scrolling.current=true;}
   }
   function tEnd(ev){
@@ -913,16 +914,10 @@ function Card(props){
           e('div',{className:'fl-q',style:{fontSize:(1.25*fontSz)+'rem'}},card.topic||card.question),
           e('div',{className:'fl-hint'},'tap to study')
         ),
-        e('div',{className:'fb',ref:fbRef,
-          onTouchStart:function(ev){
-            // If card is flipped, handle scroll inside .fb — don't bubble to flip handler
-            if(fl)ev.stopPropagation();
-          },
-          onTouchMove:function(ev){if(fl)ev.stopPropagation();},
-          onTouchEnd:function(ev){if(fl)ev.stopPropagation();}
-        },
-          e('div',{className:'fl-lbl',style:{width:'100%',textAlign:'center',marginBottom:12}},'Key Points'),
-          e('div',{style:{width:'100%'}},
+        e('div',{className:'fb'},
+          e('div',{className:'fb-scroll',ref:fbRef},
+            e('div',{className:'fl-lbl',style:{width:'100%',textAlign:'center',marginBottom:12}},'Key Points'),
+            e('div',{style:{width:'100%'}},
             pts.map(function(line,i){
               var t=line.trim();if(!t)return null;
               return e('div',{key:i,style:{display:'flex',gap:7,marginBottom:6,alignItems:'flex-start'}},
@@ -931,14 +926,15 @@ function Card(props){
               );
             })
           ),
-          e('div',{className:'fl-hint'},'tap to flip back'),
-          onNote&&e('textarea',{className:'card-note-area',placeholder:'Add a note…',value:note,rows:2,
-            onClick:function(ev){ev.stopPropagation();},
-            onTouchStart:function(ev){ev.stopPropagation();},
-            onTouchMove:function(ev){ev.stopPropagation();},
-            onTouchEnd:function(ev){ev.stopPropagation();},
-            onChange:function(ev){onNote(ev.target.value);}
-          })
+            e('div',{className:'fl-hint'},'tap to flip back'),
+            onNote&&e('textarea',{className:'card-note-area',placeholder:'Add a note…',value:note,rows:2,
+              onClick:function(ev){ev.stopPropagation();},
+              onTouchStart:function(ev){ev.stopPropagation();},
+              onTouchMove:function(ev){ev.stopPropagation();},
+              onTouchEnd:function(ev){ev.stopPropagation();},
+              onChange:function(ev){onNote(ev.target.value);}
+            })
+          )
         )
       )
     ),
