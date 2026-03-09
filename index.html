@@ -121,6 +121,7 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .nav-r{display:flex;gap:24px;align-items:center}
 .nl{font-size:0.75rem;font-weight:400;color:var(--muted);background:none;border:none;cursor:none;letter-spacing:0.06em;text-transform:uppercase;transition:color .2s;padding:0}
 .nl:hover{color:var(--text)}
+@media(max-width:600px){.nl{display:none}.nav-logo-txt{font-size:1.4rem}.nav-logo img{width:24px;height:24px}.nav-r{gap:14px}}
 .np{font-size:0.78rem;font-weight:500;color:var(--bg);background:var(--accent);border:none;border-radius:50px;padding:7px 16px;cursor:none;transition:opacity .2s,transform .15s;letter-spacing:0.02em}
 .np:hover{opacity:0.85;transform:scale(1.04)}
 
@@ -1695,6 +1696,14 @@ function App(){
     setSpeaking(true);
   }
   useEffect(function(){
+    function closeMenu(e){
+      // Close user dropdown when tapping anywhere outside on mobile
+      setShowUserMenu(false);
+    }
+    document.addEventListener('click',closeMenu);
+    return function(){document.removeEventListener('click',closeMenu);};
+  },[]);
+  useEffect(function(){
     function onPrompt(e){e.preventDefault();deferredPromptR.current=e;setCanInstall(true);}
     window.addEventListener('beforeinstallprompt',onPrompt);
     return function(){window.removeEventListener('beforeinstallprompt',onPrompt);};
@@ -1801,7 +1810,7 @@ function App(){
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Plans'),
         e('button',{className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
         user
-          ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);},style:{paddingBottom:8}},
+          ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);},onClick:function(ev){ev.stopPropagation();setShowUserMenu(function(v){return !v;});},style:{paddingBottom:8}},
               e('div',{className:'auth-btn'},
                 user.avatar&&e('img',{src:user.avatar,alt:''}),
                 user.name?user.name.split(' ')[0]:user.email.split('@')[0],
