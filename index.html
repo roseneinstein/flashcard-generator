@@ -1846,7 +1846,7 @@ function App(){
                   '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
                 ),
                 isElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('favs');setShowWs(true);}},
-                  '♥ Favourites'+(Object.values(favs).filter(Boolean).length?' ('+Object.values(favs).filter(Boolean).length+')':'')
+                  '♥ Favourites'+(Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length?' ('+Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length+')':'')
                 ),
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab(isElite()?'streak':'history');loadProData();setShowWs(true);}},
                   isElite()?'📊 Progress & Stats':'📊 Quiz History'
@@ -2178,7 +2178,7 @@ function App(){
             e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
               (isElite()?['sets','favs','history','mistakes','streak','weak']:['sets','history','mistakes']).map(function(tab){
                 var labels={sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
-                var counts={sets:savedSets.length,favs:Object.values(favs).filter(Boolean).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
+                var counts={sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
                 return e('button',{key:tab,
                   onClick:function(){setWsTab(tab);},
                   style:{
@@ -2254,8 +2254,7 @@ function App(){
 
           /* ── MISTAKES TAB ── */
           wsTab==='favs'&&isElite()&&(function(){
-            var favIdxs=Object.keys(favs).filter(function(k){return favs[k];}).map(Number);
-            var favCards=cards.filter(function(_,i){return favIdxs.indexOf(i)>=0;});
+            var favCards=Object.entries(favs).filter(function(kv){return kv[1]&&kv[1].topic;}).map(function(kv){return kv[1];});
             if(!favCards.length)return e('div',{className:'ws-empty'},
               e('div',{style:{fontSize:'2rem',marginBottom:12}},'♡'),
               'No favourites yet.',e('br'),
@@ -2264,24 +2263,28 @@ function App(){
             return e('div',null,
               e('div',{className:'streak-head'},favCards.length+' favourite card'+(favCards.length!==1?'s':'')),
               favCards.map(function(card,i){
-                var origIdx=favIdxs[i];
+                var cardKey=card.topic||card.question;
                 var pts=(card.points||card.answer||'').split('|').filter(function(l){return l.trim();});
-                return e('div',{key:i,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--r-sm)',padding:'12px 14px',marginBottom:10}},
+                return e('div',{key:cardKey||i,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--r-sm)',padding:'12px 14px',marginBottom:10}},
                   e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}},
                     e('div',{style:{fontFamily:"'Instrument Serif',serif",fontSize:'0.95rem',color:'var(--text)',lineHeight:1.5,flex:1}},card.topic||card.question),
                     e('button',{style:{background:'none',border:'none',color:'var(--muted)',cursor:'none',fontSize:'0.85rem',flexShrink:0},
-                      onClick:function(){toggleFav(origIdx);}},'\u2716')
+                      onClick:function(){
+                        setFavs(function(f){
+                          var n=Object.assign({},f);
+                          delete n[cardKey];
+                          try{localStorage.setItem('cs_favs_'+((user&&user.id)||'g'),JSON.stringify(n));}catch(ex){}
+                          return n;
+                        });
+                      }},'✖')
                   ),
                   pts.length>0&&e('div',{style:{marginTop:8,paddingTop:8,borderTop:'1px solid var(--border)'}},
                     pts.map(function(pt,pi){
                       return e('div',{key:pi,style:{display:'flex',gap:6,marginBottom:4,fontSize:'0.75rem',color:'var(--muted)',lineHeight:1.6}},
-                        e('span',{style:{color:'var(--accent)',flexShrink:0}},'\u2192'),
+                        e('span',{style:{color:'var(--accent)',flexShrink:0}},'→'),
                         e('span',null,pt)
                       );
                     })
-                  ),
-                  notesMap[origIdx]&&e('div',{style:{marginTop:6,fontSize:'0.72rem',color:'var(--muted)',fontStyle:'italic',borderTop:'1px solid var(--border)',paddingTop:6}},
-                    e('span',{style:{color:'var(--accent)',marginRight:4}},'\u270f'),notesMap[origIdx]
                   )
                 );
               })
