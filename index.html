@@ -1260,6 +1260,7 @@ function App(){
   // ── Pro state ──
   var showWsS=useState(false),setShowWs=showWsS[1];var showWs=showWsS[0];
   var wsTabS=useState('sets'),setWsTab=wsTabS[1];var wsTab=wsTabS[0];
+  var dailyCardS=useState(null),setDailyCard=dailyCardS[1];var dailyCard=dailyCardS[0];
   var regenCountS=useState(function(){try{var s=JSON.parse(localStorage.getItem('cs_regen')||'{}');var t=new Date().toDateString();return s.d===t?s.c||0:0;}catch(e){return 0;}}),setRegenCount=regenCountS[1];var regenCount=regenCountS[0];
   var savedSetsS=useState([]),setSavedSets=savedSetsS[1];var savedSets=savedSetsS[0];
   var showSaveS=useState(false),setShowSave=showSaveS[1];var showSave=showSaveS[0];
@@ -1356,6 +1357,29 @@ function App(){
     var today=new Date().toISOString().slice(0,10);
     var d=Object.assign({},streakData);d[today]=(d[today]||0)+1;
     setStreakData(d);try{localStorage.setItem('cs_streak',JSON.stringify(d));}catch(e){}
+  }
+  function pickDailyCard(cardList){
+    if(!cardList||!cardList.length)return;
+    var uid=(user&&user.id)||'g';
+    var todayKey=new Date().toISOString().slice(0,10);
+    var stored=null;
+    try{stored=JSON.parse(localStorage.getItem('cs_daily_'+uid)||'null');}catch(ex){}
+    if(stored&&stored.date===todayKey&&stored.card){setDailyCard(stored);return;}
+    var mt={};
+    mistakes.forEach(function(m){if(m.question)mt[m.question]=true;});
+    var pool=(function(){var p=cardList.filter(function(c){return mt[c.topic||c.question];});return p.length?p:cardList;})();
+    var entry={date:todayKey,card:pool[Math.floor(Math.random()*pool.length)],dismissed:false};
+    try{localStorage.setItem('cs_daily_'+uid,JSON.stringify(entry));}catch(ex){}
+    setDailyCard(entry);
+  }
+  function dismissDaily(){
+    var uid=(user&&user.id)||'g';
+    setDailyCard(function(d){
+      if(!d)return d;
+      var n=Object.assign({},d,{dismissed:true});
+      try{localStorage.setItem('cs_daily_'+uid,JSON.stringify(n));}catch(ex){}
+      return n;
+    });
   }
   function toggleFav(idx){
     var c=cards[idx];if(!c)return;
@@ -1480,7 +1504,7 @@ function App(){
     setLoading(true);setCards([]);setQuiz([]);setSummary(null);setSumLoad(true);
     try{
       var res=await callAI(txt,cnt);
-      setCards(res.flashcards||[]);setQuiz(res.quiz||[]);
+      setCards(res.flashcards||[]);setQuiz(res.quiz||[]);setTimeout(function(){pickDailyCard(res.flashcards||[]);},0);
       var counts=res.suggested_quiz_counts||[5];
       setQuizCounts(counts);
       // If only one option, auto-select it
@@ -1686,6 +1710,7 @@ function App(){
   }
   function loadSet(entry){
     setCards(entry.cards||[]);
+    setTimeout(function(){pickDailyCard(entry.cards||[]);},0);
     setQuiz(entry.quiz||[]);
     setSummary(entry.summary||null);
     setCi(0);setRtab('cards');
@@ -1860,6 +1885,35 @@ function App(){
     ),
 
     /* HERO */
+    dailyCard&&!dailyCard.dismissed&&cards.length>0&&e('div',{style:{
+      background:'var(--surface2)',borderBottom:'1px solid var(--border)',
+      padding:'10px 24px',display:'flex',alignItems:'center',
+      justifyContent:'space-between',flexWrap:'wrap',gap:8,position:'relative',zIndex:2
+    }},
+      e('div',{style:{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}},
+        e('span',{style:{fontSize:'1rem',flexShrink:0}},'⭐'),
+        e('div',{style:{minWidth:0}},
+          e('div',{style:{fontSize:'0.65rem',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:2}},"Today's Card"),
+          e('div',{style:{fontSize:'0.82rem',color:'var(--text)',fontFamily:"'Instrument Serif',serif",
+            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},
+            (dailyCard.card&&(dailyCard.card.topic||dailyCard.card.question))||'Your card for today'
+          )
+        )
+      ),
+      e('div',{style:{display:'flex',gap:8,flexShrink:0}},
+        e('button',{style:{fontSize:'0.72rem',padding:'4px 12px',borderRadius:'50px',
+          border:'1px solid var(--accent)',background:'transparent',color:'var(--accent)',cursor:'none'},
+          onClick:function(){
+            var idx=cards.findIndex(function(c){
+              return (c.topic||c.question)===(dailyCard.card.topic||dailyCard.card.question);
+            });
+            if(idx>=0){setCi(idx);setRtab('cards');document.getElementById('app')&&document.getElementById('app').scrollIntoView({behavior:'smooth'});}
+          }},'Review'),
+        e('button',{style:{fontSize:'0.72rem',padding:'4px 10px',borderRadius:'50px',
+          border:'1px solid var(--border)',background:'transparent',color:'var(--muted)',cursor:'none'},
+          onClick:dismissDaily},'✕')
+      )
+    ),
     e('section',{className:'hero'},
       e('div',{className:'h-glow'}),
       e('div',{className:'hero-logo'},
@@ -2176,9 +2230,9 @@ function App(){
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
-              (isElite()?['sets','favs','history','mistakes','streak','weak']:['sets','history','mistakes']).map(function(tab){
-                var labels={sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
-                var counts={sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
+              (isElite()?['today','sets','favs','history','mistakes','streak','weak']:['today','sets','history','mistakes']).map(function(tab){
+                var labels={today:'⭐ Today',sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
+                var counts={today:'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
                 return e('button',{key:tab,
                   onClick:function(){setWsTab(tab);},
                   style:{
@@ -2253,6 +2307,56 @@ function App(){
           ),
 
           /* ── MISTAKES TAB ── */
+          wsTab==='today'&&(function(){
+            var uid=(user&&user.id)||'g';
+            var todayKey=new Date().toISOString().slice(0,10);
+            var stored=dailyCard;
+            if(!stored){try{stored=JSON.parse(localStorage.getItem('cs_daily_'+uid)||'null');}catch(e){}}
+            if((!stored||stored.date!==todayKey)&&cards.length){
+              pickDailyCard(cards);
+              return e('div',{className:'ws-empty'},e('div',{style:{fontSize:'2rem',marginBottom:12}},'⭐'),'Picking today\'s card...');
+            }
+            if(!stored||!stored.card)return e('div',{className:'ws-empty'},
+              e('div',{style:{fontSize:'2rem',marginBottom:12}},'⭐'),
+              'No card yet.',e('br'),
+              e('span',{style:{color:'var(--muted)'}},'Generate or load a set — your daily card appears here.')
+            );
+            var dc=stored.card;
+            var pts=(dc.points||dc.answer||'').split('|').filter(function(l){return l.trim();});
+            var cardIdx=cards.findIndex(function(c){return (c.topic||c.question)===(dc.topic||dc.question);});
+            return e('div',null,
+              e('div',{className:'streak-head',style:{marginBottom:14}},'⭐ Today\'s Card — '+todayKey),
+              e('div',{style:{background:'var(--surface2)',border:'2px solid var(--accent)',
+                borderRadius:'var(--r-sm)',padding:'16px 18px',marginBottom:14}},
+                e('div',{style:{fontFamily:"'Instrument Serif',serif",fontSize:'1.05rem',
+                  color:'var(--text)',lineHeight:1.5,marginBottom:pts.length?12:0}},dc.topic||dc.question),
+                pts.length>0&&e('div',{style:{borderTop:'1px solid var(--border)',paddingTop:10}},
+                  pts.map(function(pt,pi){
+                    return e('div',{key:pi,style:{display:'flex',gap:6,marginBottom:5,fontSize:'0.78rem',color:'var(--muted)',lineHeight:1.6}},
+                      e('span',{style:{color:'var(--accent)',flexShrink:0}},'→'),
+                      e('span',null,pt));
+                  })
+                )
+              ),
+              e('div',{style:{display:'flex',gap:8}},
+                cardIdx>=0&&e('button',{className:'np',style:{flex:1},
+                  onClick:function(){setCi(cardIdx);setRtab('cards');setShowWs(false);}},
+                  'Go to card'),
+                e('button',{className:'ob',style:{flex:1},
+                  onClick:function(){
+                    if(!cards.length)return;
+                    var mt={};
+                    mistakes.forEach(function(m){if(m.question)mt[m.question]=true;});
+                    var pool=(function(){var p=cards.filter(function(c){return mt[c.topic||c.question];});return p.length?p:cards;})();
+                    var entry={date:todayKey,card:pool[Math.floor(Math.random()*pool.length)],dismissed:false};
+                    try{localStorage.setItem('cs_daily_'+uid,JSON.stringify(entry));}catch(ex){}
+                    setDailyCard(entry);
+                  }},'Refresh card')
+              ),
+              e('div',{style:{marginTop:10,fontSize:'0.68rem',color:'var(--muted)',textAlign:'center'}},'Auto-refreshes every day at midnight')
+            );
+          })(),
+
           wsTab==='favs'&&isElite()&&(function(){
             var favCards=Object.entries(favs).filter(function(kv){return kv[1]&&kv[1].topic;}).map(function(kv){return kv[1];});
             if(!favCards.length)return e('div',{className:'ws-empty'},
