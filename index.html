@@ -2359,20 +2359,10 @@ function App(){
                   })
                 )
               ),
-              e('div',{style:{display:'flex',gap:8}},
-                cardIdx>=0&&e('button',{className:'np',style:{flex:1},
+              cardIdx>=0&&e('div',{style:{marginTop:4}},
+                e('button',{className:'np',style:{width:'100%'},
                   onClick:function(){setCi(cardIdx);setRtab('cards');setShowWs(false);}},
-                  'Go to card'),
-                e('button',{className:'ob',style:{flex:1},
-                  onClick:function(){
-                    if(!cards.length)return;
-                    var mt={};
-                    mistakes.forEach(function(m){if(m.question)mt[m.question]=true;});
-                    var pool=(function(){var p=cards.filter(function(c){return mt[c.topic||c.question];});return p.length?p:cards;})();
-                    var entry={date:todayKey,card:pool[Math.floor(Math.random()*pool.length)],dismissed:false};
-                    try{localStorage.setItem('cs_daily_'+uid,JSON.stringify(entry));}catch(ex){}
-                    setDailyCard(entry);
-                  }},'Refresh card')
+                  'Go to card')
               ),
               e('div',{style:{marginTop:10,fontSize:'0.68rem',color:'var(--muted)',textAlign:'center'}},'Auto-refreshes every day at midnight')
             );
