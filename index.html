@@ -690,7 +690,7 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 .weak-bar-bg{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
 .weak-bar-fill{height:100%;border-radius:3px;background:var(--red);transition:width .6s ease}
 .weak-count{font-size:0.68rem;color:var(--muted);width:28px;text-align:right}
-.fav-btn{position:absolute;top:32px;left:32px;z-index:30;background:var(--surface);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;font-size:0.82rem;cursor:none;opacity:0.75;transition:opacity .15s,transform .15s,background .15s;display:flex;align-items:center;justify-content:center;line-height:1}
+.fav-btn{position:absolute;top:32px;left:32px;z-index:30;background:var(--surface);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;font-size:0.82rem;cursor:none;opacity:0.75;transition:opacity .15s,transform .15s,background .15s;display:flex;align-items:center;justify-content:center;line-height:1;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
 .fav-btn:hover,.fav-btn.on{opacity:1}
 .fav-btn.on{transform:scale(1.2)}
 .card-note-area{width:100%;resize:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:Geist,sans-serif;font-size:0.7rem;padding:5px 9px;margin-top:10px;line-height:1.5;cursor:none;height:26px;transition:height .2s;flex-shrink:0}
@@ -1357,7 +1357,17 @@ function App(){
     var d=Object.assign({},streakData);d[today]=(d[today]||0)+1;
     setStreakData(d);try{localStorage.setItem('cs_streak',JSON.stringify(d));}catch(e){}
   }
-  function toggleFav(idx){setFavs(function(f){var n=Object.assign({},f);n[idx]=!n[idx];return n;});}
+  function toggleFav(idx){
+    var c=cards[idx];if(!c)return;
+    var key=(c.topic||c.question||String(idx));
+    setFavs(function(f){
+      var n=Object.assign({},f);
+      if(n[key])delete n[key];
+      else n[key]={topic:c.topic||c.question,points:c.points||c.answer||''};
+      try{localStorage.setItem('cs_favs_'+((user&&user.id)||'g'),JSON.stringify(n));}catch(e){}
+      return n;
+    });
+  }
   function setNote(idx,val){setNotesMap(function(m){var n=Object.assign({},m);n[idx]=val;return n;});}
   function startSrMode(){
     if(!isElite()){setPw(true);return;}
@@ -1454,7 +1464,10 @@ function App(){
         }
       }
       var profile=await fetchUserProfile();
-      if(profile){setUser(profile);setSession(profile);loadProData();}
+      if(profile){
+        setUser(profile);setSession(profile);loadProData();
+        try{var sf=localStorage.getItem('cs_favs_'+profile.id);if(sf)setFavs(JSON.parse(sf));}catch(e){}
+      }
     }
     initAuth();
   },[]);
@@ -1659,7 +1672,8 @@ function App(){
       (target.cards||[]).forEach(function(c){if(c.topic||c.question)topics[(c.topic||c.question)]=true;});
       setFavs(function(f){
         var n=Object.assign({},f);
-        cards.forEach(function(c,i){if(topics[c.topic||c.question])delete n[i];});
+        Object.keys(topics).forEach(function(k){delete n[k];});
+        try{localStorage.setItem('cs_favs_'+((user&&user.id)||'g'),JSON.stringify(n));}catch(e){}
         return n;
       });
       setNotesMap(function(m){
@@ -1985,7 +1999,7 @@ function App(){
               : e(Card,{
                 card:cards[ci],idx:ci,total:cards.length,
                 fontSz:fontSz,
-                fav:favs[ci],
+                fav:!!(cards[ci]&&favs[cards[ci].topic||cards[ci].question||ci]),
                 note:notesMap[ci],
                 onFav:isElite()?function(){toggleFav(ci);}:null,
                 onNote:isElite()?function(v){setNote(ci,v);}:null,
