@@ -1358,10 +1358,17 @@ function App(){
     var d=Object.assign({},streakData);d[today]=(d[today]||0)+1;
     setStreakData(d);try{localStorage.setItem('cs_streak',JSON.stringify(d));}catch(e){}
   }
+  function getISTDateKey(){
+    // Returns YYYY-MM-DD in IST (UTC+5:30) so daily card resets at midnight IST
+    var now=new Date();
+    var istOffset=5.5*60*60*1000;
+    var istDate=new Date(now.getTime()+istOffset);
+    return istDate.toISOString().slice(0,10);
+  }
   function pickDailyCard(cardList){
     if(!cardList||!cardList.length)return;
     var uid=(user&&user.id)||'g';
-    var todayKey=new Date().toISOString().slice(0,10);
+    var todayKey=getISTDateKey();
     var stored=null;
     try{stored=JSON.parse(localStorage.getItem('cs_daily_'+uid)||'null');}catch(ex){}
     if(stored&&stored.date===todayKey&&stored.card){setDailyCard(stored);return;}
@@ -1461,7 +1468,21 @@ function App(){
     }catch(e){}
     try{
       var sr=await fetch('/api/data?resource=sets',{headers:authHeader()});
-      if(sr.ok){var sd=await sr.json();setSavedSets(sd.sets||[]);}
+      if(sr.ok){
+        var sd=await sr.json();
+        var fetchedSets=sd.sets||[];
+        setSavedSets(fetchedSets);
+        // Auto-pick daily card from most recent saved set if not yet picked today
+        var uid2=(user&&user.id)||'g';
+        var todayKey2=getISTDateKey();
+        var existing=null;
+        try{existing=JSON.parse(localStorage.getItem('cs_daily_'+uid2)||'null');}catch(ex){}
+        if((!existing||existing.date!==todayKey2)&&fetchedSets.length){
+          // Use most recent set's cards as the pool
+          var poolCards=fetchedSets[0].cards||[];
+          if(poolCards.length)setTimeout(function(){pickDailyCard(poolCards);},0);
+        }
+      }
     }catch(e){}
     try{
       var mr=await fetch('/api/data?resource=mistakes',{headers:authHeader()});
@@ -2309,7 +2330,7 @@ function App(){
           /* ── MISTAKES TAB ── */
           wsTab==='today'&&(function(){
             var uid=(user&&user.id)||'g';
-            var todayKey=new Date().toISOString().slice(0,10);
+            var todayKey=getISTDateKey();
             var stored=dailyCard;
             if(!stored){try{stored=JSON.parse(localStorage.getItem('cs_daily_'+uid)||'null');}catch(e){}}
             if((!stored||stored.date!==todayKey)&&cards.length){
