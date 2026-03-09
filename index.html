@@ -1706,7 +1706,9 @@ function App(){
     if(deferredPromptR.current){
       deferredPromptR.current.prompt();
       deferredPromptR.current.userChoice.then(function(){deferredPromptR.current=null;setCanInstall(false);});
+      return;
     }
+    setShowIos(true);
   }
   useEffect(function(){
     return function(){window.speechSynthesis&&window.speechSynthesis.cancel();};
@@ -1825,8 +1827,7 @@ function App(){
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab(isElite()?'streak':'history');loadProData();setShowWs(true);}},
                   isElite()?'📊 Progress & Stats':'📊 Quiz History'
                 ),
-                (canInstall||/iphone|ipad|ipod/i.test(navigator.userAgent))&&
-                  e('button',{className:'user-drop-item',onClick:handleInstall},'📲 Install App'),
+                e('button',{className:'user-drop-item',onClick:handleInstall},'📲 Install App'),
                 e('button',{className:'user-drop-item danger',onClick:logout},'Sign out')
               )
             )
@@ -2110,11 +2111,19 @@ function App(){
     showIos&&e('div',{className:'ios-install-overlay',onClick:function(ev){if(ev.target===ev.currentTarget)setShowIos(false);}},
       e('div',{className:'ios-install-box'},
         e('img',{src:'/icons/icon-light-192.png',alt:'CogniSwift'}),
-        e('h3',null,'Add to Home Screen'),
+        e('h3',null,/iphone|ipad|ipod/i.test(navigator.userAgent)?'Add to Home Screen':'Install CogniSwift'),
         e('p',null,'Install CogniSwift for quick access — works offline for reviewing your last cards.'),
-        e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'1'),e('div',null,'Tap the ',e('strong',null,'↑ Share'),' button at the bottom of Safari')),
-        e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'2'),e('div',null,'Scroll and tap ',e('strong',null,'"Add to Home Screen"'))),
-        e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'3'),e('div',null,'Tap ',e('strong',null,'"Add"'),' in the top right corner')),
+        /iphone|ipad|ipod/i.test(navigator.userAgent)
+        ? e(React.Fragment,null,
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'1'),e('div',null,'Tap the ',e('strong',null,'↑ Share'),' button at the bottom of Safari')),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'2'),e('div',null,'Scroll and tap ',e('strong',null,'"Add to Home Screen"'))),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'3'),e('div',null,'Tap ',e('strong',null,'"Add"'),' in the top right'))
+          )
+        : e(React.Fragment,null,
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'1'),e('div',null,'Open CogniSwift in ',e('strong',null,'Chrome'),' on your Android phone')),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'2'),e('div',null,'Tap the ',e('strong',null,'⋮ menu'),' at the top right')),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'3'),e('div',null,'Tap ',e('strong',null,'"Add to Home Screen"'),' or ',e('strong',null,'"Install App"')))
+          ),
         e('button',{className:'np',style:{width:'100%',marginTop:18},onClick:function(){setShowIos(false);}},'Got it')
       )
     ),
