@@ -104,10 +104,10 @@ body.hov #cur-r{width:48px;height:48px;border-radius:6px;opacity:0.2}
 nav{position:fixed;top:0;left:0;right:0;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--border);background:rgba(34,32,58,0.92);backdrop-filter:blur(20px);z-index:100;transition:background .3s,border-color .3s}
 html.light nav{background:rgba(244,241,235,0.92)}
 .logo{font-family:'Instrument Serif',serif;font-size:1.9rem;color:var(--accent);letter-spacing:-0.02em;font-weight:400}
-.nav-logo{display:flex;align-items:center;gap:9px;user-select:none}
+.nav-logo{display:flex;align-items:center;gap:6px;user-select:none}
 .nav-logo img{width:30px;height:30px;object-fit:contain;display:block;border-radius:0;background:none}
 .nav-logo-txt{font-family:'Instrument Serif',serif;font-size:1.9rem;color:var(--accent);letter-spacing:-0.02em;font-weight:400}
-.hero-logo{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:16px;margin-bottom:16px;animation:fu .55s ease both;position:relative;z-index:2}
+.hero-logo{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px;margin-bottom:16px;animation:fu .55s ease both;position:relative;z-index:2}
 .hero-logo img{width:clamp(3.4rem,7.5vw,5.5rem);height:clamp(3.4rem,7.5vw,5.5rem);object-fit:contain;display:block;border-radius:0;background:none;flex-shrink:0}
 .hero-logo-name{font-family:'Instrument Serif',serif;font-size:clamp(2.4rem,5.5vw,4rem);color:var(--accent);letter-spacing:-0.03em;font-weight:400;line-height:1.18}
 .ios-install-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 28px;animation:fu .2s ease}
@@ -2098,8 +2098,11 @@ function App(){
     ),
 
     e('footer',null,
-      e('div',{className:'fl'},'CogniSwift'),
-      e('div',{className:'ft'},'Built for Indian students · 2025')
+      e('div',{className:'fl',style:{display:'flex',alignItems:'center',gap:6}},
+        e('img',{src:dark?'/icons/icon-dark-192.png':'/icons/icon-light-192.png',alt:'',style:{width:22,height:22,objectFit:'contain'}}),
+        'CogniSwift'
+      ),
+      e('div',{className:'ft'},'Built for Indian students · 2026')
     ),
 
     /* AUTH MODAL */
