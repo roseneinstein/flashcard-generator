@@ -599,6 +599,7 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 .ws-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
 .ws-title{font-family:'Instrument Serif',serif;font-size:1.25rem;font-weight:400;color:var(--text)}
 .ws-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:none;padding:4px 8px;border-radius:6px;transition:color .2s}
+@media(max-width:520px){.ws-head{padding:12px 14px}}
 .ws-close:hover{color:var(--text)}
 .ws-body{overflow-y:auto;padding:20px 22px;flex:1}
 .ws-empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:0.82rem;line-height:1.8}
@@ -2160,7 +2161,7 @@ function App(){
               e('div',{className:'ws-title'},'My Workspace'),
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
-            e('div',{style:{display:'flex',gap:6}},
+            e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
               (isElite()?['sets','favs','history','mistakes','streak','weak']:['sets','history','mistakes']).map(function(tab){
                 var labels={sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
                 var counts={sets:savedSets.length,favs:Object.values(favs).filter(Boolean).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
