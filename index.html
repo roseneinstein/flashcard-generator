@@ -1710,13 +1710,13 @@ function App(){
   },[]);
   function handleInstall(){
     setShowUserMenu(false);
-    var ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
-    if(ios){setShowIos(true);return;}
+    // Android/Chrome — browser has install prompt ready, fire it directly
     if(deferredPromptR.current){
       deferredPromptR.current.prompt();
       deferredPromptR.current.userChoice.then(function(){deferredPromptR.current=null;setCanInstall(false);});
       return;
     }
+    // iOS or desktop — show instructions modal
     setShowIos(true);
   }
   useEffect(function(){
@@ -2120,19 +2120,32 @@ function App(){
     showIos&&e('div',{className:'ios-install-overlay',onClick:function(ev){if(ev.target===ev.currentTarget)setShowIos(false);}},
       e('div',{className:'ios-install-box'},
         e('img',{src:'/icons/icon-light-192.png',alt:'CogniSwift'}),
-        e('h3',null,/iphone|ipad|ipod/i.test(navigator.userAgent)?'Add to Home Screen':'Install CogniSwift'),
-        e('p',null,'Install CogniSwift for quick access — works offline for reviewing your last cards.'),
-        /iphone|ipad|ipod/i.test(navigator.userAgent)
-        ? e(React.Fragment,null,
-            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'1'),e('div',null,'Tap the ',e('strong',null,'↑ Share'),' button at the bottom of Safari')),
-            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'2'),e('div',null,'Scroll and tap ',e('strong',null,'"Add to Home Screen"'))),
-            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'3'),e('div',null,'Tap ',e('strong',null,'"Add"'),' in the top right'))
-          )
-        : e(React.Fragment,null,
-            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'1'),e('div',null,'Open CogniSwift in ',e('strong',null,'Chrome'),' on your Android phone')),
-            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'2'),e('div',null,'Tap the ',e('strong',null,'⋮ menu'),' at the top right')),
-            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'3'),e('div',null,'Tap ',e('strong',null,'"Add to Home Screen"'),' or ',e('strong',null,'"Install App"')))
-          ),
+        (function(){
+          var ua=navigator.userAgent;
+          var isIos=/iphone|ipad|ipod/i.test(ua)&&!window.MSStream;
+          var isAndroid=/android/i.test(ua);
+          if(isIos) return e(React.Fragment,null,
+            e('h3',null,'Add to Home Screen'),
+            e('p',null,'CogniSwift works like a native app on iOS — just add it to your home screen.'),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'1'),e('div',null,'Open this page in ',e('strong',null,'Safari'),' (not Chrome)')),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'2'),e('div',null,'Tap the ',e('strong',null,'↑ Share'),' button at the bottom of the screen')),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'3'),e('div',null,'Scroll down and tap ',e('strong',null,'"Add to Home Screen"'))),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'4'),e('div',null,'Tap ',e('strong',null,'"Add"'),' in the top right corner'))
+          );
+          if(isAndroid) return e(React.Fragment,null,
+            e('h3',null,'Install CogniSwift'),
+            e('p',null,'To install, open CogniSwift in Chrome and follow these steps:'),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'1'),e('div',null,'Tap the ',e('strong',null,'⋮ menu'),' (3 dots) at the top right of Chrome')),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'2'),e('div',null,'Tap ',e('strong',null,'"Add to Home Screen"'),' or ',e('strong',null,'"Install App"'))),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'3'),e('div',null,'Tap ',e('strong',null,'"Install"'),' to confirm'))
+          );
+          return e(React.Fragment,null,
+            e('h3',null,'Install on Your Phone'),
+            e('p',null,'CogniSwift can be installed as an app on Android and iOS.'),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'A'),e('div',null,e('strong',null,'Android:'),' Open in Chrome → tap ⋮ menu → "Add to Home Screen"')),
+            e('div',{className:'ios-step'},e('div',{className:'ios-step-num'},'B'),e('div',null,e('strong',null,'iPhone:'),' Open in Safari → tap ↑ Share → "Add to Home Screen"'))
+          );
+        })(),
         e('button',{className:'np',style:{width:'100%',marginTop:18},onClick:function(){setShowIos(false);}},'Got it')
       )
     ),
