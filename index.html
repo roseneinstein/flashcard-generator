@@ -1170,10 +1170,10 @@ function PCard(props){
 function Summary({data,loading}){
   if(loading)return e('div',{className:'ss-ld'},
     e('div',{className:'dots'},e('span'),e('span'),e('span')),
-    e('p',null,'Building summary…')
+    e('p',null,t('Building summary…'))
   );
-  if(!data)return e('div',{className:'emp'},e('div',{className:'emp-i'},'◻'),e('p',null,'Summary will appear here'));
-  if(data._error)return e('div',{className:'emp'},e('div',{className:'emp-i'},'⚠'),e('p',null,'Summary unavailable — '+data._error));
+  if(!data)return e('div',{className:'emp'},e('div',{className:'emp-i'},'◻'),e('p',null,t('Summary will appear here')));
+  if(data._error)return e('div',{className:'emp'},e('div',{className:'emp-i'},'⚠'),e('p',null,t('Summary unavailable — ')+data._error));
   return e('div',{className:'sw'},
     e('div',{className:'sw-title'},data.title),
     data.sections.map(function(sec,si){
@@ -1200,8 +1200,8 @@ function AuthModal({onClose}){
 
   return e('div',{className:'auth-modal',onClick:function(ev){if(ev.target===ev.currentTarget)onClose();}},
     e('div',{className:'auth-box'},
-      e('h3',null,'Sign in to CogniSwift'),
-      e('p',null,'Save your card sets, track progress, and unlock Pro features.'),
+      e('h3',null,t('Sign in to CogniSwift')),
+      e('p',null,t('Save your card sets, track progress, and unlock Pro features.')),
       e('button',{className:'auth-google',onClick:loginGoogle,disabled:loading},
         e('svg',{width:18,height:18,viewBox:'0 0 24 24'},
           e('path',{fill:'#4285F4',d:'M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'}),
@@ -1209,10 +1209,10 @@ function AuthModal({onClose}){
           e('path',{fill:'#FBBC05',d:'M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'}),
           e('path',{fill:'#EA4335',d:'M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'})
         ),
-        loading?'Signing in…':'Continue with Google'
+        loading?t('Signing in…'):t('Continue with Google')
       ),
       err&&e('p',{style:{color:'var(--red)',fontSize:'0.72rem',marginBottom:12}},err),
-      e('button',{className:'auth-close',onClick:onClose},'Maybe later')
+      e('button',{className:'auth-close',onClick:onClose},t('Maybe later'))
     )
   );
 }
@@ -1459,18 +1459,69 @@ function App(){
   }
   // ── Hindi translations ─────────────────────────────────────
   var HI={
-    'Features':'विशेषताएं','Plans':'प्लान्स',
-    'Cards':'कार्ड्स','Summary':'सारांश','Quiz':'क्विज़',
-    'Generate →':'जनरेट करें →','Generating…':'जनरेट हो रहा है…',
+    'Features':'विशेषताएं','Plans':'प्लान्स','Sign in':'साइन इन','Sign out':'साइन आउट',
+    'Notes become':'नोट्स बन जाते हैं','flashcards':'फ्लैशकार्ड्स',
+    'Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.':'अपना टेक्स्ट पेस्ट करें। तुरंत फ्लैशकार्ड्स, सारांश और क्विज़ पाएं।',
     'Start for free →':'मुफ़्त में शुरू करें →',
+    'What you get':'आपको क्या मिलेगा','Built for how':'बनाया गया है','Indian students':'भारतीय छात्रों','actually study':'की पढ़ाई के लिए',
+    'Instant study cards':'तुरंत स्टडी कार्ड्स','Memory-first flashcards':'याददाश्त के लिए फ्लैशकार्ड्स',
+    'Self-test quiz':'स्व-परीक्षण क्विज़','PDF upload & export':'PDF अपलोड और निर्यात',
+    'Mobile first':'मोबाइल फर्स्ट','No signup needed':'साइनअप की ज़रूरत नहीं',
+    'Paste. ':'पेस्ट करें। ','Generate.':'जनरेट करें।',' Revise.':' रिवाइज़ करें।',
+    'Drop PDF here or ':'PDF यहाँ ड्रॉप करें या ','click to browse':'ब्राउज़ करें',
+    'Click to replace':'बदलने के लिए क्लिक करें',
+    'Max ~20 pages for best results':'बेहतर परिणाम के लिए ~20 पेज तक',
+    'Edit extracted text if needed…':'ज़रूरत हो तो टेक्स्ट एडिट करें…',
+    'Text':'टेक्स्ट',
+    'Generate →':'जनरेट करें →','Generating…':'जनरेट हो रहा है…',
+    'Generating your cards…':'आपके कार्ड्स बन रहे हैं…',
+    'Your flashcards will appear here':'आपके फ्लैशकार्ड्स यहाँ दिखेंगे',
+    'Flashcards':'फ्लैशकार्ड्स','Summary':'सारांश','Quiz':'क्विज़',
+    '↩ Reset':'↩ रीसेट','⇄ Shuffle':'⇄ शफ़ल','📝 Quiz':'📝 क्विज़',
+    '↓ PDF':'↓ PDF','🔗 Share':'🔗 शेयर',
+    '💾 Save set':'💾 सेट सेव करें','🔊 Read aloud':'🔊 ज़ोर से पढ़ें','⏹ Stop':'⏹ रोकें',
+    'regenerating…':'दोबारा बन रहा है…','↻ Redo this card':'↻ कार्ड दोबारा बनाएं',
+    '✕ Exit review':'✕ समीक्षा बंद करें',
+    'Review mode':'समीक्षा मोड','Again':'फिर से','✓ Got it':'✓ याद हो गया',
+    'How many questions?':'कितने प्रश्न?','No quiz available':'क्विज़ उपलब्ध नहीं',
+    'Building summary…':'सारांश बन रहा है…','Summary will appear here':'सारांश यहाँ दिखेगा',
+    'Summary unavailable — ':'सारांश उपलब्ध नहीं — ',
+    'Start free.':'मुफ़्त शुरू करें।','Upgrade anytime.':'कभी भी अपग्रेड करें।',
+    'forever':'हमेशा के लिए','per month':'प्रति माह',
+    'Get started':'शुरू करें','Current plan':'वर्तमान प्लान',
+    'Upgrade to Pro':'Pro में अपग्रेड करें','Go Elite':'Elite लें',
+    'Maybe later':'बाद में','Continue tomorrow':'कल जारी रखें',
+    'From students':'छात्रों से','What people ':'क्या कहते हैं ','actually':' असल में',' say':'',
+    'My Workspace':'मेरा वर्कस्पेस',
     '⭐ Today':'⭐ आज','📚 Saved Sets':'📚 सेव्ड सेट्स',
     '♥ Favourites':'♥ पसंदीदा','📊 Quiz History':'📊 क्विज़ इतिहास',
     '✗ Mistakes':'✗ गलतियां','🔥 Streak':'🔥 स्ट्रीक','📉 Weak Areas':'📉 कमज़ोर क्षेत्र',
-    'Close':'बंद करें','Share':'शेयर',
+    'No saved sets yet.':'अभी कोई सेट सेव नहीं है।',
+    'Save sets after generating to access them here.':'जनरेट करने के बाद सेट सेव करें।',
+    'No quiz history yet.':'अभी कोई क्विज़ इतिहास नहीं है।',
+    'Complete a quiz from any saved set to see results here.':'किसी सेव्ड सेट का क्विज़ दें।',
+    'No favourites yet.':'अभी कोई पसंदीदा नहीं है।',
+    'Tap the ♥ on any card front to save it here.':'किसी कार्ड पर ♥ दबाएं।',
+    'No mistake data yet.':'अभी कोई गलती डेटा नहीं है।',
+    'Complete quizzes from saved sets to see your weak areas.':'कमज़ोर क्षेत्र देखने के लिए क्विज़ दें।',
+    'No mistakes recorded.':'कोई गलती दर्ज नहीं है।',
+    'Wrong quiz answers will appear here so you can review them.':'गलत उत्तर यहाँ दिखेंगे।',
+    'Generation activity — last 90 days':'जनरेशन गतिविधि — पिछले 90 दिन',
+    'Sets with most mistakes':'सबसे ज़्यादा गलतियों वाले सेट',
+    'No card yet.':'अभी कोई कार्ड नहीं।',
+    'Generate or load a set — your daily card appears here.':'एक सेट जनरेट या लोड करें।',
+    'Go to card':'कार्ड पर जाएं','Auto-refreshes every day at midnight':'हर रात 12 बजे स्वतः अपडेट',
+    'Picking today\'s card...':'आज का कार्ड चुना जा रहा है...',
+    'Save this set':'यह सेट सेव करें',
+    'Select all':'सभी चुनें','Select none':'कोई नहीं','Create short link →':'शॉर्ट लिंक बनाएं →',
+    'Copy':'कॉपी करें',
+    'Sign in to CogniSwift':'CogniSwift में साइन इन करें',
+    'Save your card sets, track progress, and unlock Pro features.':'सेट सेव करें, प्रगति देखें और Pro फीचर पाएं।',
+    'Continue with Google':'Google से जारी रखें','Signing in…':'साइन इन हो रहा है…',
+    'Share via':'के ज़रिए शेयर करें',
     'Built for Indian students · 2026':'भारतीय छात्रों के लिए · 2026',
     'Loved it? Share CogniSwift':'पसंद आया? CogniSwift शेयर करें',
-    'Go to card':'कार्ड पर जाएं',
-    'Auto-refreshes every day at midnight':'हर रात 12 बजे स्वतः अपडेट',
+    'Close':'बंद करें',
   };
   function t(s){return lang==='hi'&&HI[s]?HI[s]:s;}
   // ─────────────────────────────────────────────────────────────
@@ -1989,10 +2040,10 @@ function App(){
                   isElite()?'📊 Progress & Stats':'📊 Quiz History'
                 ),
                 e('button',{className:'user-drop-item',onClick:handleInstall},'📲 Install App'),
-                e('button',{className:'user-drop-item danger',onClick:logout},'Sign out')
+                e('button',{className:'user-drop-item danger',onClick:logout},t('Sign out'))
               )
             )
-          : e('button',{className:'np',onClick:function(){setShowAuth(true);}},'Sign in')
+          : e('button',{className:'np',onClick:function(){setShowAuth(true);}},t('Sign in'))
       )
     ),
 
@@ -2057,11 +2108,11 @@ function App(){
     /* APP */
     e('section',{id:'app',className:'app-wrap'},
       e('div',{className:'ey rev'},'Generate'),
-      e('h2',{className:'st rev'},'Paste. ',e('em',null,'Generate.'),' Revise.'),
+      e('h2',{className:'st rev'},t('Paste. '),e('em',null,t('Generate.')),t(' Revise.')),
       e('div',{className:'icard rev'},
         e('div',{className:'tbar'},
-          e('button',{className:'tb'+(itab==='text'?' act':''),onClick:function(){setItab('text');}},'Text'),
-          e('button',{className:'tb'+(itab==='pdf'?' act':''),onClick:function(){setItab('pdf');}},'PDF')
+          e('button',{className:'tb'+(itab==='text'?' act':''),onClick:function(){setItab('text');},},t('Text')),
+          e('button',{className:'tb'+(itab==='pdf'?' act':''),onClick:function(){setItab('pdf');},},t('PDF'))
         ),
         itab==='text'
           ? e('textarea',{value:notes,onChange:function(ev){setNotes(ev.target.value);},placeholder:' Paste your study notes here…\n\nWorks with anything — UPSC answer keys, JEE chapters, NEET diagrams text, CA act excerpts, your own handwritten notes typed out…'})
@@ -2072,8 +2123,8 @@ function App(){
                 onDrop:function(ev){ev.preventDefault();setDrag(false);hFile(ev.dataTransfer.files[0]);}
               },
                 e('span',{className:'upz-i'},'↑'),
-                fn ? e('p',null,e('strong',null,fn),e('br'),'Click to replace')
-                   : e('p',null,'Drop PDF here or ',e('strong',null,'click to browse'),e('br'),'Max ~20 pages for best results')
+                fn ? e('p',null,e('strong',null,fn),e('br'),t('Click to replace'))
+                   : e('p',null,t('Drop PDF here or '),e('strong',null,t('click to browse')),e('br'),t('Max ~20 pages for best results'))
               ),
               e('input',{type:'file',accept:'.pdf',ref:fref,onChange:function(ev){hFile(ev.target.files[0]);}}),
               fn&&e('textarea',{value:pdfTxt,onChange:function(ev){setPdfTxt(ev.target.value);},placeholder:'Edit extracted text if needed…',style:{borderTop:'1px solid var(--border)'}})
@@ -2132,13 +2183,13 @@ function App(){
       ),
 
       e('div',{id:'ra'}),
-      loading&&e('div',{className:'ld'},e('div',{className:'dots'},e('span'),e('span'),e('span')),e('p',null,'Generating your cards…')),
+      loading&&e('div',{className:'ld'},e('div',{className:'dots'},e('span'),e('span'),e('span')),e('p',null,t('Generating your cards…'))),
 
       !loading&&cards.length>0&&e('div',{className:'rev',style:{marginTop:4}},
         e('div',{className:'rtabs'},
-          e('button',{className:'rt'+(rtab==='cards'?' act':''),onClick:function(){setRtab('cards');}},'Flashcards',e('span',{className:'bdg'},cards.length+' / '+cnt)),
-          e('button',{className:'rt'+(rtab==='summary'?' act':''),onClick:function(){setRtab('summary');}},'Summary'),
-          e('button',{className:'rt'+(rtab==='quiz'?' act':''),onClick:function(){setRtab('quiz');}},'Quiz',e('span',{className:'bdg'},quizCounts[quizCounts.length-1]+'Q max'))
+          e('button',{className:'rt'+(rtab==='cards'?' act':''),onClick:function(){setRtab('cards');},},t('Flashcards'),e('span',{className:'bdg'},cards.length+' / '+cnt)),
+          e('button',{className:'rt'+(rtab==='summary'?' act':''),onClick:function(){setRtab('summary');},},t('Summary')),
+          e('button',{className:'rt'+(rtab==='quiz'?' act':''),onClick:function(){setRtab('quiz');},},t('Quiz'),e('span',{className:'bdg'},quizCounts[quizCounts.length-1]+'Q max'))
         ),
         isElite()&&rtab==='cards'&&e('div',{className:'theme-bar'},
           e('span',{className:'theme-lbl'},'Theme'),
@@ -2154,10 +2205,10 @@ function App(){
         e('div',{className:'rbody'},
           rtab==='cards'&&e(React.Fragment,null,
             srMode&&e('div',{className:'sr-banner'},
-              e('div',{className:'sr-banner-txt'},e('strong',null,'Review mode'),' — card '+(srIdx+1)+' of '+srQueue.length),
+              e('div',{className:'sr-banner-txt'},e('strong',null,t('Review mode')),' — card '+(srIdx+1)+' of '+srQueue.length),
               e('div',{className:'sr-rate-btns'},
-                e('button',{className:'sr-btn again',onClick:srRate},'Again'),
-                e('button',{className:'sr-btn ok',onClick:srRate},'✓ Got it')
+                e('button',{className:'sr-btn again',onClick:srRate},t('Again')),
+                e('button',{className:'sr-btn ok',onClick:srRate},t('✓ Got it'))
               )
             ),
             srMode
@@ -2173,10 +2224,10 @@ function App(){
                 onPrev:function(){setCi(function(i){return Math.max(i-1,0);});}
               }),
             e('div',{className:'fca',style:{marginTop:8}},
-              e('button',{className:'ab',onClick:function(){setCi(0);}},'↩ Reset'),
-              e('button',{className:'ab',onClick:function(){setCi(Math.floor(Math.random()*cards.length));}},'⇄ Shuffle'),
-              e('button',{className:'ab',onClick:function(){setRtab('quiz');},disabled:!quiz.length},'📝 Quiz'),
-              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,activeSetName||'CogniSwift Study Cards');}},'↓ PDF'),
+              e('button',{className:'ab',onClick:function(){setCi(0);}},t('↩ Reset')),
+              e('button',{className:'ab',onClick:function(){setCi(Math.floor(Math.random()*cards.length));}},t('⇄ Shuffle')),
+              e('button',{className:'ab',onClick:function(){setRtab('quiz');},disabled:!quiz.length},t('📝 Quiz')),
+              e('button',{className:'ab pr',onClick:function(){dlPDF(cards,activeSetName||'CogniSwift Study Cards');}},t('↓ PDF')),
               (isPro()||isElite())
                 ? e('button',{className:'ab',
                     title:'Export as PowerPoint. Open in Google Slides via Drive → Upload',
@@ -2186,25 +2237,25 @@ function App(){
                       st('📊 PPT saved! Open in Google Slides: Drive → New → File upload');
                     }},'📊 PPT / Slides')
                 : null,
-              e('button',{className:'ab',onClick:openShare},'🔗 Share'),
+              e('button',{className:'ab',onClick:openShare},t('🔗 Share')),
               (isPro()||isElite())
-                ? e('button',{className:'ab',style:{color:'var(--accent)',borderColor:'var(--accent)'},onClick:openSaveModal},'💾 Save set')
+                ? e('button',{className:'ab',style:{color:'var(--accent)',borderColor:'var(--accent)'},onClick:openSaveModal},t('💾 Save set'))
                 : null,
               (isPro()||isElite())
-                ? e('button',{className:'voice-btn'+(speaking?' active':''),onClick:toggleVoice},speaking?'⏹ Stop':'🔊 Read aloud')
+                ? e('button',{className:'voice-btn'+(speaking?' active':''),onClick:toggleVoice},speaking?t('⏹ Stop'):t('🔊 Read aloud'))
                 : null,
               (isPro()||isElite())
-                ? e('button',{className:'regen-btn',onClick:function(){regenCard(ci);},disabled:regenIdx!==null},regenIdx===ci?'regenerating…':'↻ Redo this card')
+                ? e('button',{className:'regen-btn',onClick:function(){regenCard(ci);},disabled:regenIdx!==null},regenIdx===ci?t('regenerating…'):t('↻ Redo this card'))
                 : null,
               isElite()&&srMode
-                ? e('button',{className:'regen-btn',style:{color:'var(--red)',borderColor:'var(--red)'},onClick:function(){setSrMode(false);st('Review mode off');}},'✕ Exit review')
+                ? e('button',{className:'regen-btn',style:{color:'var(--red)',borderColor:'var(--red)'},onClick:function(){setSrMode(false);st('Review mode off');}},t('✕ Exit review'))
                 : null
             )
           ),
           rtab==='summary'&&e(React.Fragment,null,
             e(Summary,{data:summary,loading:sumLoad}),
             summary&&!sumLoad&&e('div',{className:'fca'},
-              e('button',{className:'ab pr',onClick:function(){dlSummaryPDF(summary);}},'↓ PDF')
+              e('button',{className:'ab pr',onClick:function(){dlSummaryPDF(summary);}},t('↓ PDF'))
             )
           ),
           rtab==='quiz'&&(quiz.length>0
@@ -2219,7 +2270,7 @@ function App(){
                     }:null
                   })
                 : e('div',{className:'qpick'},
-                    e('div',{className:'qpick-lbl'},'How many questions?'),
+                    e('div',{className:'qpick-lbl'},t('How many questions?')),
                     e('div',{className:'qpick-opts'},
                       quizCounts.map(function(n){
                         var cls='qpick-btn'+(pickAnim===n?' chosen':pickAnim!==null?' fading':'');
@@ -2231,10 +2282,10 @@ function App(){
                     )
                   )
               )
-            : e('div',{className:'emp'},e('div',{className:'emp-i'},'?'),e('p',null,'No quiz available')))
+            : e('div',{className:'emp'},e('div',{className:'emp-i'},'?'),e('p',null,t('No quiz available'))))
         )
       ),
-      !loading&&cards.length===0&&e('div',{className:'emp rev',style:{marginTop:14}},e('div',{className:'emp-i'},'◻'),e('p',null,'Your flashcards will appear here'))
+      !loading&&cards.length===0&&e('div',{className:'emp rev',style:{marginTop:14}},e('div',{className:'emp-i'},'◻'),e('p',null,t('Your flashcards will appear here')))
     ),
 
     /* PRICING */
@@ -2324,7 +2375,7 @@ function App(){
     showAuth&&e(AuthModal,{onClose:function(){setShowAuth(false);}}),
     showShareSheet&&e('div',{className:'share-sheet-ov',onClick:function(ev){if(ev.target===ev.currentTarget)setShowShareSheet(null);}},
       e('div',{className:'share-sheet-box'},
-        e('div',{className:'share-sheet-title'},'Share via'),
+        e('div',{className:'share-sheet-title'},t('Share via')),
         e('div',{className:'share-sheet-grid'},
           (function(){
             var _su=encodeURIComponent(showShareSheet.url);
@@ -2413,7 +2464,7 @@ function App(){
         e('div',{className:'ws-head'},
           e('div',{style:{display:'flex',flexDirection:'column',gap:10}},
             e('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between'}},
-              e('div',{className:'ws-title'},'My Workspace'),
+              e('div',{className:'ws-title'},t('My Workspace')),
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
@@ -2442,9 +2493,9 @@ function App(){
             savedSets.length===0
               ? e('div',{className:'ws-empty'},
                   e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📚'),
-                  'No saved sets yet.',e('br'),
+                  t('No saved sets yet.'),e('br'),
                   e('span',{style:{color:'var(--muted)'}},'Generate cards then click '),
-                  e('strong',{style:{color:'var(--accent)'}},'💾 Save set'),
+                  e('strong',{style:{color:'var(--accent)'}},t('💾 Save set')),
                   e('span',{style:{color:'var(--muted)'}},' to store your work here.')
                 )
               : e('div',{className:'ws-grid'},
@@ -2472,7 +2523,7 @@ function App(){
             quizHist.length===0
               ? e('div',{className:'ws-empty'},
                   e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📊'),
-                  'No quiz history yet.',e('br'),
+                  t('No quiz history yet.'),e('br'),
                   e('span',{style:{color:'var(--muted)'}},'Complete a quiz and your scores will appear here.')
                 )
               : e('div',null,
@@ -2501,12 +2552,12 @@ function App(){
             if(!stored){try{stored=JSON.parse(localStorage.getItem('cs_daily_'+uid)||'null');}catch(e){}}
             if((!stored||stored.date!==todayKey)&&cards.length){
               pickDailyCard(cards);
-              return e('div',{className:'ws-empty'},e('div',{style:{fontSize:'2rem',marginBottom:12}},'⭐'),'Picking today\'s card...');
+              return e('div',{className:'ws-empty'},e('div',{style:{fontSize:'2rem',marginBottom:12}},'⭐'),t('Picking today\'s card...'));
             }
             if(!stored||!stored.card)return e('div',{className:'ws-empty'},
               e('div',{style:{fontSize:'2rem',marginBottom:12}},'⭐'),
-              'No card yet.',e('br'),
-              e('span',{style:{color:'var(--muted)'}},'Generate or load a set — your daily card appears here.')
+              t('No card yet.'),e('br'),
+              e('span',{style:{color:'var(--muted)'}},t('Generate or load a set — your daily card appears here.'))
             );
             var dc=stored.card;
             var pts=(dc.points||dc.answer||'').split('|').filter(function(l){return l.trim();});
@@ -2530,7 +2581,7 @@ function App(){
                   onClick:function(){setCi(cardIdx);setRtab('cards');setShowWs(false);}},
                   'Go to card')
               ),
-              e('div',{style:{marginTop:10,fontSize:'0.68rem',color:'var(--muted)',textAlign:'center'}},'Auto-refreshes every day at midnight')
+              e('div',{style:{marginTop:10,fontSize:'0.68rem',color:'var(--muted)',textAlign:'center'}},t('Auto-refreshes every day at midnight'))
             );
           })(),
 
@@ -2538,8 +2589,8 @@ function App(){
             var favCards=Object.entries(favs).filter(function(kv){return kv[1]&&kv[1].topic;}).map(function(kv){return kv[1];});
             if(!favCards.length)return e('div',{className:'ws-empty'},
               e('div',{style:{fontSize:'2rem',marginBottom:12}},'♡'),
-              'No favourites yet.',e('br'),
-              e('span',{style:{color:'var(--muted)'}},'Tap the ♥ on any card front to save it here.')
+              t('No favourites yet.'),e('br'),
+              e('span',{style:{color:'var(--muted)'}},t('Tap the ♥ on any card front to save it here.'))
             );
             return e('div',null,
               e('div',{className:'streak-head'},favCards.length+' favourite card'+(favCards.length!==1?'s':'')),
@@ -2587,7 +2638,7 @@ function App(){
             var totalDays=Object.keys(streakData).length;
             var totalGens=Object.values(streakData).reduce(function(a,b){return a+b;},0);
             return e('div',{className:'streak-wrap'},
-              e('div',{className:'streak-head'},'Generation activity — last 90 days'),
+              e('div',{className:'streak-head'},t('Generation activity — last 90 days')),
               e('div',{className:'heatmap'},cells),
               e('div',{className:'streak-stats'},
                 e('div',{className:'streak-stat'},e('strong',null,streak),' day streak'),
@@ -2604,11 +2655,11 @@ function App(){
             if(!sorted.length)return e('div',{className:'ws-empty'},
               e('div',{style:{fontSize:'2rem',marginBottom:12}},'📉'),
               'No mistake data yet.',e('br'),
-              e('span',{style:{color:'var(--muted)'}},'Complete quizzes from saved sets to see your weak areas.')
+              e('span',{style:{color:'var(--muted)'}},t('Complete quizzes from saved sets to see your weak areas.'))
             );
             var max=topicCounts[sorted[0]]||1;
             return e('div',{className:'weak-wrap'},
-              e('div',{className:'streak-head'},'Sets with most mistakes'),
+              e('div',{className:'streak-head'},t('Sets with most mistakes')),
               sorted.map(function(t){
                 return e('div',{key:t,className:'weak-bar-row'},
                   e('div',{className:'weak-topic',title:t},t),
@@ -2623,8 +2674,8 @@ function App(){
             mistakes.length===0
               ? e('div',{className:'ws-empty'},
                   e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'✓'),
-                  'No mistakes recorded.',e('br'),
-                  e('span',{style:{color:'var(--muted)'}},'Wrong quiz answers will appear here so you can review them.')
+                  t('No mistakes recorded.'),e('br'),
+                  e('span',{style:{color:'var(--muted)'}},t('Wrong quiz answers will appear here so you can review them.'))
                 )
               : e('div',null,
                   e(MistakeList,{mistakes:mistakes,onClear:clearMistakes})
@@ -2638,7 +2689,7 @@ function App(){
     /* SAVE SET MODAL */
     showSave&&e('div',{className:'save-ov',onClick:function(ev){if(ev.target===ev.currentTarget)setShowSave(false);}},
       e('div',{className:'save-box'},
-        e('div',{className:'save-title'},'Save this set'),
+        e('div',{className:'save-title'},t('Save this set')),
         e('div',{className:'save-sub'},'Give it a name you’ll recognise — like “UPSC Polity Ch.3” or “JEE Thermodynamics”.'),
         e('input',{
           className:'save-input',
@@ -2661,7 +2712,7 @@ function App(){
         e('h3',null,'Share flashcards'),
         e('p',null,'Pick the cards to include in your shareable link. Anyone with the link can view them instantly.'),
         e('div',{className:'sh-sel-row'},
-          e('button',{className:'sh-sel-btn',onClick:selectAllShare},'Select all'),
+          e('button',{className:'sh-sel-btn',onClick:selectAllShare},t('Select all')),
           e('button',{className:'sh-sel-btn',onClick:selectNoneShare},'Clear all'),
           e('span',{style:{fontSize:'0.68rem',color:'var(--muted)',marginLeft:'auto'}},
             Object.values(shareSel).filter(Boolean).length+' / '+cards.length+' selected'
@@ -2682,9 +2733,9 @@ function App(){
         shareUrl
           ? e('div',{className:'sh-url'},
               e('input',{type:'text',readOnly:true,value:shareUrl,onClick:function(ev){ev.target.select();}}),
-              e('button',{className:'sh-copy',onClick:copyShareUrl},'Copy')
+              e('button',{className:'sh-copy',onClick:copyShareUrl},t('Copy'))
             )
-          : e('button',{className:'sh-copy',style:{width:'100%',padding:'11px',borderRadius:'var(--r-sm)',marginBottom:'10px'},onClick:buildShareUrl},'Create short link →'),
+          : e('button',{className:'sh-copy',style:{width:'100%',padding:'11px',borderRadius:'var(--r-sm)',marginBottom:'10px'},onClick:buildShareUrl},t('Create short link →')),
         e('button',{className:'md',style:{marginTop:4},onClick:function(){setShowShare(false);}}, 'Close')
       )
     ),
