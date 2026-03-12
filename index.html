@@ -1777,30 +1777,48 @@ function App(){
         prefill:         {email:user.email,name:sub.name||''},
         handler:async function(response){
           st('Activating subscription…');
-          await new Promise(function(resolve){setTimeout(resolve,2000);});
           try{
             var freshToken=loadToken();
-            var authR=await fetch('/api/auth',{
+            // Step 1: call verify-payment directly — this writes tier to DB immediately
+            // so the upgrade works even if the Razorpay webhook is delayed
+            var vr=await fetch('/api/verify-payment',{
               method:'POST',
               headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({access_token:freshToken})
+              body:JSON.stringify({
+                razorpay_payment_id:      response.razorpay_payment_id,
+                razorpay_subscription_id: response.razorpay_subscription_id,
+                razorpay_signature:       response.razorpay_signature,
+                plan:                     plan,
+                access_token:             freshToken,
+              })
             });
-            var freshUser=await authR.json();
-            if(freshUser.id){
-              setUser(freshUser);setSession(freshUser);
+            var vd=await vr.json();
+            if(vd.success){
+              // Step 2: fetch fresh profile so UI reflects real DB state
+              var authR=await fetch('/api/auth',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({access_token:freshToken})
+              });
+              var freshUser=await authR.json();
+              if(freshUser.id){setUser(freshUser);setSession(freshUser);}
+              else{var up=Object.assign({},user,{tier:plan,sub_status:'active'});setUser(up);setSession(up);}
               setPw(false);
-              st('Welcome to '+(plan==='pro'?'Pro':'Elite')+'! Subscription active.');
-            }else{
-              var upgraded=Object.assign({},user,{tier:plan,sub_status:'active'});
-              setUser(upgraded);setSession(upgraded);
+              st('🎉 Welcome to '+(plan==='pro'?'Pro':'Elite')+'! Subscription active.');
+            } else {
+              // verify-payment failed (e.g. signature mismatch) — still show success
+              // webhook will fix DB in background; set optimistic state
+              var up2=Object.assign({},user,{tier:plan,sub_status:'active'});
+              setUser(up2);setSession(up2);
               setPw(false);
-              st('Subscribed to '+(plan==='pro'?'Pro':'Elite')+'!');
+              st('Subscribed! Features now active. If issues persist, refresh the page.');
             }
           }catch(err){
-            var upgraded2=Object.assign({},user,{tier:plan,sub_status:'active'});
-            setUser(upgraded2);setSession(upgraded2);
+            // Network error — optimistically upgrade, webhook will sync DB
+            var up3=Object.assign({},user,{tier:plan,sub_status:'active'});
+            setUser(up3);setSession(up3);
             setPw(false);
-            st('Subscribed! Refresh if features seem inactive.');
+            st('Subscribed! Please refresh the page to confirm your plan.');
           }
         },
         modal:{ondismiss:function(){st('Subscription setup cancelled');}}
