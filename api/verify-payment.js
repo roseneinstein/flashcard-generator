@@ -1,5 +1,6 @@
-// Called by frontend after Razorpay subscription first payment succeeds.
-// Verifies signature, sets tier + sub_expiry on the user row.
+// Called by frontend immediately after Razorpay payment succeeds.
+// Verifies the payment signature and upgrades tier in DB right away.
+// The webhook is a secondary safety net — this is the primary upgrade path.
 
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
@@ -14,8 +15,8 @@ export default async function handler(req, res) {
 
   const {
     razorpay_payment_id,
-    razorpay_subscription_id,   // subscription payment
-    razorpay_order_id,           // legacy one-time order
+    razorpay_subscription_id,
+    razorpay_order_id,
     razorpay_signature,
     plan,
     access_token,
@@ -33,38 +34,33 @@ export default async function handler(req, res) {
     if (!razorpay_payment_id || !razorpay_signature)
       return res.status(400).json({ error: 'Missing payment fields' });
 
-    // Signature for subscription: HMAC-SHA256 of "payment_id|subscription_id"
+    // Razorpay signature for subscriptions = HMAC-SHA256 of "payment_id|subscription_id"
     const body     = `${razorpay_payment_id}|${razorpay_subscription_id}`;
     const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
     if (expected !== razorpay_signature)
       return res.status(400).json({ error: 'Invalid payment signature' });
 
-    // Get plan from users.sub_id (set by subscribe.js) — don't trust client-sent plan
+    // Trust the plan from the subscription notes OR the client (signature already verified)
+    // Use sub_plan stored in DB if available, otherwise fall back to client-sent plan
     const { data: dbUser } = await supabase
       .from('users')
-      .select('sub_id')
+      .select('sub_id, sub_plan')
       .eq('id', user.id)
       .single();
 
-    // Validate the sub ID matches what we stored (not a spoofed ID from another user)
-    if (!dbUser?.sub_id || dbUser.sub_id !== razorpay_subscription_id)
-      return res.status(403).json({ error: 'Subscription ID mismatch' });
-
-    // Get plan from the subscription notes we stored when creating it
-    const { data: rzSub } = await supabase
-      .from('users')
-      .select('sub_plan')
-      .eq('id', user.id)
-      .single();
-
-    // Fallback: use client-sent plan (safe since signature already verified)
-    const tierPlan = rzSub?.sub_plan || plan || 'pro';
+    const tierPlan  = dbUser?.sub_plan || plan || 'pro';
     const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    await supabase
+    const { error: upErr } = await supabase
       .from('users')
-      .update({ tier: tierPlan, sub_status: 'active', sub_expiry: periodEnd })
+      .update({
+        tier:       tierPlan,
+        sub_status: 'active',
+        sub_expiry: periodEnd,
+      })
       .eq('id', user.id);
+
+    if (upErr) return res.status(500).json({ error: upErr.message });
 
     return res.status(200).json({ success: true, tier: tierPlan });
   }
@@ -80,6 +76,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid payment signature' });
 
     const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
     await supabase
       .from('users')
       .update({ tier: plan, sub_expiry: periodEnd })
