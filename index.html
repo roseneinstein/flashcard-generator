@@ -551,6 +551,45 @@ footer{border-top:1px solid var(--border);padding:52px 40px 36px;display:flex;fl
 .lgbd a{color:var(--accent);text-decoration:none}
 .lgbd a:hover{text-decoration:underline}
 @media(max-width:640px){.ftr-inner{flex-direction:column;gap:32px}.ftr-cols{gap:36px}.ftr-bottom{flex-direction:column;align-items:flex-start}.lgbox{max-height:90vh}}
+/* ── Spotlight Tour ─────────────────────────────── */
+.tour-backdrop{position:fixed;inset:0;z-index:9001;cursor:pointer}
+.tour-spot{
+  position:fixed;z-index:9002;border-radius:14px;pointer-events:none;
+  box-shadow:0 0 0 4000px rgba(0,0,0,0.74),0 0 0 3px rgba(232,213,176,0.6),0 0 44px 8px rgba(232,213,176,0.2);
+  transition:top .52s cubic-bezier(.4,0,.2,1),left .52s cubic-bezier(.4,0,.2,1),width .52s cubic-bezier(.4,0,.2,1),height .52s cubic-bezier(.4,0,.2,1);
+  animation:tpulse 2s ease-in-out infinite;
+}
+@keyframes tpulse{
+  0%,100%{box-shadow:0 0 0 4000px rgba(0,0,0,0.74),0 0 0 3px rgba(232,213,176,0.55),0 0 30px 4px rgba(232,213,176,0.12);}
+  50%{box-shadow:0 0 0 4000px rgba(0,0,0,0.74),0 0 0 4px rgba(232,213,176,0.95),0 0 56px 16px rgba(232,213,176,0.35);}
+}
+.tour-tip{
+  position:fixed;z-index:9003;pointer-events:all;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 18px 12px;width:272px;
+  box-shadow:0 12px 48px rgba(0,0,0,0.5);
+  transition:top .52s cubic-bezier(.4,0,.2,1),left .52s cubic-bezier(.4,0,.2,1),opacity .3s,transform .3s;
+}
+.tour-tip.tin{opacity:0;transform:translateY(6px) scale(0.97);}
+.tour-tip.tshow{opacity:1;transform:translateY(0) scale(1);}
+.tour-tip-step{font-size:0.57rem;letter-spacing:0.13em;text-transform:uppercase;color:var(--muted2);font-weight:600;margin-bottom:6px;font-family:'Geist',sans-serif;}
+.tour-tip-txt{font-size:0.8rem;line-height:1.7;color:var(--text);font-weight:300;font-family:'Geist',sans-serif;}
+.tour-tip-nav{display:flex;align-items:center;justify-content:space-between;margin-top:11px;}
+.tour-next{font-size:0.7rem;font-weight:500;color:var(--accent);background:none;border:1px solid rgba(232,213,176,0.35);border-radius:50px;padding:4px 14px;cursor:none;transition:background .15s;font-family:'Geist',sans-serif;}
+.tour-next:hover{background:rgba(232,213,176,0.1);}
+.tour-skip{font-size:0.67rem;color:var(--muted2);background:none;border:none;cursor:none;padding:4px;font-family:'Geist',sans-serif;}
+.tour-skip:hover{color:var(--muted);}
+.tour-wel{position:fixed;inset:0;z-index:9010;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.75);backdrop-filter:blur(20px);animation:fi2 .3s ease;}
+.tour-wel-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:36px 30px;max-width:380px;width:100%;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,0.55);animation:su .38s cubic-bezier(.34,1.56,.64,1);}
+.tour-wel-ico{font-size:2rem;margin-bottom:10px;display:block;}
+.tour-wel-name{font-family:'Instrument Serif',serif;font-size:1.3rem;font-weight:400;color:var(--accent);margin-bottom:6px;letter-spacing:-0.01em;}
+.tour-wel-sub{font-size:0.79rem;color:var(--muted);line-height:1.75;font-weight:300;margin-bottom:22px;}
+.tour-wel-btn{font-family:'Geist',sans-serif;font-size:0.82rem;font-weight:500;color:var(--bg);background:var(--accent);border:none;border-radius:50px;padding:10px 0;cursor:none;width:100%;letter-spacing:0.02em;margin-bottom:10px;transition:opacity .15s;}
+.tour-wel-btn:hover{opacity:0.87;}
+.tour-wel-no{font-size:0.7rem;color:var(--muted2);background:none;border:none;cursor:none;font-family:'Geist',sans-serif;}
+.tour-lnk{font-size:0.82rem;color:var(--muted);background:none;border:none;cursor:none;font-family:'Geist',sans-serif;font-weight:300;display:inline-flex;align-items:center;gap:6px;margin-top:20px;transition:color .15s,opacity .15s;padding:6px 0;letter-spacing:0.01em;opacity:0.75;}
+.tour-lnk:hover{color:var(--muted);}
+/* ─────────────────────────────────────────────────────────── */
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:50px;font-size:0.78rem;z-index:600;animation:ti .28s ease,to2 .28s 2.4s ease forwards;white-space:nowrap;font-weight:300;letter-spacing:0.03em}
 @keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -2076,6 +2115,102 @@ function App(){
     data:{title:'Data Policy',body:'<h4>Last Updated: March 2026</h4><p>This Data Policy explains what CogniSwift stores, where, how long, and your rights over it.</p><h4>What We Store</h4><p><strong>Account:</strong> Email, name, profile picture URL, tier, subscription status, and daily usage count.</p><p><strong>Saved sets:</strong> Flashcard sets you explicitly save — cards, quiz questions, and summary.</p><p><strong>Quiz history:</strong> Your scores and completion dates.</p><p><strong>Mistakes:</strong> Quiz questions you answered incorrectly, stored for review.</p><p><strong>Payment records:</strong> Razorpay order IDs and payment status only. We never store card numbers, UPI IDs, or bank details.</p><h4>What We Do NOT Store</h4><p>Raw notes or PDF text you paste or upload are not saved on our servers. They are sent to Groq for AI processing and discarded. We do not store IP addresses or browsing behaviour.</p><h4>Data Location</h4><p>All user data is in Supabase. The app is hosted on Vercel. AI processing is by Groq. All providers follow industry-standard security practices.</p><h4>Data Deletion</h4><p>Email <a href="mailto:cogniswiftai@gmail.com">cogniswiftai@gmail.com</a> to request complete deletion of your account and all data. We process requests within 7 business days.</p><h4>Security</h4><p>All data is transmitted over HTTPS. Supabase enforces row-level security so users can only access their own data.</p>'},
     terms:{title:'Terms of Service',body:'<h4>Last Updated: March 2026</h4><p>By using CogniSwift at cogniswift.vercel.app you agree to these Terms of Service.</p><h4>1. The Service</h4><p>CogniSwift provides an AI-powered flashcard and quiz tool for educational use. We offer a free tier and paid plans (Pro and Elite). Features may change with reasonable notice.</p><h4>2. Your Account</h4><p>You must sign in with a valid Google account to access saved features and must be at least 13 years of age. You are responsible for all activity under your account.</p><h4>3. Acceptable Use</h4><p>You must not: reverse-engineer or scrape our systems; submit illegal or harmful content; use automated scripts to generate content at scale; or share your credentials with others.</p><h4>4. Subscriptions and Payments</h4><p>Paid plans are billed monthly via Razorpay and auto-renew until cancelled. You may cancel anytime and retain access until the end of your billing period. No refunds are issued for partial months. Access is suspended if payment fails after retries.</p><h4>5. AI-Generated Content</h4><p>Flashcards and quizzes are generated by AI and may occasionally contain inaccuracies. CogniSwift is a study aid — it does not replace verified textbooks or professional academic guidance. You are responsible for verifying AI-generated content before relying on it.</p><h4>6. Intellectual Property</h4><p>The CogniSwift platform and design are owned by CogniSwift. Your submitted notes remain your own. Generated flashcard content is for your personal study use only. You may not redistribute it commercially without permission.</p><h4>7. Limitation of Liability</h4><p>CogniSwift is provided as-is. We are not liable for inaccuracies in AI content, data loss, service interruptions, or exam outcomes. Our total liability shall not exceed the amount paid in the 3 months preceding any claim.</p><h4>8. Governing Law</h4><p>These Terms are governed by the laws of India. Disputes are subject to the exclusive jurisdiction of the courts in Delhi, India.</p><h4>9. Contact</h4><p><a href="mailto:cogniswiftai@gmail.com">cogniswiftai@gmail.com</a></p>'},
   };
+
+  // ── Spotlight Tour ──────────────────────────────────────────
+  var twS=useState(false),setTw=twS[1];var tw=twS[0];      // welcome screen
+  var taS=useState(false),setTa=taS[1];var ta=taS[0];      // tour active
+  var tsS=useState(0),setTs=tsS[1];var ts=tsS[0];          // step index
+  var tbS=useState(null),setTb=tbS[1];var tb=tbS[0];       // spotlight box
+  var tshS=useState(false),setTsh=tshS[1];var tsh=tshS[0]; // show tip
+  var ttR=useRef(null);
+
+  var TSTEPS=[
+    {sel:'[data-tour="lang"]',
+     en:'Switch between English and Hindi — the entire UI and AI output adapt to your language.',
+     hi:'भाषा बदलें — UI और AI आउटपुट दोनों हिंदी में बदल जाते हैं।'},
+    {sel:'[data-tour="theme"]',
+     en:'Toggle dark and light mode — easy on the eyes during long study sessions.',
+     hi:'डार्क और लाइट मोड — लंबी पढ़ाई में आँखों को सुकून।'},
+    {sel:'[data-tour="signin"]',
+     en:'Sign in to save your sets, track progress, and unlock Pro & Elite features.',
+     hi:'साइन इन करें — सेट सेव करें, प्रगति देखें और Pro फ़ीचर अनलॉक करें।'},
+    {sel:'[data-tour="input"]',
+     en:'Paste your notes here or upload a PDF — we’ll turn them into flashcards instantly.',
+     hi:'यहाँ नोट्स पेस्ट करें या PDF अपलोड करें — तुरंत फ्लैशकार्ड तैयार।'},
+    {sel:'[data-tour="genbtn"]',
+     en:'Hit Generate — get flashcards, a structured summary, and a quiz in seconds.',
+     hi:'Generate दबाएँ — फ्लैशकार्ड, सारांश और क्विज़ कुछ ही सेकंड में।'},
+  ];
+
+  function tBox(sel){
+    var el=document.querySelector(sel);
+    if(!el)return null;
+    var r=el.getBoundingClientRect();
+    var p=10;
+    return{top:r.top-p,left:r.left-p,w:r.width+p*2,h:r.height+p*2};
+  }
+
+  function tTipPos(box){
+    if(!box)return{top:'50%',left:'20px'};
+    var tw2=276,th2=150,vw=window.innerWidth,vh=window.innerHeight;
+    var lft=box.left+box.w/2-tw2/2;
+    lft=Math.max(12,Math.min(lft,vw-tw2-12));
+    var top=box.top+box.h+14;
+    if(top+th2>vh-16)top=box.top-th2-14;
+    if(top<72)top=72;
+    return{top:Math.round(top)+'px',left:Math.round(lft)+'px'};
+  }
+
+  function tGo(step){
+    setTsh(false);
+    clearTimeout(ttR.current);
+    if(step>=TSTEPS.length){tEnd();return;}
+    setTs(step);
+    var sel=TSTEPS[step].sel;
+    var el=document.querySelector(sel);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+    ttR.current=setTimeout(function(){
+      setTb(tBox(sel));
+      setTsh(true);
+    },el?540:60);
+  }
+
+  function tStart(){
+    setTw(false);
+    setTa(true);
+    setTb(null);
+    setTsh(false);
+    ttR.current=setTimeout(function(){tGo(0);},100);
+  }
+
+  function tEnd(){
+    setTa(false);setTw(false);setTb(null);setTsh(false);
+    clearTimeout(ttR.current);
+    localStorage.setItem('cs_td','1');
+  }
+
+  function tLaunch(){setTw(true);}
+
+  useEffect(function(){
+    if(!user){
+      var t=setTimeout(function(){setTw(true);},1400);
+      return function(){clearTimeout(t);};
+    }else{
+      if(!localStorage.getItem('cs_td')){
+        var t2=setTimeout(function(){setTw(true);},900);
+        return function(){clearTimeout(t2);};
+      }
+    }
+  },[user]);
+
+  useEffect(function(){
+    if(!ta)return;
+    function upd(){if(ts<TSTEPS.length)setTb(tBox(TSTEPS[ts].sel));}
+    window.addEventListener('scroll',upd,{passive:true});
+    window.addEventListener('resize',upd,{passive:true});
+    return function(){window.removeEventListener('scroll',upd);window.removeEventListener('resize',upd);};
+  },[ta,ts]);
+  // ────────────────────────────────────────────────────────────
   var itxt=itab==='text'?notes:pdfTxt;
   var scrollApp=function(){var el=document.getElementById('app');if(el)el.scrollIntoView({behavior:'smooth'});};
 
@@ -2089,12 +2224,12 @@ function App(){
       e('div',{className:'nav-r'},
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Features')),
         e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Plans')),
-        e('button',{className:'thm-tog',
+        e('button',{'data-tour':'lang',className:'thm-tog',
           title:'Switch language / भाषा बदलें',
           onClick:function(){setLang(function(l){return l==='en'?'hi':'en';});},
           style:{fontSize:'0.62rem',fontWeight:700,width:'auto',padding:'0 9px',borderRadius:'50px',letterSpacing:'0.02em'}},
           lang==='en'?'हिं':'EN'),
-        e('button',{className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
+        e('button',{'data-tour':'theme',className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
         user
           ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);},onClick:function(ev){ev.stopPropagation();setShowUserMenu(function(v){return !v;});},style:{paddingBottom:8}},
               e('div',{className:'auth-btn'},
@@ -2134,7 +2269,7 @@ function App(){
                 e('button',{className:'user-drop-item danger',onClick:logout},t('Sign out'))
               )
             )
-          : e('button',{className:'np',onClick:function(){setShowAuth(true);},},t('Sign in'))
+          : e('button',{'data-tour':'signin',className:'np',onClick:function(){setShowAuth(true);},},t('Sign in'))
       )
     ),
 
@@ -2182,7 +2317,10 @@ function App(){
       e('div',{className:'pill-row'},
         ['UPSC','JEE','NEET','GATE','SSC','RRB','IBPS','TET','CUET','CBSE/ICSE','Distance Learning'].map(function(exam){return e('span',{key:exam,className:'pill'},exam);})
       ),
-      e('button',{className:'cta',onClick:scrollApp},t('Start for free →'))
+      e('button',{className:'cta',onClick:scrollApp},t('Start for free →')),
+      e('button',{className:'tour-lnk',onClick:tLaunch},
+        '▷ ',lang==='hi'?'CogniSwift का दौरा लें':'Take a tour of CogniSwift'
+      )
     ),
 
     /* FEATURES */
@@ -2203,7 +2341,7 @@ function App(){
     e('section',{id:'app',className:'app-wrap'},
       e('div',{className:'ey rev'},'Generate'),
       e('h2',{className:'st rev'},'Paste. ',e('em',null,'Generate.'),' Revise.'),
-      e('div',{className:'icard rev'},
+      e('div',{'data-tour':'input',className:'icard rev'},
         e('div',{className:'tbar'},
           e('button',{className:'tb'+(itab==='text'?' act':''),onClick:function(){setItab('text');},},t('Text')),
           e('button',{className:'tb'+(itab==='pdf'?' act':''),onClick:function(){setItab('pdf');},},t('PDF'))
@@ -2258,7 +2396,7 @@ function App(){
               return e('button',{key:d,className:'depth-btn'+(summaryDepth===d?' act':''),onClick:function(){setSummaryDepth(d);}},d[0].toUpperCase()+d.slice(1));
             })
           ),
-          e('button',{className:'gb',onClick:gen,disabled:loading||!itxt.trim()},loading?t('Generating…'):t('Generate →'))
+          e('button',{'data-tour':'genbtn',className:'gb',onClick:gen,disabled:loading||!itxt.trim()},loading?t('Generating…'):t('Generate →'))
         ),
         e('div',{className:'disc'},
           e('span',{className:'disc-i'},'ⓘ'),
@@ -2331,7 +2469,7 @@ function App(){
                       st('📊 PPT saved! Open in Google Slides: Drive → New → File upload');
                     }},'📊 PPT / Slides')
                 : null,
-              e('button',{className:'ab',onClick:openShare},t('🔗 Share')),
+              e('button',{className:'ab',style:{display:'flex',alignItems:'center',gap:5},onClick:openShare},e('svg',{viewBox:'0 0 18 18',width:14,height:14,fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round',style:{flexShrink:0}},e('circle',{cx:14,cy:3,r:2}),e('circle',{cx:4,cy:9,r:2}),e('circle',{cx:14,cy:15,r:2}),e('line',{x1:6,y1:10,x2:12,y2:14}),e('line',{x1:12,y1:4,x2:6,y2:8})),t('Share')),
               (isPro()||isElite())
                 ? e('button',{className:'ab',style:{color:'var(--accent)',borderColor:'var(--accent)'},onClick:openSaveModal},t('💾 Save set'))
                 : null,
@@ -2421,14 +2559,14 @@ function App(){
     ),
 
     e('section',{style:{textAlign:'center',padding:'48px 24px 20px',borderTop:'1px solid var(--border)'}},
-      e('div',{style:{fontSize:'1.6rem',marginBottom:10}},'🔗'),
+      
       e('div',{style:{fontFamily:"'Instrument Serif',serif",fontSize:'clamp(1.2rem,3vw,1.7rem)',marginBottom:8}},
         lang==='hi'?'CogniSwift पसंद आया? अपने दोस्तों के साथ शेयर करें':'Loving CogniSwift? Share it with a fellow student'),
       e('p',{style:{fontSize:'0.78rem',color:'var(--muted)',margin:'0 auto 20px',maxWidth:400}},
         lang==='hi'?'यह अपने दोस्तों के लिए भी उतना ही उपयोगी है जो UPSC, JEE, NEET की तैयारी कर रहे हैं।'
         :'This app is just as useful for your friends preparing for UPSC, JEE, NEET or any exam.'),
       e('button',{className:'cta',style:{fontSize:'0.85rem',padding:'12px 30px'},onClick:shareWebsite},
-        lang==='hi'?'🔗 शेयर करें':'🔗 Share CogniSwift')
+        e('svg',{viewBox:'0 0 18 18',width:14,height:14,fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round',style:{flexShrink:0,marginRight:6}},e('circle',{cx:14,cy:3,r:2}),e('circle',{cx:4,cy:9,r:2}),e('circle',{cx:14,cy:15,r:2}),e('line',{x1:6,y1:10,x2:12,y2:14}),e('line',{x1:12,y1:4,x2:6,y2:8})),lang==='hi'?'शेयर करें':'Share CogniSwift')
     ),
 
     e('section',{className:'test-wrap'},
@@ -2462,7 +2600,7 @@ function App(){
           ),
           e('div',{className:'ft',style:{marginTop:2}},t('Built for Indian students · 2026')),
           e('button',{className:'nl',style:{fontSize:'0.7rem',display:'flex',alignItems:'center',gap:5,cursor:'none',marginTop:10,opacity:0.6},onClick:shareWebsite},
-            '🔗 ',t('Loved it? Share CogniSwift'))
+            e('svg',{viewBox:'0 0 18 18',width:14,height:14,fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round',style:{flexShrink:0}},e('circle',{cx:14,cy:3,r:2}),e('circle',{cx:4,cy:9,r:2}),e('circle',{cx:14,cy:15,r:2}),e('line',{x1:6,y1:10,x2:12,y2:14}),e('line',{x1:12,y1:4,x2:6,y2:8})),t('Loved it? Share CogniSwift'))
         ),
         e('div',{className:'ftr-cols'},
           e('div',null,
