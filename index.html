@@ -110,6 +110,17 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .hero-logo{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px;margin-bottom:16px;animation:fu .55s ease both;position:relative;z-index:2}
 .hero-logo img{width:clamp(3.1rem,7vw,5.2rem);height:clamp(3.1rem,7vw,5.2rem);object-fit:contain;display:block;border-radius:0;background:none;flex-shrink:0}
 .hero-logo-name{font-family:'Instrument Serif',serif;font-size:clamp(2.4rem,5.5vw,4rem);color:var(--accent);letter-spacing:-0.03em;font-weight:400;line-height:1.18}
+.share-sheet-ov{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:700;display:flex;align-items:flex-end;justify-content:center}
+.share-sheet-box{background:var(--surface);border-radius:18px 18px 0 0;padding:24px 20px 36px;width:100%;max-width:500px;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.share-sheet-title{font-size:0.7rem;color:var(--muted);text-align:center;margin-bottom:20px;text-transform:uppercase;letter-spacing:0.08em}
+.share-sheet-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.share-btn-item{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:none;background:none;border:none;color:var(--text);padding:0}
+.share-btn-item:hover{opacity:0.75}
+.share-btn-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border:1px solid var(--border)}
+.share-btn-label{font-size:0.64rem;color:var(--muted);text-align:center}
+.share-url-row{display:flex;gap:8px;margin-top:4px}
+.share-url-row input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);color:var(--text);font-size:0.76rem;font-family:'Geist',sans-serif}
 .ios-install-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 28px;animation:fu .2s ease}
 .ios-install-box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px 22px 22px;width:100%;max-width:400px}
 .ios-install-box img{width:52px;height:52px;border-radius:12px;display:block;margin:0 auto 12px}
@@ -703,6 +714,7 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 </style>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 </head>
 <body>
 <div id="cur"></div>
@@ -1061,6 +1073,12 @@ function Quiz(props){
     var pct=Math.round(sc/qs.length*100);
     var wrongQs=wrongRef.current;
     var msg=pct>=80?'Excellent — concepts are clear.':pct>=50?'Good effort. Review a few areas.':'Go through the cards once more.';
+    useEffect(function(){
+      if(pct>=70&&typeof confetti==='function'){
+        confetti({particleCount:130,spread:72,origin:{y:0.6},
+          colors:['#e8d5b0','#a78bfa','#34d399','#60a5fa','#f472b6']});
+      }
+    },[]);
     return e('div',{className:'qres'},
       e('div',{className:'qsb'},pct+'%'),
       e('div',{className:'qrs'},sc+' out of '+qs.length+' correct — '+msg),
@@ -1226,6 +1244,7 @@ function App(){
   useReveal();
   var itabS=useState('text'),setItab=itabS[1];var itab=itabS[0];
   var darkS=useState(true),setDark=darkS[1];var dark=darkS[0];
+  var langS=useState('en'),setLang=langS[1];var lang=langS[0];
   var notesS=useState(''),setNotes=notesS[1];var notes=notesS[0];
   var fnS=useState(''),setFn=fnS[1];var fn=fnS[0];
   var pdfTxtS=useState(''),setPdfTxt=pdfTxtS[1];var pdfTxt=pdfTxtS[0];
@@ -1254,6 +1273,7 @@ function App(){
   var showIosS=useState(false),setShowIos=showIosS[1];var showIos=showIosS[0];
 
   var showShareS=useState(false),setShowShare=showShareS[1];var showShare=showShareS[0];
+  var showShareSheetS=useState(null),setShowShareSheet=showShareSheetS[1];var showShareSheet=showShareSheetS[0];
   var shareSelS=useState({}),setShareSel=shareSelS[1];var shareSel=shareSelS[0];
   var shareUrlS=useState(''),setShareUrl=shareUrlS[1];var shareUrl=shareUrlS[0];
 
@@ -1334,13 +1354,27 @@ function App(){
       if(data.error)throw new Error(data.error);
       var url=window.location.origin+'/s/'+data.id;
       setShareUrl(url);
+      var _sd={title:'CogniSwift Study Cards',text:'Check out these flashcards I made on CogniSwift!',url:url};
+      if(navigator.share&&navigator.canShare&&navigator.canShare(_sd)){navigator.share(_sd).catch(function(){});}
+      else{setShowShareSheet({url:url,title:'CogniSwift Study Cards',text:'Check out these flashcards I made on CogniSwift!'});}
     }catch(err){st('Could not create link: '+err.message);}
   }
   function copyShareUrl(){
     if(!shareUrl){buildShareUrl();return;}
-    navigator.clipboard.writeText(shareUrl).then(function(){st('Link copied — share on WhatsApp!');}).catch(function(){st('Copy failed — select the URL manually');});
+    var _sd={title:'CogniSwift Study Cards',text:'Check out these flashcards I made on CogniSwift!',url:shareUrl};
+    if(navigator.share&&navigator.canShare&&navigator.canShare(_sd)){navigator.share(_sd).catch(function(){});}
+    else{setShowShareSheet({url:shareUrl,title:'CogniSwift Study Cards',text:'Check out these flashcards I made on CogniSwift!'});}
   }
 
+  function shareWebsite(){
+    var _sd={title:'CogniSwift — AI Flashcards for Indian Students',
+      text:'I\'ve been using CogniSwift to study smarter. Free AI flashcards for UPSC, JEE, NEET and more — try it!',
+      url:'https://cogniswift.vercel.app'};
+    if(navigator.share&&navigator.canShare&&navigator.canShare(_sd)){navigator.share(_sd).catch(function(){});}
+    else{setShowShareSheet({url:'https://cogniswift.vercel.app',
+      title:'CogniSwift — AI Flashcards',
+      text:'I\'ve been using CogniSwift to study smarter. Free AI flashcards for UPSC, JEE, NEET and more — try it!'});}
+  }
   function toggleTheme(){
     setDark(function(d){
       var next=!d;
@@ -1388,6 +1422,23 @@ function App(){
       return n;
     });
   }
+  // ── Hindi translations ─────────────────────────────────────
+  var HI={
+    'Features':'विशेषताएं','Plans':'प्लान्स',
+    'Cards':'कार्ड्स','Summary':'सारांश','Quiz':'क्विज़',
+    'Generate →':'जनरेट करें →','Generating…':'जनरेट हो रहा है…',
+    'Start for free →':'मुफ़्त में शुरू करें →',
+    '⭐ Today':'⭐ आज','📚 Saved Sets':'📚 सेव्ड सेट्स',
+    '♥ Favourites':'♥ पसंदीदा','📊 Quiz History':'📊 क्विज़ इतिहास',
+    '✗ Mistakes':'✗ गलतियां','🔥 Streak':'🔥 स्ट्रीक','📉 Weak Areas':'📉 कमज़ोर क्षेत्र',
+    'Close':'बंद करें','Share':'शेयर',
+    'Built for Indian students · 2026':'भारतीय छात्रों के लिए · 2026',
+    'Loved it? Share CogniSwift':'पसंद आया? CogniSwift शेयर करें',
+    'Go to card':'कार्ड पर जाएं',
+    'Auto-refreshes every day at midnight':'हर रात 12 बजे स्वतः अपडेट',
+  };
+  function t(s){return lang==='hi'&&HI[s]?HI[s]:s;}
+  // ─────────────────────────────────────────────────────────────
   function toggleFav(idx){
     var c=cards[idx];if(!c)return;
     var key=(c.topic||c.question||String(idx));
@@ -1867,8 +1918,13 @@ function App(){
         e('span',{className:'nav-logo-txt'},'CogniSwift')
       ),
       e('div',{className:'nav-r'},
-        e('button',{className:'nl',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},'Features'),
-        e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},'Plans'),
+        e('button',{className:'nl',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Features')),
+        e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Plans')),
+        e('button',{className:'thm-tog',
+          title:'Switch language / भाषा बदलें',
+          onClick:function(){setLang(function(l){return l==='en'?'hi':'en';});},
+          style:{fontSize:'0.62rem',fontWeight:700,width:'auto',padding:'0 9px',borderRadius:'50px',letterSpacing:'0.02em'}},
+          lang==='en'?'हिं':'EN'),
         e('button',{className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
         user
           ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);},onClick:function(ev){ev.stopPropagation();setShowUserMenu(function(v){return !v;});},style:{paddingBottom:8}},
@@ -1944,7 +2000,7 @@ function App(){
       e('h1',null,'Notes become',e('br'),' ',e('em',null,'flashcards')),
       e('p',{className:'h-sub'},'Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.'),
       e('div',{className:'pill-row'},
-        ['UPSC Prelims','JEE Physics','NEET Bio','CA Law','History','Economics','Current Affairs'].map(function(t){return e('span',{key:t,className:'pill'},t);})
+        ['UPSC','JEE','NEET','GATE','SSC','RRB','IBPS','TET','CUET','CBSE/ICSE','Distance Learning'].map(function(exam){return e('span',{key:exam,className:'pill'},exam);})
       ),
       e('button',{className:'cta',onClick:scrollApp},'Start for free →')
     ),
@@ -2022,7 +2078,7 @@ function App(){
               return e('button',{key:d,className:'depth-btn'+(summaryDepth===d?' act':''),onClick:function(){setSummaryDepth(d);}},d[0].toUpperCase()+d.slice(1));
             })
           ),
-          e('button',{className:'gb',onClick:gen,disabled:loading||!itxt.trim()},loading?'Generating…':'Generate →')
+          e('button',{className:'gb',onClick:gen,disabled:loading||!itxt.trim()},loading?t('Generating…'):t('Generate →'))
         ),
         e('div',{className:'disc'},
           e('span',{className:'disc-i'},'ⓘ'),
@@ -2086,7 +2142,7 @@ function App(){
               e('button',{className:'ab',onClick:function(){setCi(Math.floor(Math.random()*cards.length));}},'⇄ Shuffle'),
               e('button',{className:'ab',onClick:function(){setRtab('quiz');},disabled:!quiz.length},'📝 Quiz'),
               e('button',{className:'ab pr',onClick:function(){dlPDF(cards,activeSetName||'CogniSwift Study Cards');}},'↓ PDF'),
-              e('button',{className:'ab',onClick:openShare},'⇪ Share'),
+              e('button',{className:'ab',onClick:openShare},'🔗 Share'),
               (isPro()||isElite())
                 ? e('button',{className:'ab',style:{color:'var(--accent)',borderColor:'var(--accent)'},onClick:openSaveModal},'💾 Save set')
                 : null,
@@ -2202,11 +2258,66 @@ function App(){
         e('img',{src:dark?'/icons/icon-dark-192.png':'/icons/icon-light-192.png',alt:'',style:{width:22,height:22,objectFit:'contain'}}),
         'CogniSwift'
       ),
-      e('div',{className:'ft'},'Built for Indian students · 2026')
+      e('div',{className:'ft'},t('Built for Indian students · 2026')),
+      e('button',{className:'nl',
+        style:{fontSize:'0.72rem',display:'flex',alignItems:'center',gap:6,cursor:'none',marginTop:10,opacity:0.75},
+        onClick:shareWebsite},
+        '🔗 ',t('Loved it? Share CogniSwift'))
     ),
 
     /* AUTH MODAL */
     showAuth&&e(AuthModal,{onClose:function(){setShowAuth(false);}}),
+    showShareSheet&&e('div',{className:'share-sheet-ov',onClick:function(ev){if(ev.target===ev.currentTarget)setShowShareSheet(null);}},
+      e('div',{className:'share-sheet-box'},
+        e('div',{className:'share-sheet-title'},'Share via'),
+        e('div',{className:'share-sheet-grid'},
+          (function(){
+            var _su=encodeURIComponent(showShareSheet.url);
+            var _st=encodeURIComponent(showShareSheet.text);
+            var _pl=[
+              {l:'WhatsApp', ic:'🟢', h:'https://wa.me/?text='+_st+'%20'+_su},
+              {l:'Telegram', ic:'✈️',  h:'https://t.me/share/url?url='+_su+'&text='+_st},
+              {l:'Facebook', ic:'🇫',  h:'https://www.facebook.com/sharer/sharer.php?u='+_su},
+              {l:'X / Twitter',ic:'🐦',h:'https://twitter.com/intent/tweet?text='+_st+'&url='+_su},
+              {l:'LinkedIn', ic:'💼',  h:'https://www.linkedin.com/sharing/share-offsite/?url='+_su},
+              {l:'Email',    ic:'📧',  h:'mailto:?subject='+encodeURIComponent(showShareSheet.title)+'&body='+_st+'%20'+_su},
+              {l:'Instagram',ic:'📸',  h:null},
+              {l:'Copy link',ic:'🔗',  h:null},
+            ];
+            return _pl.map(function(p){
+              return e('button',{key:p.l,className:'share-btn-item',
+                onClick:function(){
+                  if(p.l==='Copy link'){
+                    navigator.clipboard.writeText(showShareSheet.url)
+                      .then(function(){st('Link copied!');setShowShareSheet(null);}).catch(function(){});
+                  } else if(p.l==='Instagram'){
+                    navigator.clipboard.writeText(showShareSheet.url)
+                      .then(function(){st('Link copied! Open Instagram and paste it.');}).catch(function(){});
+                    window.open('https://www.instagram.com/','_blank');
+                  } else {
+                    window.open(p.h,'_blank');
+                  }
+                }},
+                e('div',{className:'share-btn-icon'},p.ic),
+                e('span',{className:'share-btn-label'},p.l)
+              );
+            });
+          })()
+        ),
+        e('div',{className:'share-url-row'},
+          e('input',{type:'text',readOnly:true,value:showShareSheet.url,
+            onClick:function(ev){ev.target.select();}}),
+          e('button',{className:'np',style:{padding:'8px 14px',fontSize:'0.76rem',flexShrink:0},
+            onClick:function(){
+              navigator.clipboard.writeText(showShareSheet.url)
+                .then(function(){st('Link copied!');}).catch(function(){});
+            }},'Copy')
+        ),
+        e('button',{className:'md',style:{width:'100%',marginTop:14},
+          onClick:function(){setShowShareSheet(null);}},t('Close'))
+      )
+    ),
+
     showIos&&e('div',{className:'ios-install-overlay',onClick:function(ev){if(ev.target===ev.currentTarget)setShowIos(false);}},
       e('div',{className:'ios-install-box'},
         e('img',{src:'/icons/icon-light-192.png',alt:'CogniSwift'}),
