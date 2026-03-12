@@ -2625,6 +2625,41 @@ function App(){
       )
     ),
 
+    /* TOUR WELCOME */
+    tw&&e('div',{className:'tour-wel',onClick:tEnd},
+      e('div',{className:'tour-wel-box',onClick:function(ev){ev.stopPropagation();}},
+        e('span',{className:'tour-wel-ico'},'🤖'),
+        e('div',{className:'tour-wel-name'},lang==='hi'?'CogniSwift में आपका स्वागत है':'Welcome to CogniSwift'),
+        e('div',{className:'tour-wel-sub'},
+          lang==='hi'
+            ?'नमस्ते! मैं Leo हूँ, आपका AI टूर गाइड — 30 सेकंड में मुख्य फ़ीचर देखते हैं।'
+            :'Hi, I am Leo — your AI tour guide. Let me walk you through the key features in 30 seconds.'
+        ),
+        e('button',{className:'tour-wel-btn',onClick:tStart},
+          lang==='hi'?'हाँ, दिखाइए! →':'Let’s go →'),
+        e('br'),
+        e('button',{className:'tour-wel-no',onClick:tEnd},
+          lang==='hi'?'अभी नहीं':'Skip for now')
+      )
+    ),
+
+    /* TOUR SPOTLIGHT */
+    ta&&tb&&e('div',{className:'tour-backdrop',onClick:tEnd}),
+    ta&&tb&&e('div',{className:'tour-spot',style:{top:tb.top+'px',left:tb.left+'px',width:tb.w+'px',height:tb.h+'px'}}),
+    ta&&e('div',{
+      className:'tour-tip '+(tsh?'tshow':'tin'),
+      style:tTipPos(tb),
+      onClick:function(ev){ev.stopPropagation();}
+    },
+      e('div',{className:'tour-tip-step'},(lang==='hi'?'चरण ':' Step ')+(ts+1)+' / '+TSTEPS.length),
+      e('div',{className:'tour-tip-txt'},lang==='hi'?TSTEPS[ts].hi:TSTEPS[ts].en),
+      e('div',{className:'tour-tip-nav'},
+        e('button',{className:'tour-skip',onClick:tEnd},lang==='hi'?'बंद करें':'Exit'),
+        e('button',{className:'tour-next',onClick:function(){tGo(ts+1);}},
+          ts===TSTEPS.length-1?(lang==='hi'?'समाप्त ✓':'Done ✓'):(lang==='hi'?'अगला →':'Next →'))
+      )
+    ),
+
     legal&&e('div',{className:'lgov',onClick:function(ev){if(ev.target===ev.currentTarget)setLegal(null);}},
       e('div',{className:'lgbox'},
         e('div',{className:'lghd'},
