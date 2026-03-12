@@ -723,6 +723,86 @@ footer{border-top:1px solid var(--border);padding:24px 28px;display:flex;align-i
 <div id="root"></div>
 
 <script>
+// ── Module-level Hindi map & translator ──────────────────────────
+// t() lives here so ALL components (AuthModal, HFeat, PCard, etc.) can call it.
+// App() syncs window._lang on every render so t() always reflects current lang.
+var HI_MAP={
+  'Features':'विशेषताएं','Plans':'प्लान्स','Sign in':'साइन इन','Sign out':'साइन आउट',
+  'Notes become':'नोट्स बनें','flashcards':'फ्लैशकार्ड्स',
+  'Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.':'अपना टेक्स्ट पेस्ट करें। तुरंत फ्लैशकार्ड्स, सारांश और क्विज़ पाएं।',
+  'Start for free →':'मुफ़्त में शुरू करें →',
+  'What you get':'आपको क्या मिलेगा','Built for how':'बनाया गया है','Indian students':'भारतीय छात्रों','actually study':'की पढ़ाई के लिए',
+  'Instant study cards':'तुरंत स्टडी कार्ड्स',
+  'Instant study cards desc':'UPSC, JEE, NEET, CA के नोट्स पेस्ट करें। सेकंड्स में सटीक टॉपिक कार्ड्स पाएं।',
+  'Memory-first flashcards':'याददाश्त के लिए फ्लैशकार्ड्स',
+  'Memory-first flashcards desc':'कार्ड्स टॉपिक → मुख्य पॉइंट्स → फ्लोचार्ट दिखाते हैं। पढ़ने के लिए नहीं, याद करने के लिए।',
+  'Self-test quiz':'स्व-परीक्षण क्विज़',
+  'Self-test quiz desc':'कार्ड्स के बाद उसी कंटेंट से MCQ दें। जानें क्या याद हुआ और क्या नहीं।',
+  'PDF upload & export':'PDF अपलोड और निर्यात',
+  'PDF upload & export desc':'अपना PDF अपलोड करें। सभी फ्लैशकार्ड्स साफ़ प्रिंटेबल PDF में डाउनलोड करें।',
+  'Mobile first':'मोबाइल फर्स्ट',
+  'Mobile first desc':'फ़ोन स्क्रीन के लिए बनाया गया। बस में, हॉस्टल में, लेक्चर के बीच — कहीं भी पढ़ें।',
+  'No signup needed':'साइनअप की ज़रूरत नहीं',
+  'No signup needed desc':'फ्री टियर के लिए अकाउंट की ज़रूरत नहीं। आपके नोट्स ब्राउज़र में सुरक्षित रहते हैं।',
+  'Paste. ':'पेस्ट करें। ','Generate.':'जनरेट करें।',' Revise.':' रिवाइज़ करें।',
+  'Drop PDF here or ':'PDF यहाँ ड्रॉप करें या ','click to browse':'ब्राउज़ करें',
+  'Click to replace':'बदलने के लिए क्लिक करें',
+  'Max ~20 pages for best results':'बेहतर परिणाम के लिए ~20 पेज तक',
+  'Text':'टेक्स्ट',
+  'Generate →':'जनरेट करें →','Generating…':'जनरेट हो रहा है…',
+  'Generating your cards…':'आपके कार्ड्स बन रहे हैं…',
+  'Your flashcards will appear here':'आपके फ्लैशकार्ड्स यहाँ दिखेंगे',
+  'Flashcards':'फ्लैशकार्ड्स','Summary':'सारांश','Quiz':'क्विज़',
+  '↩ Reset':'↩ रीसेट','⇄ Shuffle':'⇄ शफ़ल','📝 Quiz':'📝 क्विज़',
+  '↓ PDF':'↓ PDF','🔗 Share':'🔗 शेयर',
+  '💾 Save set':'💾 सेट सेव करें','🔊 Read aloud':'🔊 ज़ोर से पढ़ें','⏹ Stop':'⏹ रोकें',
+  'regenerating…':'दोबारा बन रहा है…','↻ Redo this card':'↻ कार्ड दोबारा बनाएं',
+  '✕ Exit review':'✕ समीक्षा बंद करें',
+  'Review mode':'समीक्षा मोड','Again':'फिर से','✓ Got it':'✓ याद हो गया',
+  'How many questions?':'कितने प्रश्न?','No quiz available':'क्विज़ उपलब्ध नहीं',
+  'Building summary…':'सारांश बन रहा है…','Summary will appear here':'सारांश यहाँ दिखेगा',
+  'Summary unavailable — ':'सारांश उपलब्ध नहीं — ',
+  'Start free.':'मुफ़्त शुरू करें।','Upgrade anytime.':'कभी भी अपग्रेड करें।',
+  'forever':'हमेशा के लिए','per month':'प्रति माह',
+  'Get started':'शुरू करें','Current plan':'वर्तमान प्लान',
+  'Upgrade to Pro':'Pro में अपग्रेड करें','Go Elite':'Elite लें',
+  'Maybe later':'बाद में','Continue tomorrow':'कल जारी रखें',
+  'From students':'छात्रों से',
+  'What people say':'लोग क्या कहते हैं',
+  'My Workspace':'मेरा वर्कस्पेस',
+  '⭐ Today':'⭐ आज','📚 Saved Sets':'📚 सेव्ड सेट्स',
+  '♥ Favourites':'♥ पसंदीदा','📊 Quiz History':'📊 क्विज़ इतिहास',
+  '✗ Mistakes':'✗ गलतियां','🔥 Streak':'🔥 स्ट्रीक','📉 Weak Areas':'📉 कमज़ोर क्षेत्र',
+  'No saved sets yet.':'अभी कोई सेट सेव नहीं है।',
+  'Save sets after generating to access them here.':'जनरेट करने के बाद सेट सेव करें।',
+  'No quiz history yet.':'अभी कोई क्विज़ इतिहास नहीं है।',
+  'Complete a quiz from any saved set to see results here.':'किसी सेव्ड सेट का क्विज़ दें।',
+  'No favourites yet.':'अभी कोई पसंदीदा नहीं है।',
+  'Tap the ♥ on any card front to save it here.':'किसी कार्ड पर ♥ दबाएं।',
+  'No mistake data yet.':'अभी कोई गलती डेटा नहीं है।',
+  'Complete quizzes from saved sets to see your weak areas.':'कमज़ोर क्षेत्र देखने के लिए क्विज़ दें।',
+  'No mistakes recorded.':'कोई गलती दर्ज नहीं है।',
+  'Wrong quiz answers will appear here so you can review them.':'गलत उत्तर यहाँ दिखेंगे।',
+  'Generation activity — last 90 days':'जनरेशन गतिविधि — पिछले 90 दिन',
+  'Sets with most mistakes':'सबसे ज़्यादा गलतियों वाले सेट',
+  'No card yet.':'अभी कोई कार्ड नहीं।',
+  'Generate or load a set — your daily card appears here.':'एक सेट जनरेट या लोड करें।',
+  'Go to card':'कार्ड पर जाएं','Auto-refreshes every day at midnight':'हर रात 12 बजे स्वतः अपडेट',
+  "Picking today's card...":'आज का कार्ड चुना जा रहा है...',
+  'Save this set':'यह सेट सेव करें',
+  'Select all':'सभी चुनें','Select none':'कोई नहीं','Create short link →':'शॉर्ट लिंक बनाएं →',
+  'Copy':'कॉपी करें',
+  'Sign in to CogniSwift':'CogniSwift में साइन इन करें',
+  'Save your card sets, track progress, and unlock Pro features.':'सेट सेव करें, प्रगति देखें और Pro फीचर पाएं।',
+  'Continue with Google':'Google से जारी रखें','Signing in…':'साइन इन हो रहा है…',
+  'Share via':'के ज़रिए शेयर करें',
+  'Built for Indian students · 2026':'भारतीय छात्रों के लिए · 2026',
+  'Loved it? Share CogniSwift':'पसंद आया? CogniSwift शेयर करें',
+  'Close':'बंद करें',
+};
+window._lang='en';
+function t(s){return window._lang==='hi'&&HI_MAP[s]?HI_MAP[s]:s;}
+// ─────────────────────────────────────────────────────────────────
 const{useState,useRef,useEffect}=React;
 const e=React.createElement;
 
@@ -1457,73 +1537,8 @@ function App(){
       return n;
     });
   }
-  // ── Hindi translations ─────────────────────────────────────
-  var HI={
-    'Features':'विशेषताएं','Plans':'प्लान्स','Sign in':'साइन इन','Sign out':'साइन आउट',
-    'Notes become':'नोट्स बन जाते हैं','flashcards':'फ्लैशकार्ड्स',
-    'Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.':'अपना टेक्स्ट पेस्ट करें। तुरंत फ्लैशकार्ड्स, सारांश और क्विज़ पाएं।',
-    'Start for free →':'मुफ़्त में शुरू करें →',
-    'What you get':'आपको क्या मिलेगा','Built for how':'बनाया गया है','Indian students':'भारतीय छात्रों','actually study':'की पढ़ाई के लिए',
-    'Instant study cards':'तुरंत स्टडी कार्ड्स','Memory-first flashcards':'याददाश्त के लिए फ्लैशकार्ड्स',
-    'Self-test quiz':'स्व-परीक्षण क्विज़','PDF upload & export':'PDF अपलोड और निर्यात',
-    'Mobile first':'मोबाइल फर्स्ट','No signup needed':'साइनअप की ज़रूरत नहीं',
-    'Paste. ':'पेस्ट करें। ','Generate.':'जनरेट करें।',' Revise.':' रिवाइज़ करें।',
-    'Drop PDF here or ':'PDF यहाँ ड्रॉप करें या ','click to browse':'ब्राउज़ करें',
-    'Click to replace':'बदलने के लिए क्लिक करें',
-    'Max ~20 pages for best results':'बेहतर परिणाम के लिए ~20 पेज तक',
-    'Edit extracted text if needed…':'ज़रूरत हो तो टेक्स्ट एडिट करें…',
-    'Text':'टेक्स्ट',
-    'Generate →':'जनरेट करें →','Generating…':'जनरेट हो रहा है…',
-    'Generating your cards…':'आपके कार्ड्स बन रहे हैं…',
-    'Your flashcards will appear here':'आपके फ्लैशकार्ड्स यहाँ दिखेंगे',
-    'Flashcards':'फ्लैशकार्ड्स','Summary':'सारांश','Quiz':'क्विज़',
-    '↩ Reset':'↩ रीसेट','⇄ Shuffle':'⇄ शफ़ल','📝 Quiz':'📝 क्विज़',
-    '↓ PDF':'↓ PDF','🔗 Share':'🔗 शेयर',
-    '💾 Save set':'💾 सेट सेव करें','🔊 Read aloud':'🔊 ज़ोर से पढ़ें','⏹ Stop':'⏹ रोकें',
-    'regenerating…':'दोबारा बन रहा है…','↻ Redo this card':'↻ कार्ड दोबारा बनाएं',
-    '✕ Exit review':'✕ समीक्षा बंद करें',
-    'Review mode':'समीक्षा मोड','Again':'फिर से','✓ Got it':'✓ याद हो गया',
-    'How many questions?':'कितने प्रश्न?','No quiz available':'क्विज़ उपलब्ध नहीं',
-    'Building summary…':'सारांश बन रहा है…','Summary will appear here':'सारांश यहाँ दिखेगा',
-    'Summary unavailable — ':'सारांश उपलब्ध नहीं — ',
-    'Start free.':'मुफ़्त शुरू करें।','Upgrade anytime.':'कभी भी अपग्रेड करें।',
-    'forever':'हमेशा के लिए','per month':'प्रति माह',
-    'Get started':'शुरू करें','Current plan':'वर्तमान प्लान',
-    'Upgrade to Pro':'Pro में अपग्रेड करें','Go Elite':'Elite लें',
-    'Maybe later':'बाद में','Continue tomorrow':'कल जारी रखें',
-    'From students':'छात्रों से','What people ':'क्या कहते हैं ','actually':' असल में',' say':'',
-    'My Workspace':'मेरा वर्कस्पेस',
-    '⭐ Today':'⭐ आज','📚 Saved Sets':'📚 सेव्ड सेट्स',
-    '♥ Favourites':'♥ पसंदीदा','📊 Quiz History':'📊 क्विज़ इतिहास',
-    '✗ Mistakes':'✗ गलतियां','🔥 Streak':'🔥 स्ट्रीक','📉 Weak Areas':'📉 कमज़ोर क्षेत्र',
-    'No saved sets yet.':'अभी कोई सेट सेव नहीं है।',
-    'Save sets after generating to access them here.':'जनरेट करने के बाद सेट सेव करें।',
-    'No quiz history yet.':'अभी कोई क्विज़ इतिहास नहीं है।',
-    'Complete a quiz from any saved set to see results here.':'किसी सेव्ड सेट का क्विज़ दें।',
-    'No favourites yet.':'अभी कोई पसंदीदा नहीं है।',
-    'Tap the ♥ on any card front to save it here.':'किसी कार्ड पर ♥ दबाएं।',
-    'No mistake data yet.':'अभी कोई गलती डेटा नहीं है।',
-    'Complete quizzes from saved sets to see your weak areas.':'कमज़ोर क्षेत्र देखने के लिए क्विज़ दें।',
-    'No mistakes recorded.':'कोई गलती दर्ज नहीं है।',
-    'Wrong quiz answers will appear here so you can review them.':'गलत उत्तर यहाँ दिखेंगे।',
-    'Generation activity — last 90 days':'जनरेशन गतिविधि — पिछले 90 दिन',
-    'Sets with most mistakes':'सबसे ज़्यादा गलतियों वाले सेट',
-    'No card yet.':'अभी कोई कार्ड नहीं।',
-    'Generate or load a set — your daily card appears here.':'एक सेट जनरेट या लोड करें।',
-    'Go to card':'कार्ड पर जाएं','Auto-refreshes every day at midnight':'हर रात 12 बजे स्वतः अपडेट',
-    'Picking today\'s card...':'आज का कार्ड चुना जा रहा है...',
-    'Save this set':'यह सेट सेव करें',
-    'Select all':'सभी चुनें','Select none':'कोई नहीं','Create short link →':'शॉर्ट लिंक बनाएं →',
-    'Copy':'कॉपी करें',
-    'Sign in to CogniSwift':'CogniSwift में साइन इन करें',
-    'Save your card sets, track progress, and unlock Pro features.':'सेट सेव करें, प्रगति देखें और Pro फीचर पाएं।',
-    'Continue with Google':'Google से जारी रखें','Signing in…':'साइन इन हो रहा है…',
-    'Share via':'के ज़रिए शेयर करें',
-    'Built for Indian students · 2026':'भारतीय छात्रों के लिए · 2026',
-    'Loved it? Share CogniSwift':'पसंद आया? CogniSwift शेयर करें',
-    'Close':'बंद करें',
-  };
-  function t(s){return lang==='hi'&&HI[s]?HI[s]:s;}
+  // Sync lang to global so module-level t() works in all components
+  window._lang=lang;
   // ─────────────────────────────────────────────────────────────
   function toggleFav(idx){
     var c=cards[idx];if(!c)return;
@@ -2043,7 +2058,7 @@ function App(){
                 e('button',{className:'user-drop-item danger',onClick:logout},t('Sign out'))
               )
             )
-          : e('button',{className:'np',onClick:function(){setShowAuth(true);}},t('Sign in'))
+          : e('button',{className:'np',onClick:function(){setShowAuth(true);},},t('Sign in'))
       )
     ),
 
@@ -2083,12 +2098,15 @@ function App(){
         e('img',{src:dark?'/icons/icon-dark-192.png':'/icons/icon-light-192.png',alt:'CogniSwift'}),
         e('div',{className:'hero-logo-name'},'CogniSwift')
       ),
-      e('h1',null,t('Notes become'),e('br'),' ',e('em',null,t('flashcards'))),
+      e('h1',{style:window._lang==='hi'?{lineHeight:1.15,letterSpacing:'-0.02em'}:{}},
+        window._lang==='hi'
+          ? e(React.Fragment,null,'नोट्स',e('br'),e('em',null,'बनें'),e('br'),'फ्लैशकार्ड्स')
+          : e(React.Fragment,null,'Notes become',e('br'),' ',e('em',null,'flashcards'))),
       e('p',{className:'h-sub'},t('Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.')),
       e('div',{className:'pill-row'},
         ['UPSC','JEE','NEET','GATE','SSC','RRB','IBPS','TET','CUET','CBSE/ICSE','Distance Learning'].map(function(exam){return e('span',{key:exam,className:'pill'},exam);})
       ),
-      e('button',{className:'cta',onClick:scrollApp},'Start for free →')
+      e('button',{className:'cta',onClick:scrollApp},t('Start for free →'))
     ),
 
     /* FEATURES */
@@ -2096,19 +2114,19 @@ function App(){
       e('div',{className:'feat-eyebrow'},t('What you get')),
       e('h2',{className:'feat-heading'},t('Built for how'),e('br'),e('em',null,t('Indian students')),' ',t('actually study')),
       e('div',{className:'fg'},
-        e(HFeat,{icon:'⚡',title:t('Instant study cards'),desc:'Paste any notes — UPSC, JEE, NEET, CA. Get precise topic cards with pointers, tables and flows in seconds.'}),
-        e(HFeat,{icon:'🧠',title:t('Memory-first flashcards'),desc:'Cards show topic → key pointers → flowcharts. Built for memorisation, not just reading.'}),
-        e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:'After your cards, test yourself with MCQs from the same content. Know exactly what sticks.'}),
-        e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:'Upload your study material as PDF. Download all flashcards as a clean printable PDF too.'}),
-        e(HFeat,{icon:'📱',title:t('Mobile first'),desc:'Designed for phone screens. Study on the bus, in the hostel, between lectures — anywhere.'}),
-        e(HFeat,{icon:'🔒',title:t('No signup needed'),desc:'Start immediately, no account required for free tier. Your notes stay private in your browser.'})
+        e(HFeat,{icon:'⚡',title:t('Instant study cards'),desc:t('Instant study cards desc')||'Paste any notes — UPSC, JEE, NEET, CA. Get precise topic cards with pointers, tables and flows in seconds.'}),
+        e(HFeat,{icon:'🧠',title:t('Memory-first flashcards'),desc:t('Memory-first flashcards desc')||'Cards show topic → key pointers → flowcharts. Built for memorisation, not just reading.'}),
+        e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:t('Self-test quiz desc')||'After your cards, test yourself with MCQs from the same content. Know exactly what sticks.'}),
+        e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:t('PDF upload & export desc')||'Upload your study material as PDF. Download all flashcards as a clean printable PDF too.'}),
+        e(HFeat,{icon:'📱',title:t('Mobile first'),desc:t('Mobile first desc')||'Designed for phone screens. Study on the bus, in the hostel, between lectures — anywhere.'}),
+        e(HFeat,{icon:'🔒',title:t('No signup needed'),desc:t('No signup needed desc')||'Start immediately, no account required for free tier. Your notes stay private in your browser.'})
       )
     ),
 
     /* APP */
     e('section',{id:'app',className:'app-wrap'},
       e('div',{className:'ey rev'},'Generate'),
-      e('h2',{className:'st rev'},t('Paste. '),e('em',null,t('Generate.')),t(' Revise.')),
+      e('h2',{className:'st rev'},'Paste. ',e('em',null,'Generate.'),' Revise.'),
       e('div',{className:'icard rev'},
         e('div',{className:'tbar'},
           e('button',{className:'tb'+(itab==='text'?' act':''),onClick:function(){setItab('text');},},t('Text')),
@@ -2255,7 +2273,7 @@ function App(){
           rtab==='summary'&&e(React.Fragment,null,
             e(Summary,{data:summary,loading:sumLoad}),
             summary&&!sumLoad&&e('div',{className:'fca'},
-              e('button',{className:'ab pr',onClick:function(){dlSummaryPDF(summary);}},t('↓ PDF'))
+              e('button',{className:'ab pr',onClick:function(){dlSummaryPDF(summary);}},'↓ PDF')
             )
           ),
           rtab==='quiz'&&(quiz.length>0
@@ -2339,7 +2357,7 @@ function App(){
 
     e('section',{className:'test-wrap'},
       e('div',{className:'feat-eyebrow rev'},t('From students')),
-      e('h2',{className:'feat-heading rev'},t('What people '),e('em',null,t('actually')),t(' say')),
+      e('h2',{className:'feat-heading rev'},window._lang==='hi'?t('What people say'):e(React.Fragment,null,'What people ',e('em',null,'actually'),' say')),
       e('div',{className:'tg rev'},
         e('div',{className:'tc'},
           e('p',{className:'tc-q'},'I paste my notes before sleeping and go through the cards on the metro next morning. Simple habit but it actually helps things stick.'),
@@ -2420,7 +2438,7 @@ function App(){
             }},'Copy')
         ),
         e('button',{className:'md',style:{width:'100%',marginTop:14},
-          onClick:function(){setShowShareSheet(null);}},t('Close'))
+          onClick:function(){setShowShareSheet(null);},},t('Close'))
       )
     ),
 
@@ -2495,7 +2513,7 @@ function App(){
                   e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📚'),
                   t('No saved sets yet.'),e('br'),
                   e('span',{style:{color:'var(--muted)'}},'Generate cards then click '),
-                  e('strong',{style:{color:'var(--accent)'}},t('💾 Save set')),
+                  e('strong',{style:{color:'var(--accent)'}},'💾 Save set'),
                   e('span',{style:{color:'var(--muted)'}},' to store your work here.')
                 )
               : e('div',{className:'ws-grid'},
@@ -2552,7 +2570,7 @@ function App(){
             if(!stored){try{stored=JSON.parse(localStorage.getItem('cs_daily_'+uid)||'null');}catch(e){}}
             if((!stored||stored.date!==todayKey)&&cards.length){
               pickDailyCard(cards);
-              return e('div',{className:'ws-empty'},e('div',{style:{fontSize:'2rem',marginBottom:12}},'⭐'),t('Picking today\'s card...'));
+              return e('div',{className:'ws-empty'},e('div',{style:{fontSize:'2rem',marginBottom:12}},'⭐'),t("Picking today's card..."));
             }
             if(!stored||!stored.card)return e('div',{className:'ws-empty'},
               e('div',{style:{fontSize:'2rem',marginBottom:12}},'⭐'),
