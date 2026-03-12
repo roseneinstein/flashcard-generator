@@ -840,7 +840,16 @@ async function fetchUserProfile(){
     });
     if(!r.ok){clearToken();return null;}
     var data=await r.json();
-    if(data.id)return data;
+    if(data.id){
+      // Compute days_left from sub_expiry so UI can show "12 days left"
+      if(data.sub_expiry){
+        var msLeft=new Date(data.sub_expiry).getTime()-Date.now();
+        data.days_left=Math.max(0,Math.ceil(msLeft/(1000*60*60*24)));
+      } else {
+        data.days_left=null;
+      }
+      return data;
+    }
     clearToken();return null;
   }catch(e){return null;}
 }
