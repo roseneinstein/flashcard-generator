@@ -2070,7 +2070,7 @@ function App(){
                   e('div',{style:{fontSize:'0.72rem',color:'var(--muted)',marginBottom:2}},user.email),
                   e('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
                     e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}},user.tier||'free'),
-                    user.days_left!=null&&user.sub_status==='active'&&e('div',{style:{fontSize:'0.65rem',color:user.days_left<=5?'var(--red)':user.days_left<=10?'#f59e0b':'var(--muted)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},user.days_left+' days left'),
+                    user.days_left!=null&&user.tier!=='free'&&e('div',{style:{fontSize:'0.65rem',color:user.days_left<=5?'var(--red)':user.days_left<=10?'#f59e0b':'var(--muted)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},user.days_left+' days left'),
                     user.sub_status==='cancel_pending'&&e('div',{style:{fontSize:'0.65rem',color:'#f59e0b',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},'cancels end of period'),
                     user.sub_status==='halted'&&e('div',{style:{fontSize:'0.65rem',color:'var(--red)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},'⚠ payment failed')
                   )
@@ -2088,7 +2088,7 @@ function App(){
                   isElite()?'📊 Progress & Stats':'📊 Quiz History'
                 ),
                 e('button',{className:'user-drop-item',onClick:handleInstall},'📲 Install App'),
-                (user.sub_status==='active')&&e('button',{className:'user-drop-item',style:{color:'var(--muted)',fontSize:'0.7rem'},onClick:cancelSubscription},'✕ Cancel subscription'),
+                (user.tier==='pro'||user.tier==='elite')&&user.sub_status!=='cancel_pending'&&user.sub_status!=='cancelled'&&e('button',{className:'user-drop-item',style:{color:'var(--muted)',fontSize:'0.7rem'},onClick:cancelSubscription},'✕ Cancel subscription'),
                 e('button',{className:'user-drop-item danger',onClick:logout},t('Sign out'))
               )
             )
@@ -2132,7 +2132,7 @@ function App(){
         e('img',{src:dark?'/icons/icon-dark-192.png':'/icons/icon-light-192.png',alt:'CogniSwift'}),
         e('div',{className:'hero-logo-name'},'CogniSwift')
       ),
-      e('h1',{style:window._lang==='hi'?{lineHeight:1.15,letterSpacing:'-0.02em'}:{}},
+      e('h1',{style:window._lang==='hi'?{lineHeight:1.2,letterSpacing:'-0.01em',fontSize:'clamp(2.8rem,7vw,6rem)'}:{}},
         window._lang==='hi'
           ? e(React.Fragment,null,'नोट्स',e('br'),e('em',null,'बनें'),e('br'),'फ्लैशकार्ड्स')
           : e(React.Fragment,null,'Notes become',e('br'),' ',e('em',null,'flashcards'))),
@@ -2280,9 +2280,9 @@ function App(){
               e('button',{className:'ab',onClick:function(){setCi(Math.floor(Math.random()*cards.length));}},t('⇄ Shuffle')),
               e('button',{className:'ab',onClick:function(){setRtab('quiz');},disabled:!quiz.length},t('📝 Quiz')),
               e('button',{className:'ab pr',onClick:function(){dlPDF(cards,activeSetName||'CogniSwift Study Cards');}},t('↓ PDF')),
-              (isPro()||isElite())
+              isElite()
                 ? e('button',{className:'ab',
-                    title:'Export as PowerPoint. Open in Google Slides via Drive → Upload',
+                    title:'Export as PowerPoint (Elite only). Open in Google Slides via Drive → Upload',
                     style:{color:'var(--accent)',borderColor:'var(--accent)'},
                     onClick:function(){
                       dlPPT(cards,activeSetName||'CogniSwift Study Cards');
