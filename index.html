@@ -1746,63 +1746,80 @@ function App(){
 
   async function pay(plan){
     if(!user){setShowAuth(true);setPw(false);return;}
-    // Block if already on that plan or higher
-    if(plan==='pro'&&(user.tier==='pro'||user.tier==='elite')){st('You are already on '+user.tier+' — no charge needed');setPw(false);return;}
-    if(plan==='elite'&&user.tier==='elite'){st('You are already on Elite');setPw(false);return;}
+    if(plan==='pro'&&(user.tier==='pro'||user.tier==='elite')&&user.sub_status==='active'){st('You already have an active '+user.tier+' subscription');setPw(false);return;}
+    if(plan==='elite'&&user.tier==='elite'&&user.sub_status==='active'){st('You are already on Elite');setPw(false);return;}
     try{
-      st('Creating order…');
+      st('Setting up subscription…');
       var token=loadToken();
       if(!token){setShowAuth(true);setPw(false);return;}
-
-      var r=await fetch('/api/order',{
+      var r=await fetch('/api/subscribe',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({plan,access_token:token})
       });
-      var order=await r.json();
-      if(order.error)return st('Error: '+order.error);
-
+      var sub=await r.json();
+      if(sub.error)return st('Error: '+sub.error);
       var rzp=new window.Razorpay({
-        key: order.key_id,
-        order_id: order.order_id,
-        amount: order.amount,
-        currency: order.currency,
-        name: 'CogniSwift',
-        description: plan==='pro'?'Pro · ₹99/mo':'Elite · ₹199/mo',
-        theme:{color:'#e8d5b0'},
-        prefill:{email:user.email},
+        key:             sub.key_id,
+        subscription_id: sub.subscription_id,
+        name:            'CogniSwift',
+        description:     plan==='pro'?'Pro · ₹99/month':'Elite · ₹199/month',
+        theme:           {color:'#e8d5b0'},
+        prefill:         {email:user.email,name:sub.name||''},
         handler:async function(response){
-          st('Verifying payment…');
+          st('Activating subscription…');
+          await new Promise(function(resolve){setTimeout(resolve,2000);});
           try{
-            var token=loadToken();
-            var vr=await fetch('/api/verify-payment',{
+            var freshToken=loadToken();
+            var authR=await fetch('/api/auth',{
               method:'POST',
               headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({
-                razorpay_order_id:response.razorpay_order_id,
-                razorpay_payment_id:response.razorpay_payment_id,
-                razorpay_signature:response.razorpay_signature,
-                plan:plan,
-                access_token:token,
-              }),
+              body:JSON.stringify({access_token:freshToken})
             });
-            var vd=await vr.json();
-            if(vd.success){
-              var upgraded=Object.assign({},user,{tier:plan});
+            var freshUser=await authR.json();
+            if(freshUser.id){
+              setUser(freshUser);setSession(freshUser);
+              setPw(false);
+              st('Welcome to '+(plan==='pro'?'Pro':'Elite')+'! Subscription active.');
+            }else{
+              var upgraded=Object.assign({},user,{tier:plan,sub_status:'active'});
               setUser(upgraded);setSession(upgraded);
               setPw(false);
-              st('🎉 Welcome to '+(plan==='pro'?'Pro':'Elite')+'!');
-            }else{
-              st('Payment received but upgrade failed — share this ID with support: '+response.razorpay_payment_id);
+              st('Subscribed to '+(plan==='pro'?'Pro':'Elite')+'!');
             }
           }catch(err){
-            st('Upgrade error — share this ID with support: '+response.razorpay_payment_id);
+            var upgraded2=Object.assign({},user,{tier:plan,sub_status:'active'});
+            setUser(upgraded2);setSession(upgraded2);
+            setPw(false);
+            st('Subscribed! Refresh if features seem inactive.');
           }
         },
-        modal:{ondismiss:function(){st('Payment cancelled');}}
+        modal:{ondismiss:function(){st('Subscription setup cancelled');}}
       });
       rzp.open();
-    }catch(err){st('Payment error: '+err.message);}
+    }catch(err){st('Subscription error: '+err.message);}
+  }
+
+  async function cancelSubscription(){
+    if(!user)return;
+    if(!window.confirm('Cancel subscription? You keep access until your current billing period ends.'))return;
+    try{
+      var token=loadToken();
+      var r=await fetch('/api/cancel-subscription',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({access_token:token})
+      });
+      var d=await r.json();
+      if(d.ok){
+        var updated=Object.assign({},user,{sub_status:'cancel_pending'});
+        setUser(updated);setSession(updated);
+        setShowUserMenu(false);
+        st('Subscription cancelled — access continues until billing period ends');
+      }else{
+        st('Error: '+(d.error||'Could not cancel'));
+      }
+    }catch(err){st('Error: '+err.message);}
   }
 
   function logout(){
@@ -2042,9 +2059,16 @@ function App(){
               }},
                 e('div',{style:{padding:'8px 12px 6px',borderBottom:'1px solid var(--border)',marginBottom:4}},
                   e('div',{style:{fontSize:'0.72rem',color:'var(--muted)',marginBottom:2}},user.email),
-                  e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}},user.tier||'free')
+                  e('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
+                    e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}},user.tier||'free'),
+                    user.days_left!=null&&user.sub_status==='active'&&e('div',{style:{fontSize:'0.65rem',color:user.days_left<=5?'var(--red)':user.days_left<=10?'#f59e0b':'var(--muted)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},user.days_left+' days left'),
+                    user.sub_status==='cancel_pending'&&e('div',{style:{fontSize:'0.65rem',color:'#f59e0b',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},'cancels end of period'),
+                    user.sub_status==='halted'&&e('div',{style:{fontSize:'0.65rem',color:'var(--red)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},'⚠ payment failed')
+                  )
                 ),
-                (user.tier==='free')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
+                user.sub_status==='halted'&&e('div',{style:{padding:'6px 12px 8px',fontSize:'0.72rem',color:'var(--red)',borderBottom:'1px solid var(--border)',marginBottom:4,lineHeight:1.5}},'Last payment failed. Resubscribe to restore access.'),
+                (user.tier==='free'&&user.sub_status!=='halted')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
+                user.sub_status==='halted'&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'↺ Resubscribe'),
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');loadProData();setShowWs(true);}},
                   '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
                 ),
@@ -2055,6 +2079,7 @@ function App(){
                   isElite()?'📊 Progress & Stats':'📊 Quiz History'
                 ),
                 e('button',{className:'user-drop-item',onClick:handleInstall},'📲 Install App'),
+                (user.sub_status==='active')&&e('button',{className:'user-drop-item',style:{color:'var(--muted)',fontSize:'0.7rem'},onClick:cancelSubscription},'✕ Cancel subscription'),
                 e('button',{className:'user-drop-item danger',onClick:logout},t('Sign out'))
               )
             )
@@ -2483,6 +2508,13 @@ function App(){
           e('div',{style:{display:'flex',flexDirection:'column',gap:10}},
             e('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between'}},
               e('div',{className:'ws-title'},t('My Workspace')),
+              user&&(user.sub_status==='halted'||user.sub_status==='cancelled')&&e('div',{style:{margin:'0 0 14px',padding:'10px 14px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:'var(--r-sm)',fontSize:'0.76rem',color:'var(--red)',lineHeight:1.5}},
+                e('strong',null,user.sub_status==='halted'?'Payment failed — access locked':'Subscription ended — access locked'),e('br'),
+                'Your data is safe. ',
+                e('button',{style:{background:'none',border:'none',color:'var(--accent)',cursor:'none',fontSize:'0.76rem',padding:0,fontFamily:'Geist,sans-serif',textDecoration:'underline'},onClick:function(){setShowWs(false);setPw(true);}},
+                  'Resubscribe to restore access →'
+                )
+              ),
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
@@ -2793,11 +2825,9 @@ function App(){
       var activePrice=activeSp==='elite'?'199':'99';
       return e('div',{className:'ov',onClick:function(ev){if(ev.target===ev.currentTarget)setPw(false);}},
         e('div',{className:'mo mo-wide'},
-          e('div',{className:'mo-ey'},isProUser?'Upgrade to Elite':'Upgrade'),
-          e('h2',null,isProUser?'Unlock Elite':'Unlock full access'),
-          e('p',{className:'mo-s'},isProUser
-            ? 'You’re on Pro. Upgrade to Elite for spaced repetition, analytics, themes and more.'
-            : 'You’ve used your free generations for today. Pick a plan — no interruptions, no limits.'),
+          e('div',{className:'mo-ey'},user&&user.sub_status==='halted'?'Resubscribe':isProUser?'Upgrade to Elite':'Upgrade'),
+          e('h2',null,user&&user.sub_status==='halted'?'Restore your access':isProUser?'Unlock Elite':'Unlock full access'),
+          e('p',{className:'mo-s'},user&&user.sub_status==='halted'?'Your last payment failed. Your data is safe — resubscribe to restore access.':isProUser?'You’re on Pro. Upgrade to Elite for spaced repetition, analytics, themes and more.':'You’ve used your free generations for today. Pick a plan — no interruptions, no limits.'),
           e('div',{className:'mo-plans'},
             plans.map(function(x){
               var isSel=(isProUser?activeSp:sp)===x.id;
@@ -2817,7 +2847,7 @@ function App(){
             })
           ),
           e('button',{className:'pb',onClick:function(){pay(isProUser?'elite':activeSp);}},
-            'Pay ₹'+activePrice+' via Razorpay →'
+            'Subscribe ₹'+activePrice+'/month →'
           ),
           e('button',{className:'md',onClick:function(){setPw(false);}},isProUser?'Maybe later':'Continue tomorrow')
         )
