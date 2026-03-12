@@ -1795,13 +1795,8 @@ function App(){
             var vd=await vr.json();
             if(vd.success){
               // Step 2: fetch fresh profile so UI reflects real DB state
-              var authR=await fetch('/api/auth',{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({access_token:freshToken})
-              });
-              var freshUser=await authR.json();
-              if(freshUser.id){setUser(freshUser);setSession(freshUser);}
+              var freshUser=await fetchUserProfile();
+              if(freshUser&&freshUser.id){setUser(freshUser);setSession(freshUser);}
               else{var up=Object.assign({},user,{tier:plan,sub_status:'active'});setUser(up);setSession(up);}
               setPw(false);
               st('🎉 Welcome to '+(plan==='pro'?'Pro':'Elite')+'! Subscription active.');
