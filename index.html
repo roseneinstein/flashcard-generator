@@ -2583,17 +2583,19 @@ function App(){
             'Regenerate any single card (5/day)',
             'Quiz history across all saved sets',
             'Custom card count up to 30',
+            'Card of the day',
           ],onSel:function(){setSp('pro');setPwBill(bill);if(user&&(user.tier==='pro'||user.tier==='elite')){setSp('elite');}setPw(true);}}),
         e(PCard,{name:'Elite',price:'199',period:t('per month'),bill:bill,
           priceAnnual:'1,799',perMonth:'150',strikeAnnual:'2,388',saveAmt:'589',
           feats:[
+            'Everything in Pro',
             '40 generations per day',
             'Up to 30,000 characters per input',
-            'Everything in Pro',
             'Spaced repetition for weak cards',
             'Weak area report & progress analytics',
             'Study streak calendar & heatmap',
-            'Custom deck themes',
+            'Custom deck themes & favourite cards',
+            'Export as PPT / slides',
             'Summary depth control (4 levels)',
             'Custom card count up to 50',
           ],onSel:function(){setSp('elite');setPwBill(bill);setPw(true);}})
@@ -3098,7 +3100,8 @@ function App(){
         'Spaced repetition for weak cards',
         'Weak area report & analytics',
         'Study streak calendar & heatmap',
-        'Custom deck themes',
+        'Custom deck themes & favourite cards',
+        'Export as PPT / slides',
         'Summary depth control (4 levels)',
         'Custom card count up to 50',
       ];
@@ -3111,6 +3114,7 @@ function App(){
         'Regenerate any single card',
         'Quiz history across saved sets',
         'Custom card count up to 30',
+        'Card of the day',
       ];
       var isAnnPw=pwBill==='annual';
       var plans=isProUser
@@ -3135,10 +3139,10 @@ function App(){
           e('div',{className:'mo-ey'},user&&user.sub_status==='halted'?'Resubscribe':isProUser?'Upgrade to Elite':'Upgrade'),
           e('h2',null,user&&user.sub_status==='halted'?'Restore your access':isProUser?'Unlock Elite':'Unlock full access'),
           e('p',{className:'mo-s'},user&&user.sub_status==='halted'?'Your last payment failed. Your data is safe — resubscribe to restore access.':isProUser?'You’re on Pro. Upgrade to Elite for spaced repetition, analytics, themes and more.':'You’ve used your free generations for today. Pick a plan — no interruptions, no limits.'),
-          e('div',{className:'bill-tog',style:{alignSelf:'center',marginBottom:16}},
+          e('div',{style:{display:'flex',justifyContent:'center',marginBottom:16}},e('div',{className:'bill-tog'},
             e('button',{className:'bill-opt'+(pwBill==='monthly'?' act':''),onClick:function(){setPwBill('monthly');}},t('Monthly')),
             e('button',{className:'bill-opt'+(pwBill==='annual'?' act':''),onClick:function(){setPwBill('annual');}},t('Annual'))
-          ),
+          )),
           e('div',{className:'mo-plans'},
             plans.map(function(x){
               var isSel=(isProUser?activeSp:sp)===x.id;
