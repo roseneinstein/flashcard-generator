@@ -239,6 +239,16 @@ h1 em{font-style:italic;color:var(--accent)}
 }
 
 /* APP */
+
+/* Billing toggle */
+.bill-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:36px}
+.bill-tog{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:3px;gap:2px}
+.bill-opt{font-size:0.75rem;font-weight:500;font-family:'Geist',sans-serif;border:none;border-radius:50px;padding:7px 20px;cursor:pointer;transition:background .2s,color .2s;color:var(--muted);background:transparent;letter-spacing:0.01em}
+.bill-opt.act{background:var(--accent);color:var(--bg)}
+.bill-save{font-size:0.68rem;font-weight:600;color:#4ade80;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);border-radius:50px;padding:3px 10px;letter-spacing:0.04em;font-family:'Geist',sans-serif}
+.p-mo-note{font-size:0.62rem;color:var(--muted2);margin-top:2px;font-weight:300;min-height:14px}
+.p-strike{text-decoration:line-through;opacity:0.45;margin-left:4px;font-size:0.75em}
+.p-found{font-size:0.6rem;color:var(--muted2);margin-top:6px;font-style:italic;line-height:1.5;font-weight:300;font-family:'Geist',sans-serif}
 .app-wrap{max-width:660px;margin:0 auto;padding:0 20px 110px}
 .ey{font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:9px}
 .st{font-family:'Instrument Serif',serif;font-size:clamp(1.7rem,4vw,2.6rem);text-align:center;margin-bottom:48px;letter-spacing:-0.02em;line-height:1.1}
@@ -1308,10 +1318,27 @@ function Quiz(props){
 
 function PCard(props){
   var r=useRef();
+  var isAnn=props.bill==='annual';
   return e('div',{className:'plan'+(props.pop?' pop':''),ref:r,onMouseMove:function(ev){var b=r.current.getBoundingClientRect();r.current.style.setProperty('--mx',((ev.clientX-b.left)/b.width*100)+'%');r.current.style.setProperty('--my',((ev.clientY-b.top)/b.height*100)+'%');}},
     e('div',{className:'p-tag'},props.name,props.pop&&e('span',{className:'p-bdg'},'Popular')),
-    e('div',{className:'p-price'},e('sup',null,'₹'),props.price),
-    e('div',{className:'p-per'},props.period),
+    props.price==='0'
+      ? e(React.Fragment,null,
+          e('div',{className:'p-price'},e('sup',null,'₹'),props.price),
+          e('div',{className:'p-per'},props.period),
+          e('div',{className:'p-mo-note'})
+        )
+      : isAnn
+        ? e(React.Fragment,null,
+            e('div',{className:'p-price'},e('sup',null,'₹'),props.priceAnnual,e('span',{style:{fontSize:'0.85rem',fontWeight:300,opacity:0.7}},' /yr')),
+            e('div',{className:'p-per'},'₹'+props.perMonth+'/mo ',e('span',{className:'p-strike'},'₹'+props.strikeAnnual+'/yr')),
+            e('div',{className:'p-mo-note'},'Save ₹'+props.saveAmt+' — billed annually'),
+            e('div',{className:'p-found'},'Founding member rate — prices will rise as we grow')
+          )
+        : e(React.Fragment,null,
+            e('div',{className:'p-price'},e('sup',null,'₹'),props.price),
+            e('div',{className:'p-per'},props.period),
+            e('div',{className:'p-mo-note'})
+          ),
     e('ul',{className:'p-feats'},props.feats.map(function(f){return e('li',{key:f},f);})),
     e('button',{className:'p-btn'+(props.pop?' pr':''),onClick:props.onSel},props.price==='0'?'Start free':'Get access')
   );
@@ -1814,7 +1841,7 @@ function App(){
     reader.readAsArrayBuffer(file);
   }
 
-  async function pay(plan){
+  async function pay(plan,billing){
     if(!user){setShowAuth(true);setPw(false);return;}
     if(plan==='pro'&&(user.tier==='pro'||user.tier==='elite')&&user.sub_status==='active'){st('You already have an active '+user.tier+' subscription');setPw(false);return;}
     if(plan==='elite'&&user.tier==='elite'&&user.sub_status==='active'){st('You are already on Elite');setPw(false);return;}
@@ -1822,10 +1849,11 @@ function App(){
       st('Setting up subscription…');
       var token=loadToken();
       if(!token){setShowAuth(true);setPw(false);return;}
+      var billingCycle=billing||'monthly';
       var r=await fetch('/api/subscribe',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({plan,access_token:token})
+        body:JSON.stringify({plan,billing:billingCycle,access_token:token})
       });
       var sub=await r.json();
       if(sub.error)return st('Error: '+sub.error);
@@ -1833,7 +1861,7 @@ function App(){
         key:             sub.key_id,
         subscription_id: sub.subscription_id,
         name:            'CogniSwift',
-        description:     plan==='pro'?'Pro · ₹99/month':'Elite · ₹199/month',
+        description:     plan==='pro'?(billingCycle==='annual'?'Pro · ₹899/year':'Pro · ₹99/month'):(billingCycle==='annual'?'Elite · ₹1,799/year':'Elite · ₹199/month'),
         theme:           {color:'#e8d5b0'},
         prefill:         {email:user.email,name:sub.name||''},
         handler:async function(response){
@@ -1850,6 +1878,7 @@ function App(){
                 razorpay_subscription_id: response.razorpay_subscription_id,
                 razorpay_signature:       response.razorpay_signature,
                 plan:                     plan,
+                billing:                  billingCycle,
                 access_token:             freshToken,
               })
             });
@@ -2211,6 +2240,8 @@ function App(){
     return function(){window.removeEventListener('scroll',upd);window.removeEventListener('resize',upd);};
   },[ta,ts]);
   // ────────────────────────────────────────────────────────────
+  var billS=useState('monthly'),setBill=billS[1];var bill=billS[0];
+  var pwBillS=useState('monthly'),setPwBill=pwBillS[1];var pwBill=pwBillS[0];
   var itxt=itab==='text'?notes:pdfTxt;
   var scrollApp=function(){var el=document.getElementById('app');if(el)el.scrollIntoView({behavior:'smooth'});};
 
@@ -2524,8 +2555,15 @@ function App(){
     e('section',{id:'pr',className:'pr-wrap'},
       e('div',{className:'ey rev'},t('Plans')),
       e('h2',{className:'st rev'},t('Start free.'),e('br'),e('em',null,t('Upgrade anytime.'))),
+      e('div',{className:'bill-wrap'},
+        e('div',{className:'bill-tog'},
+          e('button',{className:'bill-opt'+(bill==='monthly'?' act':''),onClick:function(){setBill('monthly');}},t('Monthly')),
+          e('button',{className:'bill-opt'+(bill==='annual'?' act':''),onClick:function(){setBill('annual');}},t('Annual'))
+        ),
+        bill==='annual'&&e('span',{className:'bill-save'},t('Save up to 25%'))
+      ),
       e('div',{className:'plans rev'},
-        e(PCard,{name:'Free',price:'0',period:t('forever'),feats:[
+        e(PCard,{name:'Free',price:'0',period:t('forever'),bill:bill,feats:[
           '10 generations per day',
           'Up to 8,000 characters per input',
           'AI flashcards with flip animation',
@@ -2534,27 +2572,31 @@ function App(){
           'PDF export of your cards',
           'Short link sharing',
         ],onSel:scrollApp}),
-        e(PCard,{name:'Pro',price:'99',period:t('per month'),pop:true,feats:[
-          '20 generations per day',
-          'Up to 20,000 characters per input',
-          'Save sets to your account (cloud-synced)',
-          'Mistake tracker — review wrong quiz answers',
-          'Voice readout of every card',
-          'Regenerate any single card (5/day)',
-          'Quiz history across all saved sets',
-          'Custom card count up to 30',
-        ],onSel:function(){if(user&&(user.tier==='pro'||user.tier==='elite')){setSp('elite');setPw(true);}else{setSp('pro');setPw(true);}}}),
-        e(PCard,{name:'Elite',price:'199',period:t('per month'),feats:[
-          '40 generations per day',
-          'Up to 30,000 characters per input',
-          'Everything in Pro',
-          'Spaced repetition for weak cards',
-          'Weak area report & progress analytics',
-          'Study streak calendar & heatmap',
-          'Custom deck themes',
-          'Summary depth control (4 levels)',
-          'Custom card count up to 50',
-        ],onSel:function(){setSp('elite');setPw(true);}})
+        e(PCard,{name:'Pro',price:'99',period:t('per month'),bill:bill,pop:true,
+          priceAnnual:'899',perMonth:'75',strikeAnnual:'1,188',saveAmt:'289',
+          feats:[
+            '20 generations per day',
+            'Up to 20,000 characters per input',
+            'Save sets to your account (cloud-synced)',
+            'Mistake tracker — review wrong quiz answers',
+            'Voice readout of every card',
+            'Regenerate any single card (5/day)',
+            'Quiz history across all saved sets',
+            'Custom card count up to 30',
+          ],onSel:function(){setSp('pro');setPwBill(bill);if(user&&(user.tier==='pro'||user.tier==='elite')){setSp('elite');}setPw(true);}}),
+        e(PCard,{name:'Elite',price:'199',period:t('per month'),bill:bill,
+          priceAnnual:'1,799',perMonth:'150',strikeAnnual:'2,388',saveAmt:'589',
+          feats:[
+            '40 generations per day',
+            'Up to 30,000 characters per input',
+            'Everything in Pro',
+            'Spaced repetition for weak cards',
+            'Weak area report & progress analytics',
+            'Study streak calendar & heatmap',
+            'Custom deck themes',
+            'Summary depth control (4 levels)',
+            'Custom card count up to 50',
+          ],onSel:function(){setSp('elite');setPwBill(bill);setPw(true);}})
       )
     ),
 
@@ -3070,27 +3112,42 @@ function App(){
         'Quiz history across saved sets',
         'Custom card count up to 30',
       ];
+      var isAnnPw=pwBill==='annual';
       var plans=isProUser
-        ? [{id:'elite',n:'Elite',p:'199',s:'per month',feats:eliteFeats}]
+        ? [{id:'elite',n:'Elite',
+            p:isAnnPw?'1,799':'199',s:isAnnPw?'/ year':'/ month',
+            mo:isAnnPw?'₹150/mo billed annually':'',
+            strike:isAnnPw?'₹2,388/yr':'',save:isAnnPw?'Save ₹589':'',feats:eliteFeats}]
         : [
-            {id:'pro',n:'Pro',p:'99',s:'per month',feats:proFeats},
-            {id:'elite',n:'Elite',p:'199',s:'per month',feats:eliteFeats},
+            {id:'pro',n:'Pro',
+              p:isAnnPw?'899':'99',s:isAnnPw?'/ year':'/ month',
+              mo:isAnnPw?'₹75/mo billed annually':'',
+              strike:isAnnPw?'₹1,188/yr':'',save:isAnnPw?'Save ₹289':'',feats:proFeats},
+            {id:'elite',n:'Elite',
+              p:isAnnPw?'1,799':'199',s:isAnnPw?'/ year':'/ month',
+              mo:isAnnPw?'₹150/mo billed annually':'',
+              strike:isAnnPw?'₹2,388/yr':'',save:isAnnPw?'Save ₹589':'',feats:eliteFeats},
           ];
-      // Auto-correct sp: if only elite is shown, sp must be 'elite'
       var activeSp=(isProUser&&sp!=='elite')?'elite':sp;
-      var activePrice=activeSp==='elite'?'199':'99';
+      var activePrice=isAnnPw?(activeSp==='elite'?'1,799':'899'):(activeSp==='elite'?'199':'99');
       return e('div',{className:'ov',onClick:function(ev){if(ev.target===ev.currentTarget)setPw(false);}},
         e('div',{className:'mo mo-wide'},
           e('div',{className:'mo-ey'},user&&user.sub_status==='halted'?'Resubscribe':isProUser?'Upgrade to Elite':'Upgrade'),
           e('h2',null,user&&user.sub_status==='halted'?'Restore your access':isProUser?'Unlock Elite':'Unlock full access'),
           e('p',{className:'mo-s'},user&&user.sub_status==='halted'?'Your last payment failed. Your data is safe — resubscribe to restore access.':isProUser?'You’re on Pro. Upgrade to Elite for spaced repetition, analytics, themes and more.':'You’ve used your free generations for today. Pick a plan — no interruptions, no limits.'),
+          e('div',{className:'bill-tog',style:{alignSelf:'center',marginBottom:16}},
+            e('button',{className:'bill-opt'+(pwBill==='monthly'?' act':''),onClick:function(){setPwBill('monthly');}},t('Monthly')),
+            e('button',{className:'bill-opt'+(pwBill==='annual'?' act':''),onClick:function(){setPwBill('annual');}},t('Annual'))
+          ),
           e('div',{className:'mo-plans'},
             plans.map(function(x){
               var isSel=(isProUser?activeSp:sp)===x.id;
               return e('div',{key:x.id,className:'mp'+(isSel?' sel':''),onClick:function(){setSp(x.id);}},
                 e('div',{className:'mp-n'},x.n),
                 e('div',{className:'mp-p'},e('sup',null,'₹'),x.p),
-                e('div',{className:'mp-s'},x.s),
+                e('div',{className:'mp-s'},x.s,x.strike&&e('span',{className:'p-strike',style:{marginLeft:5}},x.strike)),
+                x.mo&&e('div',{style:{fontSize:'0.62rem',color:'#4ade80',marginTop:3,fontWeight:500,lineHeight:1.4}},
+                  x.mo,'  ',x.save&&e('span',{style:{opacity:0.75}},x.save)),
                 e('div',{className:'mp-feat-grid'},
                   x.feats.map(function(f,i){
                     return e('div',{key:i,className:'mp-feat-row'+(i===0?' mp-feat-head':'')},
@@ -3102,8 +3159,11 @@ function App(){
               );
             })
           ),
-          e('button',{className:'pb',onClick:function(){pay(isProUser?'elite':activeSp);}},
-            'Subscribe ₹'+activePrice+'/month →'
+          isAnnPw&&e('div',{style:{fontSize:'0.62rem',color:'var(--muted2)',textAlign:'center',marginBottom:6,fontStyle:'italic',lineHeight:1.5}},
+            'Founding member rate — prices will rise as we grow'
+          ),
+          e('button',{className:'pb',onClick:function(){pay(isProUser?'elite':activeSp,pwBill);}},
+            'Subscribe ₹'+activePrice+(isAnnPw?'/year':'/month')+' →'
           ),
           e('button',{className:'md',onClick:function(){setPw(false);}},isProUser?'Maybe later':'Continue tomorrow')
         )
