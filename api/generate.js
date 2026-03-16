@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { text, count, quizCount } = req.body;
+  const { text, count } = req.body;
   if (!text || !count) return res.status(400).json({ error: 'Missing text or count' });
 
   const apiKey  = process.env.GROQ_API_KEY;
@@ -11,35 +11,20 @@ export default async function handler(req, res) {
   const inputText = text.substring(0, 12000);
   const wordCount = inputText.split(/\s+/).filter(Boolean).length;
 
-  // Detect if text is primarily Hindi (Devanagari Unicode range: 0900–097F)
+  // Detect if text is primarily Hindi (Devanagari Unicode range 0900–097F)
   const devanagariChars = (inputText.match(/[\u0900-\u097F]/g) || []).length;
   const totalLetters    = (inputText.match(/[a-zA-Z\u0900-\u097F]/g) || []).length;
   const isHindi = totalLetters > 0 && (devanagariChars / totalLetters) > 0.4;
 
   const langInstruction = isHindi
-    ? `LANGUAGE RULE — CRITICAL: The source text is primarily in Hindi. You MUST write ALL output — every topic name, every point, every quiz question, every option, every explanation — entirely in Hindi (Devanagari script). Do NOT switch to English at any point, even for technical terms (transliterate them if needed).`
-    : `LANGUAGE RULE: Write all output in the same language as the source text. If the source is English, respond in English. If the source is another language, respond in that language.`;
+    ? `LANGUAGE RULE — CRITICAL: The source text is primarily in Hindi. You MUST write ALL output — every topic name, every point, every quiz question, every option, every explanation — entirely in Hindi (Devanagari script). Do NOT switch to English at any point, even for technical terms (transliterate them into Devanagari if needed).`
+    : `LANGUAGE RULE: Write all output in the same language as the source text.`;
 
-  // Quiz count: use explicitly requested quizCount, or derive from word count
-  let maxQuiz, suggestedCounts;
-  if (wordCount < 400) {
-    suggestedCounts = [5];
-    maxQuiz = quizCount && quizCount <= 5 ? quizCount : 5;
-  } else if (wordCount < 900) {
-    suggestedCounts = [5, 10];
-    maxQuiz = quizCount && quizCount <= 10 ? quizCount : 10;
-  } else {
-    suggestedCounts = [5, 10, 15, 20];
-    maxQuiz = quizCount && quizCount <= 20 ? quizCount : 15;
-  }
-
-  // Always honour explicit quizCount if provided and reasonable
-  if (quizCount && quizCount >= 1 && quizCount <= 20) {
-    maxQuiz = quizCount;
-  }
+  // Always generate maximum quiz questions — frontend slices to user's selection
+  const maxQuiz = wordCount < 400 ? 5 : wordCount < 900 ? 10 : 20;
 
   const countNote = count > 15
-    ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects in the array. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
+    ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
     : `Return exactly ${count} flashcard objects.`;
 
   const prompt = `You are a subject-matter expert creating high-quality revision flashcards for serious Indian competitive exam students (UPSC, JEE, NEET, CA, etc.).
@@ -47,8 +32,6 @@ export default async function handler(req, res) {
 ${langInstruction}
 
 The study notes below may cover MULTIPLE topics or editorials. You must cover ALL of them — do NOT focus only on the first topic. Distribute the ${count} flashcards proportionally across every topic present in the notes.
-
-Read carefully and extract specific, exam-relevant facts — not vague summaries.
 
 Return ONLY a valid JSON object. No markdown, no code fences, nothing else.
 
@@ -58,34 +41,33 @@ Schema:
 FLASHCARD RULES:
 
 topic:
-- Draw the topic name DIRECTLY from the content. Cover all topics present — if there are 3 editorials, cards must come from all 3.
-- Every card must have a DISTINCT topic name. If one concept genuinely needs two cards, append Roman numerals: "Topic (I)", "Topic (II)". Use Roman numerals ONLY for this — not for variety.
-- Topics must be specific — NOT "Introduction" or "Overview". Use the actual concept, article, or term name.
+- Draw the topic name DIRECTLY from the content. Cover all topics present.
+- Every card must have a DISTINCT topic name. If one concept needs two cards, append Roman numerals: "Topic (I)", "Topic (II)".
+- Topics must be specific — NOT "Introduction" or "Overview".
 
 points (4-6 per card, pipe-separated " | "):
-- Each point must state a SPECIFIC fact, figure, date, name, formula, provision, case name, or mechanism from the notes.
+- Each point must state a SPECIFIC fact, figure, date, name, formula, provision, or mechanism from the notes.
 - BAD: "It plays an important role" — NEVER write this.
-- GOOD: "Article 44 of DPSP directs the state to secure a Uniform Civil Code for all citizens."
+- GOOD: "Article 44 of DPSP directs the state to secure a Uniform Civil Code."
 - Include exact numbers, percentages, years, chemical symbols, statutory references.
-- Preserve ALL technical terms, abbreviations, jargon exactly as in the source.
-- Match the register of the source: legal stays formal, science stays precise, history stays factual with dates.
+- Preserve ALL technical terms exactly as in the source.
 
-QUIZ RULES — READ CAREFULLY:
-- Generate EXACTLY ${maxQuiz} quiz questions. This is a hard requirement — not ${maxQuiz-2}, not ${maxQuiz+1} — exactly ${maxQuiz}.
-- Cover ALL topics in the notes — not just the first one.
-- Test specific facts from the notes only, not general knowledge.
+QUIZ RULES — CRITICAL:
+- Generate EXACTLY ${maxQuiz} quiz questions. This is a hard requirement — count them before outputting.
+- Cover ALL topics in the notes proportionally.
+- Test specific facts from the notes only.
 - Distractors must be plausible alternatives from the same domain.
-- Explanation must state why the correct answer is right AND why the main wrong option is wrong.
+- Explanation: why the correct answer is right AND why the main wrong option is wrong.
 
-JSON FORMAT (violations break the parser — follow exactly):
+JSON FORMAT:
 1. ${countNote}
-2. quiz array: exactly ${maxQuiz} objects. Count them before outputting.
-3. Every string value on ONE line — no newlines or tabs inside any string.
+2. quiz array: EXACTLY ${maxQuiz} objects — count before outputting.
+3. Every string on ONE line — no newlines or tabs inside strings.
 4. Points separated by " | " (space pipe space).
-5. NO double-quote characters inside any string value — rephrase instead.
-6. NO trailing commas anywhere.
-7. All JSON keys double-quoted. No single quotes anywhere.
-8. "correct" is an integer 0-3, not a string.
+5. NO double-quote characters inside string values.
+6. NO trailing commas.
+7. All keys double-quoted. No single quotes.
+8. "correct" is integer 0-3.
 
 Study notes:
 ${inputText}`;
@@ -108,8 +90,8 @@ ${inputText}`;
     if (!errObj) return false;
     const msg  = (errObj.message || '').toLowerCase();
     const code = (errObj.code    || '').toLowerCase();
-    return msg.includes('rate')  || msg.includes('limit') || msg.includes('quota') ||
-           msg.includes('tpd')   || msg.includes('tokens per day') || msg.includes('try again') ||
+    return msg.includes('rate') || msg.includes('limit') || msg.includes('quota') ||
+           msg.includes('tpd')  || msg.includes('try again') ||
            code.includes('rate') || code.includes('limit') || code.includes('quota');
   }
 
@@ -150,7 +132,7 @@ ${inputText}`;
 
   for (const { key, model } of attempts) {
     try {
-      const maxTokens = Math.min(5000, 1500 + count * 80 + maxQuiz * 60);
+      const maxTokens = Math.min(5000, 1500 + count * 80 + maxQuiz * 80);
 
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -169,7 +151,7 @@ ${inputText}`;
         lastError = data.error.message || JSON.stringify(data.error);
         if (isRateLimit(groqRes.status, data.error)) continue;
         if (groqRes.status === 401 || groqRes.status === 403)
-          return res.status(500).json({ error: 'Invalid API key — check Vercel env vars' });
+          return res.status(500).json({ error: 'Invalid API key' });
         continue;
       }
 
@@ -177,9 +159,7 @@ ${inputText}`;
       raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
       const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
       if (fi === -1 || la === -1) { lastError = 'No JSON found'; continue; }
-      raw = raw.slice(fi, la + 1);
-      raw = raw.replace(/[\r\n\t]+/g, ' ');
-      raw = raw.replace(/,\s*([}\]])/g, '$1');
+      raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
 
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed.flashcards) || !Array.isArray(parsed.quiz) || !parsed.quiz.length) {
@@ -188,14 +168,8 @@ ${inputText}`;
 
       parsed.flashcards = deduplicateTopics(parsed.flashcards);
       parsed.flashcards = padToCount(parsed.flashcards, count);
-      parsed.suggested_quiz_counts = suggestedCounts;
-      // Enforce exact quiz count — pad if AI returned fewer
-      if (parsed.quiz.length < maxQuiz && parsed.quiz.length > 0) {
-        while (parsed.quiz.length < maxQuiz) {
-          const src = parsed.quiz[parsed.quiz.length % parsed.quiz.length];
-          parsed.quiz.push({ ...src });
-        }
-      }
+      // Keep all quiz questions — frontend will show count options based on length
+      // Slice only to maxQuiz cap
       parsed.quiz = parsed.quiz.slice(0, maxQuiz);
 
       return res.status(200).json(parsed);
@@ -206,7 +180,5 @@ ${inputText}`;
     }
   }
 
-  return res.status(503).json({
-    error: `All models unavailable: ${lastError}`,
-  });
+  return res.status(503).json({ error: `All models unavailable: ${lastError}` });
 }
