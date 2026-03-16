@@ -1773,9 +1773,10 @@ function App(){
     if(usage>=dayLimit){setPw(true);return;}
     setLoading(true);setCards([]);setQuiz([]);setSummary(null);setSumLoad(true);
     try{
-      var res=await callAI(txt,cnt,quizCounts[quizCounts.length-1]||null);
+      var res=await callAI(txt,cnt,null);
       setCards(res.flashcards||[]);setQuiz(res.quiz||[]);setTimeout(function(){pickDailyCard(res.flashcards||[]);},0);
-      var counts=res.suggested_quiz_counts||[5];
+      var totalQ=(res.quiz||[]).length;
+      var counts=totalQ>=20?[5,10,15,20]:totalQ>=15?[5,10,15]:totalQ>=10?[5,10]:[5];
       setQuizCounts(counts);
       // If only one option, auto-select it
       setActiveQuiz(counts.length===1?res.quiz.slice(0,counts[0]):null);
