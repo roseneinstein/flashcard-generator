@@ -1,33 +1,50 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { text, count } = req.body;
+  const { text, count, quizCount } = req.body;
   if (!text || !count) return res.status(400).json({ error: 'Missing text or count' });
 
   const apiKey  = process.env.GROQ_API_KEY;
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  // Cap at 12,000 chars (~3,000 tokens). With prompt overhead and output tokens
-  // this stays within every Groq model's context window and TPM budget.
   const inputText = text.substring(0, 12000);
   const wordCount = inputText.split(/\s+/).filter(Boolean).length;
 
+  // Detect if text is primarily Hindi (Devanagari Unicode range: 0900–097F)
+  const devanagariChars = (inputText.match(/[\u0900-\u097F]/g) || []).length;
+  const totalLetters    = (inputText.match(/[a-zA-Z\u0900-\u097F]/g) || []).length;
+  const isHindi = totalLetters > 0 && (devanagariChars / totalLetters) > 0.4;
+
+  const langInstruction = isHindi
+    ? `LANGUAGE RULE — CRITICAL: The source text is primarily in Hindi. You MUST write ALL output — every topic name, every point, every quiz question, every option, every explanation — entirely in Hindi (Devanagari script). Do NOT switch to English at any point, even for technical terms (transliterate them if needed).`
+    : `LANGUAGE RULE: Write all output in the same language as the source text. If the source is English, respond in English. If the source is another language, respond in that language.`;
+
+  // Quiz count: use explicitly requested quizCount, or derive from word count
   let maxQuiz, suggestedCounts;
   if (wordCount < 400) {
-    maxQuiz = 5;  suggestedCounts = [5];
+    suggestedCounts = [5];
+    maxQuiz = quizCount && quizCount <= 5 ? quizCount : 5;
   } else if (wordCount < 900) {
-    maxQuiz = 10; suggestedCounts = [5, 10];
+    suggestedCounts = [5, 10];
+    maxQuiz = quizCount && quizCount <= 10 ? quizCount : 10;
   } else {
-    maxQuiz = 15; suggestedCounts = [5, 10, 15];
+    suggestedCounts = [5, 10, 15, 20];
+    maxQuiz = quizCount && quizCount <= 20 ? quizCount : 15;
   }
 
-  // Stronger count enforcement for large requests
+  // Always honour explicit quizCount if provided and reasonable
+  if (quizCount && quizCount >= 1 && quizCount <= 20) {
+    maxQuiz = quizCount;
+  }
+
   const countNote = count > 15
     ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects in the array. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
     : `Return exactly ${count} flashcard objects.`;
 
   const prompt = `You are a subject-matter expert creating high-quality revision flashcards for serious Indian competitive exam students (UPSC, JEE, NEET, CA, etc.).
+
+${langInstruction}
 
 The study notes below may cover MULTIPLE topics or editorials. You must cover ALL of them — do NOT focus only on the first topic. Distribute the ${count} flashcards proportionally across every topic present in the notes.
 
@@ -53,8 +70,8 @@ points (4-6 per card, pipe-separated " | "):
 - Preserve ALL technical terms, abbreviations, jargon exactly as in the source.
 - Match the register of the source: legal stays formal, science stays precise, history stays factual with dates.
 
-QUIZ RULES:
-- Generate exactly ${maxQuiz} quiz questions.
+QUIZ RULES — READ CAREFULLY:
+- Generate EXACTLY ${maxQuiz} quiz questions. This is a hard requirement — not ${maxQuiz-2}, not ${maxQuiz+1} — exactly ${maxQuiz}.
 - Cover ALL topics in the notes — not just the first one.
 - Test specific facts from the notes only, not general knowledge.
 - Distractors must be plausible alternatives from the same domain.
@@ -62,7 +79,7 @@ QUIZ RULES:
 
 JSON FORMAT (violations break the parser — follow exactly):
 1. ${countNote}
-2. quiz array: exactly ${maxQuiz} objects.
+2. quiz array: exactly ${maxQuiz} objects. Count them before outputting.
 3. Every string value on ONE line — no newlines or tabs inside any string.
 4. Points separated by " | " (space pipe space).
 5. NO double-quote characters inside any string value — rephrase instead.
@@ -117,7 +134,6 @@ ${inputText}`;
     return r;
   }
 
-  // Pad array to exact count by cycling through existing cards
   function padToCount(cards, target) {
     if (cards.length >= target) return cards.slice(0, target);
     const result = cards.slice();
@@ -134,8 +150,7 @@ ${inputText}`;
 
   for (const { key, model } of attempts) {
     try {
-      // Output tokens: enough for count cards + quiz, but not so large it pushes total over context limit
-      const maxTokens = Math.min(4000, 1500 + count * 80);
+      const maxTokens = Math.min(5000, 1500 + count * 80 + maxQuiz * 60);
 
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -172,9 +187,15 @@ ${inputText}`;
       }
 
       parsed.flashcards = deduplicateTopics(parsed.flashcards);
-      // Hard-enforce exact count — pad if under, slice if over
       parsed.flashcards = padToCount(parsed.flashcards, count);
       parsed.suggested_quiz_counts = suggestedCounts;
+      // Enforce exact quiz count — pad if AI returned fewer
+      if (parsed.quiz.length < maxQuiz && parsed.quiz.length > 0) {
+        while (parsed.quiz.length < maxQuiz) {
+          const src = parsed.quiz[parsed.quiz.length % parsed.quiz.length];
+          parsed.quiz.push({ ...src });
+        }
+      }
       parsed.quiz = parsed.quiz.slice(0, maxQuiz);
 
       return res.status(200).json(parsed);
