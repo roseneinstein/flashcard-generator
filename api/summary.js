@@ -8,6 +8,16 @@ export default async function handler(req, res) {
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
+  // Detect if text is primarily Hindi (Devanagari Unicode range: 0900–097F)
+  const safeText = (text || '').substring(0, 6000);
+  const devanagariChars = (safeText.match(/[\u0900-\u097F]/g) || []).length;
+  const totalLetters    = (safeText.match(/[a-zA-Z\u0900-\u097F]/g) || []).length;
+  const isHindi = totalLetters > 0 && (devanagariChars / totalLetters) > 0.4;
+
+  const langInstruction = isHindi
+    ? `LANGUAGE RULE — CRITICAL: The source text is primarily in Hindi. You MUST write ALL output — every title, every heading, every bullet point — entirely in Hindi (Devanagari script). Do NOT switch to English at any point.`
+    : `LANGUAGE RULE: Write all output in the same language as the source text.`;
+
   const depthInstructions = {
     concise:     'Write a CONCISE summary: 3-4 sections, 2-3 bullet points each.',
     standard:    'Write a STANDARD summary: 4-6 sections, 3-5 bullet points each.',
@@ -16,11 +26,9 @@ export default async function handler(req, res) {
   };
   const depthNote = depthInstructions[depth] || depthInstructions.standard;
 
-  // Hard cap at 6000 chars (~1500 tokens). Total prompt ~2200 tokens + 1200 output = ~3400.
-  // Stays well inside every Groq model's per-request and per-minute token budget.
-  const safeText = (text || '').substring(0, 6000);
-
   const prompt = `You are a study notes writer for Indian exams (UPSC, JEE, NEET, CA). ${depthNote}
+
+${langInstruction}
 
 Return ONLY a JSON object. No markdown, no backticks. Schema:
 {"title":"string","sections":[{"heading":"string","points":["string"]}]}
@@ -30,7 +38,6 @@ Rules: title max 8 words. heading 3-6 words. Each point = one complete fact with
 Study material:
 ${safeText}`;
 
-  // Fast small models first — they have the highest TPM quota on Groq free tier
   const models = [
     'llama-3.1-8b-instant',
     'gemma2-9b-it',
@@ -49,7 +56,7 @@ ${safeText}`;
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify({
           model,
-          max_tokens: 1200,
+          max_tokens: 1400,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
           response_format: { type: 'json_object' },
@@ -79,7 +86,6 @@ ${safeText}`;
     }
   }
 
-  // Return all errors so we can actually debug what Groq is saying
   return res.status(503).json({
     error: `Summary failed. Details: ${errors.slice(0, 3).join(' | ')}`,
   });
