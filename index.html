@@ -963,12 +963,12 @@ async function callSummary(text,depth){
   return r.json();
 }
 
-async function callAI(text,count,quizCount){
-  var r=await fetch('/api/generate',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text:text.substring(0,12000),count,quizCount:quizCount||null}),
-  });
+async function callAI(text,count,quizCount,opts){
+  opts=opts||{};
+  var charLimit=getCharLimit();
+  var body={text:text.substring(0,charLimit),count:count,quizCount:quizCount||null,isFileUpload:opts.isFileUpload||false,summaryDepth:opts.summaryDepth||'standard',access_token:loadToken()||undefined};
+  if(opts.images&&opts.images.length)body.images=opts.images;
+  var r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
 }
@@ -1772,8 +1772,12 @@ function App(){
     var dayLimit=getDayLimit();
     if(usage>=dayLimit){setPw(true);return;}
     setLoading(true);setCards([]);setQuiz([]);setSummary(null);setSumLoad(true);
+    var isFile=itab==='pdf'; // true only when coming from PDF upload tab
+    var tier=getTier();
+    // For paid users uploading a file, pass images if available (Elite scanned PDFs)
+    var imgPayload=(isFile&&(tier==='pro'||tier==='elite')&&window._pdfImages&&window._pdfImages.length)?window._pdfImages:[];
     try{
-      var res=await callAI(txt,cnt,null);
+      var res=await callAI(txt,cnt,null,{isFileUpload:isFile,images:imgPayload,summaryDepth:isElite()?summaryDepth:'standard'});
       setCards(res.flashcards||[]);setQuiz(res.quiz||[]);setTimeout(function(){pickDailyCard(res.flashcards||[]);},0);
       var totalQ=(res.quiz||[]).length;
       var counts=totalQ>=20?[5,10,15,20]:totalQ>=15?[5,10,15]:totalQ>=10?[5,10]:[5];
@@ -1795,8 +1799,13 @@ function App(){
       if(isElite())bumpStreak();
       st((res.flashcards||[]).length+' cards ready');
       setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
-      // Fire summary in background — doesn't block cards from showing
-      callSummary(txt,isElite()?summaryDepth:'standard').then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
+      // Paid users: summary comes bundled in generate response (single Grok call)
+      // Free users: fire separate summary call in background as before
+      if(res.summary&&res.summary.title){
+        setSummary(res.summary);setSumLoad(false);
+      }else{
+        callSummary(txt,isElite()?summaryDepth:'standard').then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
+      }
     }catch(err){st('Error: '+(err.message||'Check config'));setSumLoad(false);}
     finally{setLoading(false);}
   }
@@ -1805,7 +1814,7 @@ function App(){
     if(!file)return;
     if(!file.type.includes('pdf'))return st('PDF files only');
     if(file.size>20*1024*1024)return st('PDF too large — keep under 20MB');
-    setFn(file.name);setPdfTxt('');st('Reading PDF…');
+    setFn(file.name);setPdfTxt('');window._pdfImages=[];st('Reading PDF…');
     var loadLib=new Promise(function(resolve,reject){
       if(window.pdfjsLib){resolve();return;}
       var s=document.createElement('script');
@@ -1819,22 +1828,66 @@ function App(){
       loadLib.then(function(){
         var typedArray=new Uint8Array(ev.target.result);
         window.pdfjsLib.getDocument({data:typedArray}).promise.then(function(pdf){
-          var maxPages=Math.min(pdf.numPages,20),allText='',pagesDone=0;
+          // Hard limit: 20 pages max
+          var maxPages=Math.min(pdf.numPages,20);
+          if(pdf.numPages>20)st('PDF has '+pdf.numPages+' pages — processing first 20 only');
+          var allText='',pagesDone=0;
+          var tier=getTier();
+          // We render pages as images only for Pro/Elite — to detect scanned PDFs
+          // and for Elite to send visuals to Grok
+          var needsRender=(tier==='pro'||tier==='elite');
+          var pageTexts=new Array(maxPages).fill('');
+          var pageImages=[];
+          // Helper: compress a canvas to max 1920x1080 and return base64 jpeg
+          function compressCanvas(canvas){
+            var MAX_W=1920,MAX_H=1080;
+            var w=canvas.width,h=canvas.height;
+            var scale=Math.min(1,Math.min(MAX_W/w,MAX_H/h));
+            if(scale>=1)return canvas.toDataURL('image/jpeg',0.82);
+            var c2=document.createElement('canvas');
+            c2.width=Math.round(w*scale);c2.height=Math.round(h*scale);
+            c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+            return c2.toDataURL('image/jpeg',0.82);
+          }
+          function checkDone(){
+            if(pagesDone!==maxPages)return;
+            var allText2=pageTexts.join(' ').trim();
+            var charPerPage=allText2.length/maxPages;
+            // A page with <80 chars of selectable text is considered scanned/image-based
+            var isScanned=charPerPage<80;
+            if(needsRender&&isScanned&&pageImages.length){
+              // Pro: send images but AI is instructed to skip handwriting (in generate.js prompt)
+              // Elite: send images + AI processes everything including handwriting
+              window._pdfImages=pageImages;
+              setPdfTxt(allText2||'[scanned document]');
+              st('Scanned PDF detected — '+(tier==='elite'?'full visual processing (Elite)':'chart & table processing (Pro)')+' ready');
+            }else{
+              window._pdfImages=[];
+              if(!allText2){st('No text found in PDF');return;}
+              setPdfTxt(allText2);
+              st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
+            }
+          }
           for(var p=1;p<=maxPages;p++){
-            (function(pageNum){
+            (function(pageNum,pageIdx){
               pdf.getPage(pageNum).then(function(page){
+                // Always extract text
                 page.getTextContent().then(function(tc){
-                  allText+=tc.items.map(function(item){return item.str;}).join(' ')+' ';
-                  pagesDone++;
-                  if(pagesDone===maxPages){
-                    var t=allText.trim();
-                    if(!t){st('No text found — try a text-based PDF');return;}
-                    setPdfTxt(t);
-                    st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
-                  }
+                  pageTexts[pageIdx]=tc.items.map(function(item){return item.str;}).join(' ');
+                  if(!needsRender){pagesDone++;checkDone();}
                 });
+                // Render to canvas for paid users
+                if(needsRender){
+                  var vp=page.getViewport({scale:1.5});
+                  var canvas=document.createElement('canvas');
+                  canvas.width=vp.width;canvas.height=vp.height;
+                  page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise.then(function(){
+                    pageImages[pageIdx]=compressCanvas(canvas);
+                    pagesDone++;checkDone();
+                  }).catch(function(){pagesDone++;checkDone();});
+                }
               });
-            })(p);
+            })(p,p-1);
           }
         }).catch(function(err){st('Could not read PDF: '+err.message);});
       }).catch(function(){st('PDF library failed to load — check connection');});
@@ -2088,6 +2141,7 @@ function App(){
           text:txt.substring(0,getCharLimit()),
           topic:card.topic,
           existing_points:card.points,
+          access_token:loadToken()||undefined,
         }),
       });
       if(!r.ok){var ed=await r.json().catch(function(){return{};});throw new Error(ed.error||'Server error');}
