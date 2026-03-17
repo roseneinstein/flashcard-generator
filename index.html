@@ -1776,6 +1776,33 @@ function App(){
     var tier=getTier();
     // For paid users uploading a file, pass images if available (Elite scanned PDFs)
     var imgPayload=(isFile&&(tier==='pro'||tier==='elite')&&window._pdfImages&&window._pdfImages.length)?window._pdfImages:[];
+    // Safety check: if images exceed 3.8MB total (leaving room for text payload + headers)
+    // Re-compress at lower quality rather than dropping — preserves all pages
+    if(imgPayload.length){
+      var totalSize=imgPayload.reduce(function(sum,b64){return sum+(b64?b64.length:0);},0);
+      console.log('[CogniSwift] Image payload size: '+Math.round(totalSize/1024)+'KB across '+imgPayload.length+' pages');
+      if(totalSize>3.8*1024*1024){
+        // Re-compress at lower quality to fit — still readable by Grok
+        console.warn('[CogniSwift] Payload too large, re-compressing at 0.65 quality');
+        imgPayload=imgPayload.map(function(b64){
+          if(!b64)return b64;
+          var img=new Image();
+          img.src=b64;
+          var c=document.createElement('canvas');
+          c.width=img.width||800;c.height=img.height||1100;
+          c.getContext('2d').drawImage(img,0,0);
+          return c.toDataURL('image/jpeg',0.65);
+        });
+        var newSize=imgPayload.reduce(function(sum,b64){return sum+(b64?b64.length:0);},0);
+        console.log('[CogniSwift] Re-compressed size: '+Math.round(newSize/1024)+'KB');
+        // If still too large after recompression, drop images as last resort
+        if(newSize>4*1024*1024){
+          console.warn('[CogniSwift] Still too large after recompression — dropping images');
+          st('Document too large for visual processing — using extracted text only');
+          imgPayload=[];
+        }
+      }
+    }
     try{
       var res=await callAI(txt,cnt,null,{isFileUpload:isFile,images:imgPayload,summaryDepth:isElite()?summaryDepth:'standard'});
       setCards(res.flashcards||[]);setQuiz(res.quiz||[]);setTimeout(function(){pickDailyCard(res.flashcards||[]);},0);
@@ -1838,14 +1865,19 @@ function App(){
           var needsRender=(tier==='pro'||tier==='elite');
           var pageTexts=new Array(maxPages).fill('');
           var pageImages=[];
-          // Helper: compress a canvas to max 1920x1080 and return base64 jpeg
+          // Target: 800px wide (portrait A4 → ~1130px tall), JPEG quality 0.82
+          // Why 800px: sharp enough for Grok to read handwriting/tables/charts clearly
+          // (equivalent to a phone screenshot — all text legible)
+          // At ~110-140KB per page × 20 pages = ~2.5MB max, safely under Vercel 4.5MB limit
+          // All maxPages are sent — no page cap, full doc coverage
           function compressCanvas(canvas){
-            var MAX_W=1920,MAX_H=1080;
+            var TARGET_W=800;
             var w=canvas.width,h=canvas.height;
-            var scale=Math.min(1,Math.min(MAX_W/w,MAX_H/h));
-            if(scale>=1)return canvas.toDataURL('image/jpeg',0.82);
+            // Scale so width = TARGET_W (height scales proportionally — preserves aspect ratio)
+            var scale=TARGET_W/w;
             var c2=document.createElement('canvas');
-            c2.width=Math.round(w*scale);c2.height=Math.round(h*scale);
+            c2.width=TARGET_W;
+            c2.height=Math.round(h*scale);
             c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
             return c2.toDataURL('image/jpeg',0.82);
           }
@@ -1913,9 +1945,10 @@ function App(){
                   pageTexts[pageIdx]=tc.items.map(function(item){return item.str;}).join(' ');
                   if(!needsRender){pagesDone++;checkDone();}
                 });
-                // Render to canvas for paid users
+                // Render to canvas for paid users — all pages
+                // scale:1.2 gives good resolution for AI reading without oversizing
                 if(needsRender){
-                  var vp=page.getViewport({scale:1.5});
+                  var vp=page.getViewport({scale:1.2});
                   var canvas=document.createElement('canvas');
                   canvas.width=vp.width;canvas.height=vp.height;
                   page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise.then(function(){
