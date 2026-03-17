@@ -296,7 +296,10 @@ export default async function handler(req, res) {
   // File upload + free → Groq
   const usePaidModel = (isFileUpload === true) && (tier === 'pro' || tier === 'elite');
   const hasImages    = Array.isArray(images) && images.length > 0;
-  const sendImages   = (tier === 'elite') && hasImages; // only Elite gets vision
+  // Both Pro and Elite receive images — tier restriction is enforced inside the prompt
+  // Pro prompt: skip all handwriting, only use tables/charts/printed text
+  // Elite prompt: use everything including handwriting and diagrams
+  const sendImages = (tier === 'pro' || tier === 'elite') && hasImages;
 
   console.log('[CogniSwift] routing — usePaidModel:', usePaidModel, '| sendImages:', sendImages);
 
@@ -316,12 +319,12 @@ export default async function handler(req, res) {
         ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
         : `Return exactly ${count} flashcard objects.`;
 
-      // Tier-specific vision instruction
+      // Tier-specific vision instruction — strictly enforced in prompt
       const visionRule = sendImages
         ? (tier === 'elite'
-            ? `VISUAL PROCESSING (ELITE): Images of document pages are attached. Extract information from ALL visible content — text, tables, graphs, charts, handwritten notes, diagrams, flowcharts, equations, and any other visual element. Do not skip anything.`
-            : `VISUAL PROCESSING (PRO): Images of document pages are attached. Extract from text, tables, graphs, and charts only. Do NOT interpret handwritten content or hand-drawn diagrams.`)
-        : `Process the provided text carefully, paying close attention to any structured or tabular data.`;
+            ? `VISUAL PROCESSING — ELITE TIER: Document page images are attached. You MUST extract and use information from ALL visible content without exception: printed text, handwritten text, tables, graphs, charts, diagrams, flowcharts, equations, labels, annotations, and any other visual element. Treat handwritten content with equal importance to printed text.`
+            : `VISUAL PROCESSING — PRO TIER (STRICT RESTRICTION): Document page images are attached. You are ONLY permitted to extract information from: printed/typed text, tables, graphs, and charts. You MUST COMPLETELY IGNORE any handwritten content, hand-drawn diagrams, or informal sketches — do not read, transcribe, or use handwriting in any output. If a page appears to be entirely handwritten, skip it entirely and move to the next page.`)
+        : `Process the provided text carefully, paying close attention to any structured or tabular data, tables, and numerical information embedded in the text.`;
 
       // Full user message text
       const userText = `${langInstruction}
