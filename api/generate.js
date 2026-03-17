@@ -60,12 +60,23 @@ function isRateLimitGroq(status, errObj) {
 }
 
 function parseAndValidate(raw) {
+  const preview = raw ? raw.substring(0, 300) : '(empty)';
   raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
   const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
-  if (fi === -1 || la === -1) throw new Error('No JSON found in response');
+  if (fi === -1 || la === -1) {
+    console.error('[CogniSwift] parseAndValidate: No JSON braces found. Raw preview:', preview);
+    throw new Error('No JSON found in response');
+  }
   raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
-  const parsed = JSON.parse(raw);
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (jsonErr) {
+    console.error('[CogniSwift] parseAndValidate: JSON.parse failed:', jsonErr.message, '| Raw preview:', raw.substring(0, 400));
+    throw new Error('JSON parse error: ' + jsonErr.message);
+  }
   if (!Array.isArray(parsed.flashcards) || !Array.isArray(parsed.quiz) || !parsed.quiz.length) {
+    console.error('[CogniSwift] parseAndValidate: Bad shape. Keys present:', Object.keys(parsed).join(','), '| flashcards:', Array.isArray(parsed.flashcards) ? parsed.flashcards.length : 'NOT ARRAY', '| quiz:', Array.isArray(parsed.quiz) ? parsed.quiz.length : 'NOT ARRAY');
     throw new Error('Response shape invalid — missing flashcards or quiz array');
   }
   return parsed;
@@ -179,13 +190,30 @@ async function callGrok(messages, maxTokens) {
 
   const data = await response.json();
 
+  // Log full response structure for diagnosis
+  console.log('[CogniSwift] OpenRouter HTTP status:', response.status);
+  console.log('[CogniSwift] OpenRouter response keys:', Object.keys(data).join(','));
+
   if (data.error) {
-    console.error('[CogniSwift] OpenRouter/Grok error:', JSON.stringify(data.error));
-    throw new Error(data.error.message || JSON.stringify(data.error));
+    console.error('[CogniSwift] OpenRouter/Grok API error — status:', response.status, '| error:', JSON.stringify(data.error));
+    throw new Error('Grok API error (' + response.status + '): ' + (data.error.message || JSON.stringify(data.error)));
   }
 
-  const raw = (data.choices?.[0]?.message?.content || '').trim();
-  console.log('[CogniSwift] Grok response received, length:', raw.length);
+  if (!data.choices || !data.choices.length) {
+    console.error('[CogniSwift] OpenRouter: no choices in response. Full response:', JSON.stringify(data).substring(0, 500));
+    throw new Error('Grok returned no choices — possible content filter or empty response');
+  }
+
+  const finishReason = data.choices[0].finish_reason;
+  console.log('[CogniSwift] Grok finish_reason:', finishReason, '| usage:', JSON.stringify(data.usage || {}));
+
+  if (finishReason === 'length') {
+    console.error('[CogniSwift] Grok response TRUNCATED (finish_reason=length) — increase maxTokens or reduce input');
+    // Do not throw — try to parse what we got, padToCount will fix card count
+  }
+
+  const raw = (data.choices[0].message?.content || '').trim();
+  console.log('[CogniSwift] Grok raw response length (chars):', raw.length);
   return raw;
 }
 
@@ -369,9 +397,9 @@ ${inputText}`;
         { role: 'system', content: GROK_SYSTEM_PROMPT },
         { role: 'user',   content: userContent },
       ];
-      // Token budget: summary adds ~800-1500 tokens on top of cards+quiz
-      // Use generous limit — Grok 4.1 Fast supports 30k output, truncation causes parse failures
-      const maxTokens = Math.min(16000, 3000 + count * 150 + maxQuiz * 120);
+      // Token budget: cards (~150 tokens each) + quiz (~120 each) + summary (~2000) + JSON overhead
+      // Grok 4.1 Fast supports 30k output — be generous to avoid truncation causing parse failures
+      const maxTokens = Math.min(24000, 4000 + count * 200 + maxQuiz * 150);
 
       const raw    = await callGrok(messages, maxTokens);
       const parsed = parseAndValidate(raw);
@@ -384,13 +412,18 @@ ${inputText}`;
       return res.status(200).json(parsed);
 
     } catch (err) {
-      console.error('[CogniSwift] Grok path FAILED:', err.message, '— falling back to Groq');
-      // Log the specific error so it appears in Vercel function logs
-      // Fall through to Groq so paid users always get a result even if Grok fails
+      console.error('[CogniSwift] Grok path FAILED:', err.message);
+      // Return the real error to frontend instead of silently falling to Groq
+      // This makes debugging much easier — we can see the actual failure reason
+      return res.status(503).json({
+        error: 'AI processing failed: ' + err.message + '. Please try again or contact support if this persists.',
+        _debug_tier: tier,
+        _debug_isFileUpload: isFileUpload,
+      });
     }
   }
 
-  // ── FREE / FALLBACK PATH: Groq ────────────────────────────────────────────
+  // ── FREE / FALLBACK PATH: Groq (plain text paste for any tier, or free user file upload) ────
 
   const countNote = count > 15
     ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
@@ -453,6 +486,6 @@ ${inputText}`;
     return res.status(200).json(parsed);
 
   } catch (err) {
-    return res.status(503).json({ error: `Generation failed: ${err.message}` });
+    return res.status(503).json({ error: 'Generation failed: ' + err.message + '. Try again in a moment.' });
   }
 }
