@@ -1853,16 +1853,53 @@ function App(){
             if(pagesDone!==maxPages)return;
             var allText2=pageTexts.join(' ').trim();
             var charPerPage=allText2.length/maxPages;
-            // A page with <80 chars of selectable text is considered scanned/image-based
+            // A page averaging <80 selectable chars is considered image-based (scanned/handwritten/photo)
             var isScanned=charPerPage<80;
+
             if(needsRender&&isScanned&&pageImages.length){
-              // Pro: send images but AI is instructed to skip handwriting (in generate.js prompt)
-              // Elite: send images + AI processes everything including handwriting
-              window._pdfImages=pageImages;
-              setPdfTxt(allText2||'[scanned document]');
-              st('Scanned PDF detected — '+(tier==='elite'?'full visual processing (Elite)':'chart & table processing (Pro)')+' ready');
-            }else{
-              window._pdfImages=[];
+              // Scanned/image-based PDF detected
+              if(tier==='pro'){
+                // Pro cannot process handwritten docs at all.
+                // But we still need to handle mixed docs (some pages scanned, some text).
+                // Strategy: send images BUT mark as pro-vision so backend prompt
+                // strictly tells Grok to skip handwriting and only read tables/charts/printed text.
+                // If the ENTIRE doc appears to be handwritten (virtually zero text extracted),
+                // block it outright with a clear message.
+                var totalExtracted=allText2.replace(/\s/g,'').length;
+                if(totalExtracted<50){
+                  // Purely handwritten — block for Pro
+                  setFn('');setPdfTxt('');window._pdfImages=[];
+                  st('Handwritten docs require Elite tier. Pro supports printed text, tables, graphs & charts only.');
+                  return;
+                }
+                // Mixed doc (some scanned pages + some text) — send images, backend will skip handwriting
+                window._pdfImages=pageImages;
+                setPdfTxt(allText2||'[scanned document with text pages]');
+                st('PDF ready — tables & charts will be processed. Handwritten pages are an Elite feature and will be skipped.');
+              } else if(tier==='elite'){
+                // Elite: full visual processing — everything including handwriting
+                window._pdfImages=pageImages;
+                setPdfTxt(allText2||'[scanned document]');
+                st('Scanned PDF ready — full visual processing (Elite): handwriting, diagrams, tables & charts included.');
+              } else {
+                // Free tier: can't process scanned docs, no vision
+                window._pdfImages=[];
+                if(!allText2){
+                  st('Scanned/handwritten PDFs require Pro or Elite. Upgrade to process visual content.');
+                  return;
+                }
+                setPdfTxt(allText2);
+                st('Extracted '+maxPages+' pages. Note: scanned/visual content requires Pro or Elite.');
+              }
+            } else {
+              // Selectable text PDF (or typed/digital PDF)
+              // For paid users: still send images so Grok can see tables/charts/graphs
+              // embedded in the PDF pages — even if text is selectable, tables look better visually
+              if(needsRender&&pageImages.length){
+                window._pdfImages=pageImages;
+              } else {
+                window._pdfImages=[];
+              }
               if(!allText2){st('No text found in PDF');return;}
               setPdfTxt(allText2);
               st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
@@ -2086,6 +2123,19 @@ function App(){
     var text=card.topic+'. '+card.points.split('|').join('. ');
     var utt=new SpeechSynthesisUtterance(text);
     utt.rate=0.92;utt.pitch=1;
+    // Detect language from card content — Hindi if >30% Devanagari characters
+    var devaCount=(text.match(/[ऀ-ॿ]/g)||[]).length;
+    var letterCount=(text.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
+    var isHindiCard=letterCount>0&&(devaCount/letterCount)>0.3;
+    if(isHindiCard){
+      utt.lang='hi-IN';
+      // Try to find a Hindi voice if available
+      var voices=window.speechSynthesis.getVoices();
+      var hindiVoice=voices.find(function(v){return v.lang==='hi-IN'||v.lang==='hi';});
+      if(hindiVoice)utt.voice=hindiVoice;
+    } else {
+      utt.lang='en-IN';
+    }
     utt.onend=function(){setSpeaking(false);};
     utt.onerror=function(){setSpeaking(false);};
     window.speechSynthesis.speak(utt);
