@@ -149,23 +149,33 @@ async function callGrok(messages, maxTokens) {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (!openRouterKey) throw new Error('OPENROUTER_API_KEY not set in Vercel environment variables');
 
-  console.log('[CogniSwift] Calling Grok 4.1 Fast via OpenRouter');
+  console.log('[CogniSwift] Calling Grok 4.1 Fast via OpenRouter, maxTokens:', maxTokens);
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${openRouterKey}`,
-      'HTTP-Referer': 'https://cogniswift.in',
-      'X-Title': 'CogniSwift',
-    },
-    body: JSON.stringify({
-      model: 'x-ai/grok-4.1-fast',
-      max_tokens: maxTokens,
-      temperature: 0.15,
-      messages,
-    }),
-  });
+  // 55-second timeout — stays under Vercel's 60s function limit
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), 55000);
+
+  let response;
+  try {
+    response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openRouterKey}`,
+        'HTTP-Referer': 'https://cogniswift.in',
+        'X-Title': 'CogniSwift',
+      },
+      body: JSON.stringify({
+        model: 'x-ai/grok-4.1-fast',
+        max_tokens: maxTokens,
+        temperature: 0.15,
+        messages,
+      }),
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const data = await response.json();
 
@@ -323,7 +333,7 @@ export default async function handler(req, res) {
       const visionRule = sendImages
         ? (tier === 'elite'
             ? `VISUAL PROCESSING — ELITE TIER: Document page images are attached. You MUST extract and use information from ALL visible content without exception: printed text, handwritten text, tables, graphs, charts, diagrams, flowcharts, equations, labels, annotations, and any other visual element. Treat handwritten content with equal importance to printed text.`
-            : `VISUAL PROCESSING — PRO TIER (STRICT RESTRICTION): Document page images are attached. You are ONLY permitted to extract information from: printed/typed text, tables, graphs, and charts. You MUST COMPLETELY IGNORE any handwritten content, hand-drawn diagrams, or informal sketches — do not read, transcribe, or use handwriting in any output. If a page appears to be entirely handwritten, skip it entirely and move to the next page.`)
+            : `VISUAL PROCESSING — PRO TIER (STRICT RESTRICTIONS): Document page images are attached. You are ONLY permitted to extract information from: printed text, typed text, tables, data graphs, and data charts. You are STRICTLY FORBIDDEN from reading or using: handwritten text, hand-drawn diagrams, flowcharts, circuit diagrams, mind maps, sketches, or any informal illustrations. If a page is entirely or primarily made up of forbidden elements, skip it completely and do not reference it in your output.`)
         : `Process the provided text carefully, paying close attention to any structured or tabular data, tables, and numerical information embedded in the text.`;
 
       // Full user message text
@@ -359,7 +369,9 @@ ${inputText}`;
         { role: 'system', content: GROK_SYSTEM_PROMPT },
         { role: 'user',   content: userContent },
       ];
-      const maxTokens = Math.min(8000, 2000 + count * 100 + maxQuiz * 100);
+      // Token budget: summary adds ~800-1500 tokens on top of cards+quiz
+      // Use generous limit — Grok 4.1 Fast supports 30k output, truncation causes parse failures
+      const maxTokens = Math.min(16000, 3000 + count * 150 + maxQuiz * 120);
 
       const raw    = await callGrok(messages, maxTokens);
       const parsed = parseAndValidate(raw);
@@ -373,7 +385,8 @@ ${inputText}`;
 
     } catch (err) {
       console.error('[CogniSwift] Grok path FAILED:', err.message, '— falling back to Groq');
-      // Fall through to Groq below so paid users always get a result
+      // Log the specific error so it appears in Vercel function logs
+      // Fall through to Groq so paid users always get a result even if Grok fails
     }
   }
 
