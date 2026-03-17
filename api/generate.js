@@ -1,9 +1,11 @@
 // generate.js
 // Routing logic:
-//   - User pastes plain text (any tier)  → Groq (free tier models)
-//   - Free user uploads PDF/image        → Groq (text extraction only, no vision)
-//   - Pro user uploads PDF/image         → Grok 4.1 Fast via OpenRouter (text + tables/graphs/charts)
-//   - Elite user uploads PDF/image       → Grok 4.1 Fast via OpenRouter (full vision: handwriting, diagrams, flowcharts, everything)
+//   - User pastes plain text (ANY tier)   → Groq (free tier models, unchanged)
+//   - Free user uploads PDF               → Groq (text extraction only, no vision)
+//   - Pro user uploads PDF                → Grok 4.1 Fast via OpenRouter
+//                                            (text + tables + graphs + charts only)
+//   - Elite user uploads PDF/image        → Grok 4.1 Fast via OpenRouter
+//                                            (full vision: handwriting, diagrams, flowcharts, everything)
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -12,7 +14,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-// ─── Shared helper functions ───────────────────────────────────────────────
+// ─── Shared helper functions (unchanged from original) ─────────────────────
 
 function deduplicateTopics(flashcards) {
   const seen = {};
@@ -60,11 +62,11 @@ function isRateLimitGroq(status, errObj) {
 function parseAndValidate(raw) {
   raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
   const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
-  if (fi === -1 || la === -1) throw new Error('No JSON found');
+  if (fi === -1 || la === -1) throw new Error('No JSON found in response');
   raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
   const parsed = JSON.parse(raw);
   if (!Array.isArray(parsed.flashcards) || !Array.isArray(parsed.quiz) || !parsed.quiz.length) {
-    throw new Error('Response shape invalid');
+    throw new Error('Response shape invalid — missing flashcards or quiz array');
   }
   return parsed;
 }
@@ -75,77 +77,65 @@ function detectLanguage(inputText) {
   const isHindi = totalLetters > 0 && (devanagariChars / totalLetters) > 0.4;
   return isHindi
     ? `LANGUAGE RULE — CRITICAL: The source text is primarily in Hindi. You MUST write ALL output — every topic name, every point, every quiz question, every option, every explanation — entirely in Hindi (Devanagari script). Do NOT switch to English at any point, even for technical terms (transliterate them into Devanagari if needed).`
-    : `LANGUAGE RULE: Write all output in the same language as the source text. Preserve all technical terms, jargon, and domain-specific vocabulary exactly as they appear.`;
+    : `LANGUAGE RULE: Write all output in the same language as the source text. Preserve all technical terms, jargon, and domain-specific vocabulary exactly as they appear in the source.`;
 }
 
-// ─── SYSTEM PROMPT (static — gets cached by Grok 4.1 on OpenRouter) ────────
-// This never changes between requests, maximising prompt cache hits at $0.05/1M tokens.
+// ─── SYSTEM PROMPT — static, never changes → gets cached by OpenRouter ──────
+// Prompt caching kicks in after first request. Cached reads cost $0.05/1M vs $0.20/1M.
 
 const GROK_SYSTEM_PROMPT = `You are a world-class subject-matter expert and study material creator specialising in Indian competitive exams: UPSC, JEE, NEET, CA, SSC, GATE, and similar high-stakes examinations.
 
 Your sole job is to analyse the provided study material — which may include text, tables, graphs, charts, handwritten notes, diagrams, and flowcharts — and return a single, perfectly structured JSON object containing flashcards, a quiz, and a summary.
 
-═══════════════════════════════════════════════
 SECTION 1 — FLASHCARD RULES
-═══════════════════════════════════════════════
 
 TOPIC field:
-• Draw the topic name DIRECTLY from the content. Cover ALL topics present — do NOT focus only on the first topic.
-• Distribute flashcards PROPORTIONALLY across every topic in the material.
-• Every card must have a DISTINCT topic name.
-• If one concept genuinely needs two cards, append Roman numerals: "Photosynthesis (I)", "Photosynthesis (II)".
-• Topics must be SPECIFIC — NEVER use "Introduction", "Overview", "Miscellaneous".
-• Preserve technical terms, chemical names, statutory references, and jargon exactly.
+- Draw the topic name DIRECTLY from the content. Cover ALL topics present — do NOT focus only on the first topic.
+- Distribute flashcards PROPORTIONALLY across every topic in the material.
+- Every card must have a DISTINCT topic name.
+- If one concept genuinely needs two cards, append Roman numerals: "Photosynthesis (I)", "Photosynthesis (II)".
+- Topics must be SPECIFIC — NEVER use "Introduction", "Overview", "Miscellaneous".
+- Preserve technical terms, chemical names, statutory references, and jargon exactly.
 
-POINTS field (pipe-separated, 4–6 points per card):
-• Each point MUST state a SPECIFIC fact, figure, date, name, formula, provision, mechanism, or data value from the material.
-• BAD point: "It plays an important role in the economy." — NEVER write this.
-• GOOD point: "Article 44 of DPSP directs the state to secure a Uniform Civil Code for citizens."
-• Include exact numbers, percentages, years, chemical symbols, units, and statutory references wherever present.
-• Preserve ALL technical terms and jargon exactly as in the source.
-• From tables: capture row/column relationships as factual statements.
-• From graphs/charts: capture trend direction, peak values, comparative figures, axis labels, and units.
-• From diagrams/flowcharts: capture the sequence, components, and relationships shown.
-• Points separated by " | " (space-pipe-space). No newlines inside the points string.
+POINTS field (pipe-separated, 4-6 points per card):
+- Each point MUST state a SPECIFIC fact, figure, date, name, formula, provision, mechanism, or data value from the material.
+- BAD point: "It plays an important role in the economy." — NEVER write this.
+- GOOD point: "Article 44 of DPSP directs the state to secure a Uniform Civil Code for citizens."
+- Include exact numbers, percentages, years, chemical symbols, units, and statutory references wherever present.
+- Preserve ALL technical terms and jargon exactly as in the source.
+- From tables: capture row/column relationships as factual statements.
+- From graphs/charts: capture trend direction, peak values, comparative figures, axis labels, and units.
+- From diagrams/flowcharts: capture the sequence, components, and relationships shown.
+- Points separated by " | " (space-pipe-space). No newlines inside the points string.
 
-═══════════════════════════════════════════════
 SECTION 2 — QUIZ RULES
-═══════════════════════════════════════════════
 
-• Generate EXACTLY the number of quiz questions specified in the user prompt. This is a hard requirement — count them before outputting.
-• Cover ALL topics proportionally — do not over-represent any single topic.
-• Test SPECIFIC facts from the material only — no generic knowledge questions.
-• Each question must have EXACTLY 4 options (A, B, C, D).
-• Distractors must be plausible alternatives from the same domain — not obviously wrong.
-• The "correct" field is an integer 0–3 (0=A, 1=B, 2=C, 3=D).
-• Explanation: state why the correct answer is right AND why the most tempting wrong option is wrong.
-• Questions from tables/graphs/charts must reference specific data points, trends, or values shown.
+- Generate EXACTLY the number of quiz questions specified in the user message. Hard requirement — count before outputting.
+- Cover ALL topics proportionally — do not over-represent any single topic.
+- Test SPECIFIC facts from the material only — no generic knowledge questions.
+- Each question must have EXACTLY 4 options (A, B, C, D).
+- Distractors must be plausible alternatives from the same domain — not obviously wrong.
+- The "correct" field is an integer 0-3 (0=A, 1=B, 2=C, 3=D).
+- Explanation: state why the correct answer is right AND why the most tempting wrong option is wrong.
+- Questions from tables/graphs/charts must reference specific data points, trends, or values shown.
 
-═══════════════════════════════════════════════
 SECTION 3 — SUMMARY RULES
-═══════════════════════════════════════════════
 
-• Title: maximum 8 words, captures the core subject.
-• Sections: each section has a heading (3–6 words) and an array of bullet points.
-• Each bullet point = one complete, specific fact with numbers/names/dates where available.
-• Coverage: every major topic in the material must appear in at least one section.
-• Depth is controlled by the user prompt — follow the section/bullet count specified there exactly.
+- Title: maximum 8 words, captures the core subject.
+- Sections: each section has a heading (3-6 words) and an array of bullet points.
+- Each bullet point = one complete, specific fact with numbers/names/dates where available.
+- Coverage: every major topic in the material must appear in at least one section.
+- Depth is controlled by the user message — follow the section/bullet count specified there exactly.
 
-═══════════════════════════════════════════════
 SECTION 4 — JSON FORMAT (STRICT)
-═══════════════════════════════════════════════
 
 Return ONLY a valid JSON object. No markdown. No code fences. No explanation. Nothing before or after the JSON.
 
 Schema:
-{
-  "flashcards": [{"topic": "string", "points": "string"}],
-  "quiz": [{"question": "string", "options": ["string","string","string","string"], "correct": 0, "explanation": "string"}],
-  "summary": {"title": "string", "sections": [{"heading": "string", "points": ["string"]}]}
-}
+{"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}],"summary":{"title":"string","sections":[{"heading":"string","points":["string"]}]}}
 
-Strict formatting rules:
-1. Every string on ONE line — absolutely no newlines or tabs inside any string value.
+Rules:
+1. Every string on ONE line — no newlines or tabs inside any string value.
 2. Points field: pipe-separated " | " (space pipe space).
 3. NO double-quote characters inside string values — rephrase to avoid them.
 4. NO trailing commas anywhere.
@@ -155,38 +145,11 @@ Strict formatting rules:
 
 // ─── Grok 4.1 Fast via OpenRouter ──────────────────────────────────────────
 
-async function callGrok(userMessageContent, count, maxQuiz, summaryDepth) {
+async function callGrok(messages, maxTokens) {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
-  if (!openRouterKey) throw new Error('OpenRouter API key not configured');
+  if (!openRouterKey) throw new Error('OPENROUTER_API_KEY not set in Vercel environment variables');
 
-  const depthInstructions = {
-    concise:     '3–4 sections, 2–3 bullet points each',
-    standard:    '4–6 sections, 3–5 bullet points each',
-    detailed:    '5–7 sections, 4–6 bullet points each',
-    'deep dive': '6–8 sections, 5–7 bullet points each',
-  };
-  const depthNote = depthInstructions[summaryDepth] || depthInstructions.standard;
-
-  const countNote = count > 15
-    ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
-    : `Return exactly ${count} flashcard objects.`;
-
-  const userInstruction = `TASK PARAMETERS:
-• Flashcards: ${countNote}
-• Quiz: Generate EXACTLY ${maxQuiz} quiz questions — count before outputting.
-• Summary depth: ${depthNote}
-
-Now analyse the study material below and return the JSON object.`;
-
-  // userMessageContent is either a string (text) or an array (multimodal with images)
-  const userContent = typeof userMessageContent === 'string'
-    ? `${userInstruction}\n\nStudy material:\n${userMessageContent}`
-    : [
-        { type: 'text', text: userInstruction + '\n\nStudy material:' },
-        ...userMessageContent,
-      ];
-
-  const maxTokens = Math.min(8000, 2000 + count * 100 + maxQuiz * 100);
+  console.log('[CogniSwift] Calling Grok 4.1 Fast via OpenRouter');
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -197,29 +160,31 @@ Now analyse the study material below and return the JSON object.`;
       'X-Title': 'CogniSwift',
     },
     body: JSON.stringify({
-      model: 'x-ai/grok-4-1-fast',
+      model: 'x-ai/grok-4.1-fast',
       max_tokens: maxTokens,
       temperature: 0.15,
-      messages: [
-        { role: 'system', content: GROK_SYSTEM_PROMPT },
-        { role: 'user',   content: userContent },
-      ],
+      messages,
     }),
   });
 
   const data = await response.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+  if (data.error) {
+    console.error('[CogniSwift] OpenRouter/Grok error:', JSON.stringify(data.error));
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
 
   const raw = (data.choices?.[0]?.message?.content || '').trim();
+  console.log('[CogniSwift] Grok response received, length:', raw.length);
   return raw;
 }
 
-// ─── Groq fallback chain (free tier / plain text) ──────────────────────────
+// ─── Groq fallback chain (free tier / plain text for all tiers) ───────────
 
 async function callGroq(prompt) {
   const apiKey  = process.env.GROQ_API_KEY;
   const apiKey2 = process.env.GROQ_API_KEY_2;
-  if (!apiKey) throw new Error('Groq API key not configured');
+  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
 
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
@@ -238,6 +203,7 @@ async function callGroq(prompt) {
 
   for (const { key, model } of attempts) {
     try {
+      console.log('[CogniSwift] Trying Groq model:', model);
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
@@ -253,12 +219,14 @@ async function callGroq(prompt) {
       const data = await groqRes.json();
       if (data.error) {
         lastError = data.error.message || JSON.stringify(data.error);
+        console.warn('[CogniSwift] Groq error on', model, ':', lastError);
         if (isRateLimitGroq(groqRes.status, data.error)) continue;
         if (groqRes.status === 401 || groqRes.status === 403)
           throw new Error('Invalid Groq API key');
         continue;
       }
 
+      console.log('[CogniSwift] Groq success on model:', model);
       return (data.choices?.[0]?.message?.content || '').trim();
 
     } catch (err) {
@@ -278,15 +246,15 @@ export default async function handler(req, res) {
   const {
     text,           // extracted text (always present)
     count,          // number of flashcards requested
-    images,         // array of base64 image strings (Elite/Pro PDF pages) — optional
-    isFileUpload,   // boolean: true = came from PDF/image upload, false = plain text paste
-    summaryDepth,   // 'concise'|'standard'|'detailed'|'deep dive' — Elite only, defaults standard
-    access_token,   // user's Supabase auth token — needed to determine tier
+    images,         // base64 image array — only for Elite scanned PDFs
+    isFileUpload,   // boolean: true = PDF upload, false = plain text paste
+    summaryDepth,   // 'concise'|'standard'|'detailed'|'deep dive' — Elite only
+    access_token,   // Supabase auth token — used to look up tier in DB
   } = req.body;
 
   if (!text || !count) return res.status(400).json({ error: 'Missing text or count' });
 
-  // ── Determine user tier ──────────────────────────────────────────────────
+  // ── Determine user tier from DB ──────────────────────────────────────────
   let tier = 'free';
   if (access_token) {
     try {
@@ -298,7 +266,6 @@ export default async function handler(req, res) {
           .eq('id', user.id)
           .single();
         if (dbUser?.tier && dbUser.tier !== 'free') {
-          // Safety check: confirm subscription hasn't expired
           const expiry = dbUser.sub_expiry ? new Date(dbUser.sub_expiry) : null;
           if (!expiry || expiry.getTime() > Date.now()) {
             tier = dbUser.tier; // 'pro' or 'elite'
@@ -306,91 +273,108 @@ export default async function handler(req, res) {
         }
       }
     } catch (_) {
-      // If tier check fails, fall back to free — never error out the user
+      // Tier check failed — fall back to free safely
     }
   }
+
+  console.log('[CogniSwift] generate — tier:', tier, '| isFileUpload:', isFileUpload, '| images:', Array.isArray(images) ? images.length : 0);
 
   // ── Input length caps by tier ────────────────────────────────────────────
   const charLimit = tier === 'elite' ? 30000 : tier === 'pro' ? 20000 : 6000;
   const inputText = text.substring(0, charLimit);
   const wordCount = inputText.split(/\s+/).filter(Boolean).length;
 
-  // ── Quiz count scales with content size ─────────────────────────────────
+  // ── Quiz count scales with content (same as original) ────────────────────
   const maxQuiz = wordCount < 400 ? 5 : wordCount < 900 ? 10 : 20;
 
-  // ── Language detection (same logic as before) ────────────────────────────
+  // ── Language detection (same as original) ────────────────────────────────
   const langInstruction = detectLanguage(inputText);
 
-  // ── Decide routing ───────────────────────────────────────────────────────
-  // Plain text paste → always Groq regardless of tier
-  // File upload + paid tier → Grok 4.1
-  // File upload + free tier → Groq (text only)
-  const usePaidModel = isFileUpload && (tier === 'pro' || tier === 'elite');
+  // ── Routing decision ─────────────────────────────────────────────────────
+  // Plain text paste → ALWAYS Groq (any tier — fast, free, good enough for text)
+  // File upload + paid → Grok 4.1 Fast
+  // File upload + free → Groq
+  const usePaidModel = (isFileUpload === true) && (tier === 'pro' || tier === 'elite');
+  const hasImages    = Array.isArray(images) && images.length > 0;
+  const sendImages   = (tier === 'elite') && hasImages; // only Elite gets vision
 
-  // ── Images: only used for Elite when provided ────────────────────────────
-  // Pro gets Grok but text-only (no image bytes sent — AI still processes
-  // tables/charts from the extracted text which PDF.js captures well)
-  // Elite gets images when the PDF has non-selectable/scanned pages
-  const hasImages = Array.isArray(images) && images.length > 0;
-  const sendImages = tier === 'elite' && hasImages;
+  console.log('[CogniSwift] routing — usePaidModel:', usePaidModel, '| sendImages:', sendImages);
 
-  // ── PAID PATH: Grok 4.1 Fast via OpenRouter ─────────────────────────────
+  // ── PAID PATH: Grok 4.1 Fast ─────────────────────────────────────────────
   if (usePaidModel) {
     try {
-      // Vision instruction varies by tier
-      const visionRule = sendImages
-        ? (tier === 'elite'
-            ? `VISUAL PROCESSING RULE: This material contains images of document pages. You MUST analyse ALL visual content — text, tables, graphs, charts, handwritten notes, diagrams, flowcharts, equations, and any other visual element. Extract every piece of information visible.`
-            : `VISUAL PROCESSING RULE: This material contains images of document pages. Process text, tables, graphs, and charts only. Do NOT attempt to interpret handwritten content or informal diagrams.`)
-        : `VISUAL PROCESSING RULE: Process the provided text content. Pay special attention to any tabular data, numerical data, or structured information — treat it with the same rigour as visual tables and charts.`;
+      const depthMap = {
+        concise:     '3-4 sections, 2-3 bullet points each',
+        standard:    '4-6 sections, 3-5 bullet points each',
+        detailed:    '5-7 sections, 4-6 bullet points each',
+        'deep dive': '6-8 sections, 5-7 bullet points each',
+      };
+      const resolvedDepth = (tier === 'elite' && summaryDepth) ? summaryDepth : 'standard';
+      const depthNote     = depthMap[resolvedDepth] || depthMap.standard;
 
       const countNote = count > 15
-        ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding.`
+        ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
         : `Return exactly ${count} flashcard objects.`;
 
-      // Build user message content
-      let userMessageContent;
+      // Tier-specific vision instruction
+      const visionRule = sendImages
+        ? (tier === 'elite'
+            ? `VISUAL PROCESSING (ELITE): Images of document pages are attached. Extract information from ALL visible content — text, tables, graphs, charts, handwritten notes, diagrams, flowcharts, equations, and any other visual element. Do not skip anything.`
+            : `VISUAL PROCESSING (PRO): Images of document pages are attached. Extract from text, tables, graphs, and charts only. Do NOT interpret handwritten content or hand-drawn diagrams.`)
+        : `Process the provided text carefully, paying close attention to any structured or tabular data.`;
 
+      // Full user message text
+      const userText = `${langInstruction}
+
+${visionRule}
+
+TASK PARAMETERS:
+- Flashcards: ${countNote}
+- Quiz: Generate EXACTLY ${maxQuiz} questions — count before outputting.
+- Summary depth: ${depthNote}
+
+Study material:
+${inputText}`;
+
+      // Build messages — multimodal if Elite + scanned images, text-only otherwise
+      let userContent;
       if (sendImages) {
-        // Multimodal: text instruction + image pages
         const imageBlocks = images.map(b64 => ({
           type: 'image_url',
-          image_url: {
-            url: b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`,
-          },
+          image_url: { url: b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}` },
         }));
-        userMessageContent = [
-          {
-            type: 'text',
-            text: `${langInstruction}\n\n${visionRule}\n\nFlashcard count: ${countNote}\nQuiz count: EXACTLY ${maxQuiz} questions.\nSummary depth: ${(summaryDepth && tier === 'elite') ? summaryDepth : 'standard'}.`,
-          },
+        userContent = [
+          { type: 'text', text: userText },
           ...imageBlocks,
-          // Also include extracted text as additional context
-          { type: 'text', text: `Extracted text from document (use alongside images):\n${inputText}` },
+          { type: 'text', text: `The images above are the document pages. Extracted text (may be partial for scanned docs — use images as primary source):\n${inputText}` },
         ];
       } else {
-        // Text only (Pro, or Elite with fully selectable PDF)
-        userMessageContent = `${langInstruction}\n\n${visionRule}\n\nFlashcard count: ${countNote}\nQuiz count: EXACTLY ${maxQuiz} questions.\nSummary depth: ${(summaryDepth && tier === 'elite') ? summaryDepth : 'standard'}.\n\nStudy material:\n${inputText}`;
+        userContent = userText;
       }
 
-      const raw = await callGrok(userMessageContent, count, maxQuiz, (summaryDepth && tier === 'elite') ? summaryDepth : 'standard');
+      const messages  = [
+        { role: 'system', content: GROK_SYSTEM_PROMPT },
+        { role: 'user',   content: userContent },
+      ];
+      const maxTokens = Math.min(8000, 2000 + count * 100 + maxQuiz * 100);
+
+      const raw    = await callGrok(messages, maxTokens);
       const parsed = parseAndValidate(raw);
 
       parsed.flashcards = deduplicateTopics(parsed.flashcards);
       parsed.flashcards = padToCount(parsed.flashcards, count);
-      parsed.quiz = parsed.quiz.slice(0, maxQuiz);
-      // summary is included in parsed from Grok response
+      parsed.quiz       = parsed.quiz.slice(0, maxQuiz);
 
+      console.log('[CogniSwift] Grok path SUCCESS — cards:', parsed.flashcards.length, '| quiz:', parsed.quiz.length, '| has summary:', !!parsed.summary);
       return res.status(200).json(parsed);
 
     } catch (err) {
-      // If Grok fails for any reason, fall through to Groq as safety net
-      // (so paid users are never left with a broken experience)
-      console.error('Grok error, falling back to Groq:', err.message);
+      console.error('[CogniSwift] Grok path FAILED:', err.message, '— falling back to Groq');
+      // Fall through to Groq below so paid users always get a result
     }
   }
 
-  // ── FREE PATH (or fallback): Groq ────────────────────────────────────────
+  // ── FREE / FALLBACK PATH: Groq ────────────────────────────────────────────
 
   const countNote = count > 15
     ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
@@ -442,12 +426,13 @@ Study notes:
 ${inputText}`;
 
   try {
-    const raw = await callGroq(groqPrompt);
+    console.log('[CogniSwift] Using Groq — tier:', tier, '| isFileUpload:', isFileUpload);
+    const raw    = await callGroq(groqPrompt);
     const parsed = parseAndValidate(raw);
 
     parsed.flashcards = deduplicateTopics(parsed.flashcards);
     parsed.flashcards = padToCount(parsed.flashcards, count);
-    parsed.quiz = parsed.quiz.slice(0, maxQuiz);
+    parsed.quiz       = parsed.quiz.slice(0, maxQuiz);
 
     return res.status(200).json(parsed);
 
