@@ -1,8 +1,8 @@
 // regen-card.js
 // Regenerates a single flashcard on the same topic with fresh points.
 // Routing:
-//   Free user or plain text → Groq
-//   Pro/Elite user          → Grok 4.1 Fast via OpenRouter (better accuracy)
+//   Free user  → Groq (unchanged)
+//   Pro/Elite  → Grok 4.1 Fast via OpenRouter (better accuracy, same topic lock)
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -40,13 +40,15 @@ export default async function handler(req, res) {
     }
   }
 
+  console.log('[CogniSwift] regen-card — tier:', tier, '| topic:', topic);
+
   const inputText = text.substring(0, 6000);
 
-  const basePrompt = (modelType) => `You are a subject-matter expert creating revision flashcards for Indian competitive exam students.
+  const prompt = `You are a subject-matter expert creating revision flashcards for Indian competitive exam students.
 
-A student wants a FRESH version of one flashcard. The topic is fixed — you must NOT change it. The points must be DIFFERENT from the existing ones — cover other facts, details, or angles on the same topic from the source text.
+A student wants a FRESH version of one flashcard. The topic is fixed — do NOT change it. The points must be DIFFERENT from the existing ones — cover other facts, details, or angles on the same topic from the source text.
 
-${modelType === 'grok' ? `Preserve all technical terms, jargon, formulas, and domain-specific vocabulary exactly as they appear in the source. Include specific figures, dates, percentages, and named references.` : ''}
+Preserve all technical terms, jargon, formulas, and domain-specific vocabulary exactly as they appear in the source. Include specific figures, dates, percentages, and named references wherever possible.
 
 TOPIC (do not change): "${topic}"
 
@@ -61,10 +63,10 @@ Return ONLY a valid JSON object — no markdown, no explanation:
 
 RULES:
 - Keep the exact same topic string
-- Write 4–6 points, pipe-separated " | "
+- Write 4-6 points, pipe-separated " | "
 - Each point must be a SPECIFIC fact, figure, date, name, formula, or provision from the source text
 - Do NOT repeat any point from the existing points above
-- If the source text has no more distinct facts on this topic, rephrase the most important existing ones completely
+- If no more distinct facts exist on this topic, rephrase the most important existing ones completely
 - Every string on ONE line — no newlines inside any string
 - NO double-quote characters inside string values`;
 
@@ -72,7 +74,9 @@ RULES:
   if (tier === 'pro' || tier === 'elite') {
     try {
       const openRouterKey = process.env.OPENROUTER_API_KEY;
-      if (!openRouterKey) throw new Error('OpenRouter key not configured');
+      if (!openRouterKey) throw new Error('OPENROUTER_API_KEY not set');
+
+      console.log('[CogniSwift] regen-card calling Grok 4.1 Fast');
 
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -83,17 +87,19 @@ RULES:
           'X-Title': 'CogniSwift',
         },
         body: JSON.stringify({
-          model: 'x-ai/grok-4-1-fast',
+          model: 'x-ai/grok-4.1-fast',
           max_tokens: 600,
           temperature: 0.3,
-          messages: [
-            { role: 'user', content: basePrompt('grok') },
-          ],
+          messages: [{ role: 'user', content: prompt }],
         }),
       });
 
       const data = await response.json();
-      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+      if (data.error) {
+        console.error('[CogniSwift] regen-card Grok error:', JSON.stringify(data.error));
+        throw new Error(data.error.message || JSON.stringify(data.error));
+      }
 
       let raw = (data.choices?.[0]?.message?.content || '').trim();
       raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
@@ -104,15 +110,16 @@ RULES:
       const parsed = JSON.parse(raw);
       if (!parsed.topic || !parsed.points) throw new Error('Bad response shape from Grok');
 
+      console.log('[CogniSwift] regen-card Grok SUCCESS');
       return res.status(200).json({ topic: parsed.topic, points: parsed.points });
 
     } catch (err) {
-      console.error('Grok regen error, falling back to Groq:', err.message);
-      // Fall through to Groq below
+      console.error('[CogniSwift] regen-card Grok FAILED:', err.message, '— falling back to Groq');
+      // Fall through to Groq
     }
   }
 
-  // ── FREE PATH (or fallback): Groq ────────────────────────────────────────
+  // ── FREE / FALLBACK PATH: Groq ────────────────────────────────────────────
   const apiKey  = process.env.GROQ_API_KEY;
   const apiKey2 = process.env.GROQ_API_KEY_2;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
@@ -138,6 +145,7 @@ RULES:
 
   for (const { key, model } of attempts) {
     try {
+      console.log('[CogniSwift] regen-card trying Groq model:', model);
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
@@ -145,7 +153,7 @@ RULES:
           model,
           max_tokens: 500,
           temperature: 0.3,
-          messages: [{ role: 'user', content: basePrompt('groq') }],
+          messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' },
         }),
       });
@@ -166,6 +174,7 @@ RULES:
       const parsed = JSON.parse(raw);
       if (!parsed.topic || !parsed.points) { lastError = 'Bad shape'; continue; }
 
+      console.log('[CogniSwift] regen-card Groq SUCCESS on model:', model);
       return res.status(200).json({ topic: parsed.topic, points: parsed.points });
 
     } catch (err) {
