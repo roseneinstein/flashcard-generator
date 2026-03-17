@@ -16,5 +16,19 @@
         { "key": "Content-Type", "value": "application/manifest+json" }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/generate.js":           { "maxDuration": 60 },
+    "api/regen-card.js":         { "maxDuration": 60 },
+    "api/summary.js":            { "maxDuration": 30 },
+    "api/auth.js":               { "maxDuration": 15 },
+    "api/subscribe.js":          { "maxDuration": 15 },
+    "api/verify-payment.js":     { "maxDuration": 15 },
+    "api/webhook.js":            { "maxDuration": 15 },
+    "api/order.js":              { "maxDuration": 15 },
+    "api/cancel-subscription.js":{ "maxDuration": 15 },
+    "api/data.js":               { "maxDuration": 15 },
+    "api/share.js":              { "maxDuration": 15 },
+    "api/s/[id].js":             { "maxDuration": 15 }
+  }
 }
