@@ -885,6 +885,9 @@ const CFG={
   PRO_CHARS:20000,
   ELITE_CHARS:30000,
   SUPABASE_URL:'https://vnbseesmppljppranukb.supabase.co',
+  // Cloudflare Worker URL for Elite PDF uploads (no payload size limit)
+  // Replace WORKER_URL_HERE with your actual Worker URL after deploying
+  WORKER_URL:'WORKER_URL_HERE',
 };
 
 // ── Auth helpers (no Supabase JS SDK needed) ──
@@ -966,8 +969,28 @@ async function callSummary(text,depth){
 async function callAI(text,count,quizCount,opts){
   opts=opts||{};
   var charLimit=getCharLimit();
+  var tier=getTier();
+  var isEliteFileUpload=opts.isFileUpload&&tier==='elite';
   var body={text:text.substring(0,charLimit),count:count,quizCount:quizCount||null,isFileUpload:opts.isFileUpload||false,summaryDepth:opts.summaryDepth||'standard',access_token:loadToken()||undefined};
   if(opts.images&&opts.images.length)body.images=opts.images;
+
+  // Elite file uploads → Cloudflare Worker (no payload size limit, handles 50 pages)
+  // Everything else → Vercel (unchanged)
+  if(isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE'){
+    try{
+      console.log('[CogniSwift] Routing Elite PDF to Cloudflare Worker');
+      var wr=await fetch(CFG.WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(!wr.ok){var werr=await wr.json().catch(function(){return{};});throw new Error(werr.error||'Worker error '+wr.status);}
+      return wr.json();
+    }catch(workerErr){
+      // Cloudflare Worker failed — fall back to Vercel (handles up to 20 pages)
+      console.warn('[CogniSwift] Cloudflare Worker failed:',workerErr.message,'— falling back to Vercel (20 page limit applies)');
+      // Trim images to stay under Vercel 4.5MB limit for fallback
+      if(body.images&&body.images.length>10)body.images=body.images.slice(0,10);
+    }
+  }
+
+  // Vercel path (all non-Elite-file-upload cases, and fallback)
   var r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
@@ -1855,9 +1878,12 @@ function App(){
       loadLib.then(function(){
         var typedArray=new Uint8Array(ev.target.result);
         window.pdfjsLib.getDocument({data:typedArray}).promise.then(function(pdf){
-          // Hard limit: 20 pages max
-          var maxPages=Math.min(pdf.numPages,20);
-          if(pdf.numPages>20)st('PDF has '+pdf.numPages+' pages — processing first 20 only');
+          // Page limits by tier: Elite = 50, Pro/Free = 20
+          var elitePageLimit=50;
+          var stdPageLimit=20;
+          var pageLimit=(tier==='elite')?elitePageLimit:stdPageLimit;
+          var maxPages=Math.min(pdf.numPages,pageLimit);
+          if(pdf.numPages>pageLimit)st('PDF has '+pdf.numPages+' pages — processing first '+pageLimit+' pages ('+(tier==='elite'?'Elite limit':'upgrade to Elite for 50 pages')+')');
           var allText='',pagesDone=0;
           var tier=getTier();
           // We render pages as images only for Pro/Elite — to detect scanned PDFs
