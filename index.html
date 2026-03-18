@@ -974,31 +974,27 @@ async function callAI(text,count,quizCount,opts){
   var body={text:text.substring(0,charLimit),count:count,quizCount:quizCount||null,isFileUpload:opts.isFileUpload||false,summaryDepth:opts.summaryDepth||'standard',access_token:loadToken()||undefined};
   if(opts.images&&opts.images.length)body.images=opts.images;
 
-  // Route to Cloudflare Worker when:
-  //   - Elite file upload (any PDF — 50 page limit, full vision)
-  //   - Pro file upload route B (scanned PDF, <70% selectable — needs vision)
-  // Route to Vercel when:
-  //   - Pro file upload route A (>70% selectable — text only, fast)
-  //   - Any text paste (any tier — always Groq via Vercel)
-  //   - Free file upload (always Vercel → Groq)
-  var isPaidFileUpload=opts.isFileUpload&&(tier==='elite'||tier==='pro');
-  var needsWorker=isPaidFileUpload&&opts.useWorker&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE';
+  // ── Routing — clean and simple ──────────────────────────────────────────
+  // Elite file upload → Cloudflare Worker → Grok 4.1 (full vision, all visuals)
+  // Everything else  → Vercel → Groq free tier (text paste any tier, free/pro PDF)
+  var isEliteFileUpload=opts.isFileUpload&&tier==='elite';
+  var needsWorker=isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE';
+
   if(needsWorker){
     try{
-      console.log('[CogniSwift] Routing to Cloudflare Worker — tier:',tier,'| images:',body.images?body.images.length:0);
+      console.log('[CogniSwift] Elite PDF → Cloudflare Worker → Grok 4.1 | images:',body.images?body.images.length:0);
       var wr=await fetch(CFG.WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       if(!wr.ok){var werr=await wr.json().catch(function(){return{};});throw new Error(werr.error||'Worker error '+wr.status);}
       return wr.json();
     }catch(workerErr){
-      // Worker failed — fall back to Vercel
-      // For Elite: trim images to 10 max to stay under 4.5MB Vercel limit
-      // For Pro route B: drop images entirely (no images = text-only Grok call, still works)
+      // Worker failed — fall back to Vercel (Grok call, may timeout on very large docs)
       console.warn('[CogniSwift] Worker failed:',workerErr.message,'— falling back to Vercel');
+      // Trim images to stay under Vercel 4.5MB payload limit
       if(body.images&&body.images.length>10)body.images=body.images.slice(0,10);
     }
   }
 
-  // Vercel path (all non-Elite-file-upload cases, and fallback)
+  // Vercel → Groq (all non-Elite-file-upload cases, and Elite fallback)
   var r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
@@ -1805,9 +1801,9 @@ function App(){
     setLoading(true);setCards([]);setQuiz([]);setSummary(null);setSumLoad(true);
     var isFile=itab==='pdf'; // true only when coming from PDF upload tab
     var tier=getTier();
-    // For paid users uploading a file, pass images if available (Elite scanned PDFs)
-    var imgPayload=(isFile&&(tier==='pro'||tier==='elite')&&window._pdfImages&&window._pdfImages.length)?window._pdfImages:[];
-    var useWorker=isFile&&!!(window._pdfUseWorker); // set by hFile based on 70% threshold
+    // Images only sent for Elite file uploads (Pro and Free use text-only Groq)
+    var imgPayload=(isFile&&tier==='elite'&&window._pdfImages&&window._pdfImages.length)?window._pdfImages:[];
+    var useWorker=false; // routing decision now made inside callAI based on tier
     // Safety check: if images exceed 3.8MB total (leaving room for text payload + headers)
     // Re-compress at lower quality rather than dropping — preserves all pages
     if(imgPayload.length){
@@ -1902,7 +1898,7 @@ function App(){
           var allText='',pagesDone=0;
           // We render pages as images only for Pro/Elite — to detect scanned PDFs
           // and for Elite to send visuals to Grok
-          var needsRender=(tier==='pro'||tier==='elite');
+          var needsRender=(tier==='elite'); // only Elite renders page images — Pro uses text only
           var pageTexts=new Array(maxPages).fill('');
           var pageImages=[];
           // Target: 800px wide (portrait A4 → ~1130px tall), JPEG quality 0.82
@@ -1925,62 +1921,33 @@ function App(){
             if(pagesDone!==maxPages)return;
             var allText2=pageTexts.join(' ').trim();
 
-            // ── Selectability score ─────────────────────────────────────────
-            // Total possible chars if fully selectable: rough estimate = pages × 1500 chars/page
-            // We compare actual extracted chars to this to get a % selectability
-            var estimatedMaxChars=maxPages*1500;
-            var extractedChars=allText2.replace(/\s/g,'').length;
-            var selectPct=Math.min(100,Math.round((extractedChars/estimatedMaxChars)*100));
-            var routeA=selectPct>=70; // route A: >70% selectable → text only
-            var routeB=!routeA;       // route B: <70% selectable → images needed
+            console.log('[CogniSwift] PDF processed — tier:',tier,'| extracted chars:',allText2.length,'| images:',pageImages.filter(Boolean).length);
 
-            console.log('[CogniSwift] PDF selectability:',selectPct+'%','→ route '+(routeA?'A (text only)':'B (vision needed)'));
+            if(tier==='elite'){
+              // Elite → Cloudflare Worker → Grok 4.1 — full vision, everything
+              // Always send all page images regardless of selectability
+              // Always provide non-empty text (placeholder if fully handwritten/scanned)
+              window._pdfImages=pageImages.filter(Boolean);
+              window._pdfUseWorker=true;
+              setPdfTxt(allText2||'[document — use images as primary source]');
+              st('PDF ready — full visual processing (Elite): text, handwriting, diagrams, tables & charts.');
 
-            if(tier==='free'){
-              // Free: text only always, block if nothing extracted
+            } else {
+              // Free & Pro → Vercel → Groq — text only from PDF.js extraction
+              // Pro: selectable text, tables, chart labels already extracted by PDF.js as strings
+              // Groq processes this well — fast, free, no Grok cost
               window._pdfImages=[];
               window._pdfUseWorker=false;
               if(!allText2){
-                st('Scanned/handwritten PDFs require Pro or Elite. Upgrade to process visual content.');
+                if(tier==='pro'){
+                  st('No selectable text found. Pro processes text-based PDFs only. Elite supports all visual content.');
+                } else {
+                  st('No selectable text found. Upgrade to Elite to process scanned or handwritten documents.');
+                }
                 return;
               }
               setPdfTxt(allText2);
               st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
-
-            } else if(tier==='pro'){
-              if(routeA){
-                // Pro route A: ≥70% selectable — text only via Vercel → Groq (free tier)
-                // PDF.js already extracted text including table/chart data as plain text strings
-                // Groq handles this fast (2-5s), zero Grok cost, no timeout risk
-                window._pdfImages=[];
-                window._pdfUseWorker=false;
-                if(!allText2){st('No text found in PDF');return;}
-                setPdfTxt(allText2);
-                st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
-              } else {
-                // Pro route B: <70% selectable — scanned/phone-captured printed doc
-                // Send images to Worker — Grok processes printed text, tables, graphs, charts
-                // Prompt strictly forbids handwriting and diagrams — if present, Grok skips them
-                window._pdfImages=pageImages.filter(Boolean);
-                window._pdfUseWorker=true;
-                // Use extracted text as context; placeholder if nothing extracted
-                setPdfTxt(allText2||'[scanned document — vision processing active]');
-                st('Scanned PDF detected — printed text, tables & charts will be processed (Pro).');
-              }
-
-            } else if(tier==='elite'){
-              // Elite: always full vision via Worker — all pages, everything processed
-              // No blocking — handwriting, diagrams, flowcharts, everything goes through
-              window._pdfImages=pageImages.filter(Boolean);
-              window._pdfUseWorker=true;
-              // Critical: always set a non-empty pdfTxt so backend receives valid text field
-              // For fully handwritten docs, extracted text will be empty — use placeholder
-              setPdfTxt(allText2||'[scanned/handwritten document — use images as primary source]');
-              if(routeA){
-                st('Extracted '+maxPages+' of '+pdf.numPages+' pages — full visual processing (Elite) ready.');
-              } else {
-                st('Scanned PDF ready — full visual processing (Elite): handwriting, diagrams, tables & charts included.');
-              }
             }
           }
           for(var p=1;p<=maxPages;p++){
