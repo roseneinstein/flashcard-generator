@@ -1950,34 +1950,32 @@ function App(){
             } else if(tier==='pro'){
               if(routeA){
                 // Pro route A: ≥70% selectable — text only via Vercel → Groq (free tier)
-                // PDF.js already extracted the text including table/chart data as strings
-                // Groq handles this fast (2-5s), zero Grok API cost, no timeout risk
+                // PDF.js already extracted text including table/chart data as plain text strings
+                // Groq handles this fast (2-5s), zero Grok cost, no timeout risk
                 window._pdfImages=[];
                 window._pdfUseWorker=false;
                 if(!allText2){st('No text found in PDF');return;}
                 setPdfTxt(allText2);
                 st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
               } else {
-                // Pro route B: <70% selectable — scanned/phone-captured doc
-                // Block if purely handwritten (virtually zero text, probably handwritten not scanned)
-                if(extractedChars<50){
-                  setFn('');setPdfTxt('');window._pdfImages=[];window._pdfUseWorker=false;
-                  st('Handwritten docs require Elite. Pro supports printed text, tables, graphs & charts only.');
-                  return;
-                }
-                // Scanned printed doc (phone-captured text, tables, charts) — send via Worker
-                // Prompt will strictly forbid handwriting/diagrams
+                // Pro route B: <70% selectable — scanned/phone-captured printed doc
+                // Send images to Worker — Grok processes printed text, tables, graphs, charts
+                // Prompt strictly forbids handwriting and diagrams — if present, Grok skips them
                 window._pdfImages=pageImages.filter(Boolean);
                 window._pdfUseWorker=true;
-                setPdfTxt(allText2||'[scanned document]');
-                st('Scanned PDF detected — tables & charts will be processed via vision (Pro). Handwriting skipped.');
+                // Use extracted text as context; placeholder if nothing extracted
+                setPdfTxt(allText2||'[scanned document — vision processing active]');
+                st('Scanned PDF detected — printed text, tables & charts will be processed (Pro).');
               }
 
             } else if(tier==='elite'){
               // Elite: always full vision via Worker — all pages, everything processed
+              // No blocking — handwriting, diagrams, flowcharts, everything goes through
               window._pdfImages=pageImages.filter(Boolean);
               window._pdfUseWorker=true;
-              setPdfTxt(allText2||'[document]');
+              // Critical: always set a non-empty pdfTxt so backend receives valid text field
+              // For fully handwritten docs, extracted text will be empty — use placeholder
+              setPdfTxt(allText2||'[scanned/handwritten document — use images as primary source]');
               if(routeA){
                 st('Extracted '+maxPages+' of '+pdf.numPages+' pages — full visual processing (Elite) ready.');
               } else {
