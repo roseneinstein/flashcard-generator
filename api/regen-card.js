@@ -122,6 +122,7 @@ RULES:
   // ── FREE / FALLBACK PATH: Groq ────────────────────────────────────────────
   const apiKey  = process.env.GROQ_API_KEY;
   const apiKey2 = process.env.GROQ_API_KEY_2;
+  const apiKey3 = process.env.GROQ_API_KEY_3;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
   const attempts = [
@@ -131,6 +132,10 @@ RULES:
     ...(apiKey2 ? [
       { key: apiKey2, model: 'llama-3.3-70b-versatile' },
       { key: apiKey2, model: 'llama-3.1-8b-instant'    },
+    ] : []),
+    ...(apiKey3 ? [
+      { key: apiKey3, model: 'llama-3.3-70b-versatile' },
+      { key: apiKey3, model: 'llama-3.1-8b-instant'    },
     ] : []),
   ];
 
