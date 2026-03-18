@@ -976,7 +976,7 @@ async function callAI(text,count,quizCount,opts){
 
   // Elite file uploads → Cloudflare Worker (no payload size limit, handles 50 pages)
   // Everything else → Vercel (unchanged)
-  if(isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='https://cogniswift-worker.cogniswift.workers.dev'){
+  if(isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE'){
     try{
       console.log('[CogniSwift] Routing Elite PDF to Cloudflare Worker');
       var wr=await fetch(CFG.WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -1878,14 +1878,19 @@ function App(){
       loadLib.then(function(){
         var typedArray=new Uint8Array(ev.target.result);
         window.pdfjsLib.getDocument({data:typedArray}).promise.then(function(pdf){
-          // Page limits by tier: Elite = 50, Pro/Free = 20
-          var elitePageLimit=50;
-          var stdPageLimit=20;
-          var pageLimit=(tier==='elite')?elitePageLimit:stdPageLimit;
-          var maxPages=Math.min(pdf.numPages,pageLimit);
-          if(pdf.numPages>pageLimit)st('PDF has '+pdf.numPages+' pages — processing first '+pageLimit+' pages ('+(tier==='elite'?'Elite limit':'upgrade to Elite for 50 pages')+')');
-          var allText='',pagesDone=0;
+          // Read tier FIRST before anything else
           var tier=getTier();
+          // Page limits by tier: Elite = 50 pages, Pro/Free = 20 pages
+          var pageLimit=(tier==='elite')?50:20;
+          var maxPages=Math.min(pdf.numPages,pageLimit);
+          if(pdf.numPages>pageLimit){
+            if(tier==='elite'){
+              st('PDF has '+pdf.numPages+' pages — processing first 50 (Elite limit)');
+            } else {
+              st('PDF has '+pdf.numPages+' pages — processing first 20. Upgrade to Elite for up to 50 pages.');
+            }
+          }
+          var allText='',pagesDone=0;
           // We render pages as images only for Pro/Elite — to detect scanned PDFs
           // and for Elite to send visuals to Grok
           var needsRender=(tier==='pro'||tier==='elite');
@@ -2551,7 +2556,7 @@ function App(){
               },
                 e('span',{className:'upz-i'},'↑'),
                 fn ? e('p',null,e('strong',null,fn),e('br'),t('Click to replace'))
-                   : e('p',null,t('Drop PDF here or '),e('strong',null,t('click to browse')),e('br'),t('Max ~20 pages for best results'))
+                   : e('p',null,t('Drop PDF here or '),e('strong',null,t('click to browse')),e('br'),isElite()?'Up to 50 pages':'Up to 20 pages'+(isPro()?'':' — Elite allows 50'))
               ),
               e('input',{type:'file',accept:'.pdf',ref:fref,onChange:function(ev){hFile(ev.target.files[0]);}}),
               fn&&e('textarea',{value:pdfTxt,onChange:function(ev){setPdfTxt(ev.target.value);},placeholder:'Edit extracted text if needed…',style:{borderTop:'1px solid var(--border)'}})
@@ -2601,7 +2606,7 @@ function App(){
           e('p',null,'Your text is '+itxt.length.toLocaleString('en-IN')+' characters — only the first '+getCharLimit().toLocaleString('en-IN')+' will be used. For best results across all topics, trim your input or paste one topic at a time.')
         ),
         itab==='pdf'&&e('div',{className:'pdf-disc'},
-          e('p',null,'Scanned or handwritten PDFs won’t work — only text-based PDFs can be read. If your PDF is a photo or scan, copy-paste the text instead.')
+          e('p',null,isElite()?'Elite: all visuals processed — text, tables, charts, handwriting, diagrams (up to 50 pages).':isPro()?'Pro: printed text, tables, graphs & charts only. Handwriting and diagrams require Elite.':'Free: text-based PDFs only. Upgrade to Pro or Elite for visual processing.')
         ),
         e('div',{className:'urow'},
           e('div',{className:'ut'},e('div',{className:'uf',style:{width:Math.min(100,usage/getDayLimit()*100)+'%'}})),
