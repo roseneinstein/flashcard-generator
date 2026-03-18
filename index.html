@@ -887,7 +887,7 @@ const CFG={
   SUPABASE_URL:'https://vnbseesmppljppranukb.supabase.co',
   // Cloudflare Worker URL for Elite PDF uploads (no payload size limit)
   // Replace WORKER_URL_HERE with your actual Worker URL after deploying
-  WORKER_URL:'WORKER_URL_HERE',
+  WORKER_URL:'https://cogniswift-worker.cogniswift.workers.dev',
 };
 
 // ── Auth helpers (no Supabase JS SDK needed) ──
@@ -976,7 +976,7 @@ async function callAI(text,count,quizCount,opts){
 
   // Elite file uploads → Cloudflare Worker (no payload size limit, handles 50 pages)
   // Everything else → Vercel (unchanged)
-  if(isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE'){
+  if(isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='https://cogniswift-worker.cogniswift.workers.dev'){
     try{
       console.log('[CogniSwift] Routing Elite PDF to Cloudflare Worker');
       var wr=await fetch(CFG.WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
