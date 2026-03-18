@@ -222,6 +222,7 @@ async function callGrok(messages, maxTokens) {
 async function callGroq(prompt) {
   const apiKey  = process.env.GROQ_API_KEY;
   const apiKey2 = process.env.GROQ_API_KEY_2;
+  const apiKey3 = process.env.GROQ_API_KEY_3;
   if (!apiKey) throw new Error('GROQ_API_KEY not configured');
 
   const attempts = [
@@ -234,6 +235,12 @@ async function callGroq(prompt) {
       { key: apiKey2, model: 'llama-3.1-8b-instant'    },
       { key: apiKey2, model: 'gemma2-9b-it'             },
       { key: apiKey2, model: 'mixtral-8x7b-32768'       },
+    ] : []),
+    ...(apiKey3 ? [
+      { key: apiKey3, model: 'llama-3.3-70b-versatile' },
+      { key: apiKey3, model: 'llama-3.1-8b-instant'    },
+      { key: apiKey3, model: 'gemma2-9b-it'             },
+      { key: apiKey3, model: 'mixtral-8x7b-32768'       },
     ] : []),
   ];
 
@@ -329,23 +336,19 @@ export default async function handler(req, res) {
   const langInstruction = detectLanguage(inputText);
 
   // ── Routing decision ─────────────────────────────────────────────────────
-  // Plain text paste (any tier)     → Groq via Vercel (free, fast)
-  // Free file upload                → Groq via Vercel (text only)
-  // Pro file upload route A         → Grok via Vercel (text only, >70% selectable)
-  // Pro file upload route B         → Grok via Cloudflare Worker (images, <70% selectable)
-  //                                   (route B never reaches here — Worker handles it)
-  // Elite file upload               → Grok via Cloudflare Worker (images)
-  //                                   (never reaches here — Worker handles it)
+  // ALL paid file uploads (Pro + Elite, both routes) now go via Cloudflare Worker.
+  // Vercel's generate.js only handles:
+  //   1. Text pastes from any tier → Groq (fast, 2-5 seconds, no timeout risk)
+  //   2. Free user file uploads → Groq (text only)
   //
-  // So Vercel's generate.js now only ever receives:
-  //   - Text pastes (any tier) → Groq
-  //   - Free file uploads → Groq
-  //   - Pro route A file uploads → Grok, text only, no images
+  // This means usePaidModel will almost never be true here in normal operation.
+  // It only triggers if the Cloudflare Worker is down and the frontend falls back to Vercel.
+  // In that fallback case we still try Grok but may hit the 60s timeout on very large docs.
   const usePaidModel = (isFileUpload === true) && (tier === 'pro' || tier === 'elite');
   const hasImages    = Array.isArray(images) && images.length > 0;
-  // Pro route A: text only (no images — they were stripped by frontend before sending here)
-  // If somehow images arrive with a Pro request via Vercel, drop them to prevent timeout
-  const sendImages = (tier === 'elite') && hasImages; // only Elite sends images via Vercel (fallback only)
+  // Drop images on Vercel fallback path to reduce timeout risk
+  // (Worker handles all image processing — Vercel should only see text)
+  const sendImages = false;
 
   console.log('[CogniSwift] routing — usePaidModel:', usePaidModel, '| sendImages:', sendImages);
 
