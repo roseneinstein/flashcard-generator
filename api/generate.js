@@ -329,15 +329,23 @@ export default async function handler(req, res) {
   const langInstruction = detectLanguage(inputText);
 
   // ── Routing decision ─────────────────────────────────────────────────────
-  // Plain text paste → ALWAYS Groq (any tier — fast, free, good enough for text)
-  // File upload + paid → Grok 4.1 Fast
-  // File upload + free → Groq
+  // Plain text paste (any tier)     → Groq via Vercel (free, fast)
+  // Free file upload                → Groq via Vercel (text only)
+  // Pro file upload route A         → Grok via Vercel (text only, >70% selectable)
+  // Pro file upload route B         → Grok via Cloudflare Worker (images, <70% selectable)
+  //                                   (route B never reaches here — Worker handles it)
+  // Elite file upload               → Grok via Cloudflare Worker (images)
+  //                                   (never reaches here — Worker handles it)
+  //
+  // So Vercel's generate.js now only ever receives:
+  //   - Text pastes (any tier) → Groq
+  //   - Free file uploads → Groq
+  //   - Pro route A file uploads → Grok, text only, no images
   const usePaidModel = (isFileUpload === true) && (tier === 'pro' || tier === 'elite');
   const hasImages    = Array.isArray(images) && images.length > 0;
-  // Both Pro and Elite receive images — tier restriction is enforced inside the prompt
-  // Pro prompt: skip all handwriting, only use tables/charts/printed text
-  // Elite prompt: use everything including handwriting and diagrams
-  const sendImages = (tier === 'pro' || tier === 'elite') && hasImages;
+  // Pro route A: text only (no images — they were stripped by frontend before sending here)
+  // If somehow images arrive with a Pro request via Vercel, drop them to prevent timeout
+  const sendImages = (tier === 'elite') && hasImages; // only Elite sends images via Vercel (fallback only)
 
   console.log('[CogniSwift] routing — usePaidModel:', usePaidModel, '| sendImages:', sendImages);
 
