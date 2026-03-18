@@ -970,22 +970,30 @@ async function callAI(text,count,quizCount,opts){
   opts=opts||{};
   var charLimit=getCharLimit();
   var tier=getTier();
-  var isEliteFileUpload=opts.isFileUpload&&tier==='elite';
+  // useWorker flag is set by gen() based on tier + selectability threshold
   var body={text:text.substring(0,charLimit),count:count,quizCount:quizCount||null,isFileUpload:opts.isFileUpload||false,summaryDepth:opts.summaryDepth||'standard',access_token:loadToken()||undefined};
   if(opts.images&&opts.images.length)body.images=opts.images;
 
-  // Elite file uploads → Cloudflare Worker (no payload size limit, handles 50 pages)
-  // Everything else → Vercel (unchanged)
-  if(isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE'){
+  // Route to Cloudflare Worker when:
+  //   - Elite file upload (any PDF — 50 page limit, full vision)
+  //   - Pro file upload route B (scanned PDF, <70% selectable — needs vision)
+  // Route to Vercel when:
+  //   - Pro file upload route A (>70% selectable — text only, fast)
+  //   - Any text paste (any tier — always Groq via Vercel)
+  //   - Free file upload (always Vercel → Groq)
+  var isPaidFileUpload=opts.isFileUpload&&(tier==='elite'||tier==='pro');
+  var needsWorker=isPaidFileUpload&&opts.useWorker&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE';
+  if(needsWorker){
     try{
-      console.log('[CogniSwift] Routing Elite PDF to Cloudflare Worker');
+      console.log('[CogniSwift] Routing to Cloudflare Worker — tier:',tier,'| images:',body.images?body.images.length:0);
       var wr=await fetch(CFG.WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       if(!wr.ok){var werr=await wr.json().catch(function(){return{};});throw new Error(werr.error||'Worker error '+wr.status);}
       return wr.json();
     }catch(workerErr){
-      // Cloudflare Worker failed — fall back to Vercel (handles up to 20 pages)
-      console.warn('[CogniSwift] Cloudflare Worker failed:',workerErr.message,'— falling back to Vercel (20 page limit applies)');
-      // Trim images to stay under Vercel 4.5MB limit for fallback
+      // Worker failed — fall back to Vercel
+      // For Elite: trim images to 10 max to stay under 4.5MB Vercel limit
+      // For Pro route B: drop images entirely (no images = text-only Grok call, still works)
+      console.warn('[CogniSwift] Worker failed:',workerErr.message,'— falling back to Vercel');
       if(body.images&&body.images.length>10)body.images=body.images.slice(0,10);
     }
   }
@@ -1799,6 +1807,7 @@ function App(){
     var tier=getTier();
     // For paid users uploading a file, pass images if available (Elite scanned PDFs)
     var imgPayload=(isFile&&(tier==='pro'||tier==='elite')&&window._pdfImages&&window._pdfImages.length)?window._pdfImages:[];
+    var useWorker=isFile&&!!(window._pdfUseWorker); // set by hFile based on 70% threshold
     // Safety check: if images exceed 3.8MB total (leaving room for text payload + headers)
     // Re-compress at lower quality rather than dropping — preserves all pages
     if(imgPayload.length){
@@ -1827,7 +1836,7 @@ function App(){
       }
     }
     try{
-      var res=await callAI(txt,cnt,null,{isFileUpload:isFile,images:imgPayload,summaryDepth:isElite()?summaryDepth:'standard'});
+      var res=await callAI(txt,cnt,null,{isFileUpload:isFile,images:imgPayload,summaryDepth:isElite()?summaryDepth:'standard',useWorker:useWorker});
       setCards(res.flashcards||[]);setQuiz(res.quiz||[]);setTimeout(function(){pickDailyCard(res.flashcards||[]);},0);
       var totalQ=(res.quiz||[]).length;
       var counts=totalQ>=20?[5,10,15,20]:totalQ>=15?[5,10,15]:totalQ>=10?[5,10]:[5];
@@ -1864,7 +1873,7 @@ function App(){
     if(!file)return;
     if(!file.type.includes('pdf'))return st('PDF files only');
     if(file.size>20*1024*1024)return st('PDF too large — keep under 20MB');
-    setFn(file.name);setPdfTxt('');window._pdfImages=[];st('Reading PDF…');
+    setFn(file.name);setPdfTxt('');window._pdfImages=[];window._pdfUseWorker=false;st('Reading PDF…');
     var loadLib=new Promise(function(resolve,reject){
       if(window.pdfjsLib){resolve();return;}
       var s=document.createElement('script');
@@ -1915,57 +1924,63 @@ function App(){
           function checkDone(){
             if(pagesDone!==maxPages)return;
             var allText2=pageTexts.join(' ').trim();
-            var charPerPage=allText2.length/maxPages;
-            // A page averaging <80 selectable chars is considered image-based (scanned/handwritten/photo)
-            var isScanned=charPerPage<80;
 
-            if(needsRender&&isScanned&&pageImages.length){
-              // Scanned/image-based PDF detected
-              if(tier==='pro'){
-                // Pro cannot process handwritten docs at all.
-                // But we still need to handle mixed docs (some pages scanned, some text).
-                // Strategy: send images BUT mark as pro-vision so backend prompt
-                // strictly tells Grok to skip handwriting and only read tables/charts/printed text.
-                // If the ENTIRE doc appears to be handwritten (virtually zero text extracted),
-                // block it outright with a clear message.
-                var totalExtracted=allText2.replace(/\s/g,'').length;
-                if(totalExtracted<50){
-                  // Purely handwritten — block for Pro
-                  setFn('');setPdfTxt('');window._pdfImages=[];
-                  st('Handwritten docs require Elite tier. Pro supports printed text, tables, graphs & charts only.');
-                  return;
-                }
-                // Mixed doc (some scanned pages + some text) — send images, backend will skip handwriting
-                window._pdfImages=pageImages;
-                setPdfTxt(allText2||'[scanned document with text pages]');
-                st('PDF ready — tables & charts will be processed. Handwritten pages are an Elite feature and will be skipped.');
-              } else if(tier==='elite'){
-                // Elite: full visual processing — everything including handwriting
-                window._pdfImages=pageImages;
-                setPdfTxt(allText2||'[scanned document]');
-                st('Scanned PDF ready — full visual processing (Elite): handwriting, diagrams, tables & charts included.');
-              } else {
-                // Free tier: can't process scanned docs, no vision
-                window._pdfImages=[];
-                if(!allText2){
-                  st('Scanned/handwritten PDFs require Pro or Elite. Upgrade to process visual content.');
-                  return;
-                }
-                setPdfTxt(allText2);
-                st('Extracted '+maxPages+' pages. Note: scanned/visual content requires Pro or Elite.');
+            // ── Selectability score ─────────────────────────────────────────
+            // Total possible chars if fully selectable: rough estimate = pages × 1500 chars/page
+            // We compare actual extracted chars to this to get a % selectability
+            var estimatedMaxChars=maxPages*1500;
+            var extractedChars=allText2.replace(/\s/g,'').length;
+            var selectPct=Math.min(100,Math.round((extractedChars/estimatedMaxChars)*100));
+            var routeA=selectPct>=70; // route A: >70% selectable → text only
+            var routeB=!routeA;       // route B: <70% selectable → images needed
+
+            console.log('[CogniSwift] PDF selectability:',selectPct+'%','→ route '+(routeA?'A (text only)':'B (vision needed)'));
+
+            if(tier==='free'){
+              // Free: text only always, block if nothing extracted
+              window._pdfImages=[];
+              window._pdfUseWorker=false;
+              if(!allText2){
+                st('Scanned/handwritten PDFs require Pro or Elite. Upgrade to process visual content.');
+                return;
               }
-            } else {
-              // Selectable text PDF (or typed/digital PDF)
-              // For paid users: still send images so Grok can see tables/charts/graphs
-              // embedded in the PDF pages — even if text is selectable, tables look better visually
-              if(needsRender&&pageImages.length){
-                window._pdfImages=pageImages;
-              } else {
-                window._pdfImages=[];
-              }
-              if(!allText2){st('No text found in PDF');return;}
               setPdfTxt(allText2);
               st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
+
+            } else if(tier==='pro'){
+              if(routeA){
+                // Pro route A: >70% selectable — text only via Vercel → Grok (fast, no timeout)
+                window._pdfImages=[];
+                window._pdfUseWorker=false;
+                if(!allText2){st('No text found in PDF');return;}
+                setPdfTxt(allText2);
+                st('Extracted '+maxPages+' of '+pdf.numPages+' pages — ready to generate');
+              } else {
+                // Pro route B: <70% selectable — scanned/phone-captured doc
+                // Block if purely handwritten (virtually zero text, probably handwritten not scanned)
+                if(extractedChars<50){
+                  setFn('');setPdfTxt('');window._pdfImages=[];window._pdfUseWorker=false;
+                  st('Handwritten docs require Elite. Pro supports printed text, tables, graphs & charts only.');
+                  return;
+                }
+                // Scanned printed doc (phone-captured text, tables, charts) — send via Worker
+                // Prompt will strictly forbid handwriting/diagrams
+                window._pdfImages=pageImages.filter(Boolean);
+                window._pdfUseWorker=true;
+                setPdfTxt(allText2||'[scanned document]');
+                st('Scanned PDF detected — tables & charts will be processed via vision (Pro). Handwriting skipped.');
+              }
+
+            } else if(tier==='elite'){
+              // Elite: always full vision via Worker — all pages, everything processed
+              window._pdfImages=pageImages.filter(Boolean);
+              window._pdfUseWorker=true;
+              setPdfTxt(allText2||'[document]');
+              if(routeA){
+                st('Extracted '+maxPages+' of '+pdf.numPages+' pages — full visual processing (Elite) ready.');
+              } else {
+                st('Scanned PDF ready — full visual processing (Elite): handwriting, diagrams, tables & charts included.');
+              }
             }
           }
           for(var p=1;p<=maxPages;p++){
@@ -2615,7 +2630,7 @@ function App(){
       ),
 
       e('div',{id:'ra'}),
-      loading&&e('div',{className:'ld'},e('div',{className:'dots'},e('span'),e('span'),e('span')),e('p',null,t('Generating your cards…'))),
+      loading&&e('div',{className:'ld'},e('div',{className:'dots'},e('span'),e('span'),e('span')),e('p',null,t('Generating your cards…')),e('p',{style:{fontSize:'0.7rem',color:'var(--muted)',marginTop:6,fontWeight:300}},'Please wait, this may take a few seconds…')),
 
       !loading&&cards.length>0&&e('div',{className:'rev',style:{marginTop:4}},
         e('div',{className:'rtabs'},
