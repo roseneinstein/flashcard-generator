@@ -1949,7 +1949,9 @@ function App(){
 
             } else if(tier==='pro'){
               if(routeA){
-                // Pro route A: >70% selectable — text only via Vercel → Grok (fast, no timeout)
+                // Pro route A: ≥70% selectable — text only via Vercel → Groq (free tier)
+                // PDF.js already extracted the text including table/chart data as strings
+                // Groq handles this fast (2-5s), zero Grok API cost, no timeout risk
                 window._pdfImages=[];
                 window._pdfUseWorker=false;
                 if(!allText2){st('No text found in PDF');return;}
