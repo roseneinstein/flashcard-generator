@@ -336,19 +336,18 @@ export default async function handler(req, res) {
   const langInstruction = detectLanguage(inputText);
 
   // ── Routing decision ─────────────────────────────────────────────────────
-  // ALL paid file uploads (Pro + Elite, both routes) now go via Cloudflare Worker.
-  // Vercel's generate.js only handles:
-  //   1. Text pastes from any tier → Groq (fast, 2-5 seconds, no timeout risk)
-  //   2. Free user file uploads → Groq (text only)
+  // Vercel generate.js handles:
+  //   - Text pastes (any tier)     → Groq free tier
+  //   - Free user PDF uploads      → Groq free tier (text only)
+  //   - Pro user PDF uploads       → Groq free tier (text only, PDF.js extracted)
+  //   - Elite PDF fallback only    → Grok (if Cloudflare Worker is down)
   //
-  // This means usePaidModel will almost never be true here in normal operation.
-  // It only triggers if the Cloudflare Worker is down and the frontend falls back to Vercel.
-  // In that fallback case we still try Grok but may hit the 60s timeout on very large docs.
-  const usePaidModel = (isFileUpload === true) && (tier === 'pro' || tier === 'elite');
+  // Normal Elite PDF uploads go via Cloudflare Worker — they only reach here as fallback.
+  // Pro NEVER uses Grok — always Groq regardless of PDF type.
+  const usePaidModel = (isFileUpload === true) && (tier === 'elite'); // only Elite fallback uses Grok
   const hasImages    = Array.isArray(images) && images.length > 0;
-  // Drop images on Vercel fallback path to reduce timeout risk
-  // (Worker handles all image processing — Vercel should only see text)
-  const sendImages = false;
+  // On Vercel fallback path, drop images beyond 10 to avoid payload/timeout issues
+  const sendImages   = (tier === 'elite') && hasImages;
 
   console.log('[CogniSwift] routing — usePaidModel:', usePaidModel, '| sendImages:', sendImages);
 
