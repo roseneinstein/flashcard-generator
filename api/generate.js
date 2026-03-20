@@ -232,17 +232,17 @@ async function callGrok(messages, maxTokens) {
 // Rate limits: 1k RPM, 250k TPM, 500k RPD — no fallback needed
 
 async function callLlama(prompt) {
-  const apiKey = process.env.GROQ_API_KEY; // uses same key as free tier but paid plan
-  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
+  const proKey = process.env.GROQ_PRO_KEY; // dedicated paid Dev plan key — 250k TPM
+  if (!proKey) throw new Error('GROQ_PRO_KEY not configured');
 
-  console.log('[CogniSwift] Calling llama-3.1-8b-instant for Pro user');
+  console.log('[CogniSwift] Calling llama-3.1-8b-instant for Pro user (GROQ_PRO_KEY)');
 
   const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${proKey}` },
     body: JSON.stringify({
       model:           'llama-3.1-8b-instant',
-      max_tokens:      6000,
+      max_tokens:      8000,
       messages:        [{ role: 'user', content: prompt }],
       temperature:     0.15,
       response_format: { type: 'json_object' },
@@ -413,8 +413,11 @@ FLASHCARD RULES:
 QUIZ RULES — CRITICAL:
 - Generate EXACTLY ${maxQuiz} quiz questions. Hard requirement — count before outputting.
 - Cover ALL topics proportionally. Test specific facts from the notes only.
-- Each question has EXACTLY 4 options. Distractors must be plausible.
-- "correct" is integer 0-3. Explanation: why correct is right AND why main wrong option is wrong.
+- Each question has EXACTLY 4 options (A, B, C, D). Each option is a SHORT PHRASE — maximum 8 words. NEVER write a sentence or paragraph as an option.
+- Example WRONG option: "The process by which plants convert sunlight into glucose using chlorophyll"
+- Example CORRECT option: "Photosynthesis" or "Chlorophyll absorbs light"
+- Distractors must be plausible short alternatives from the same domain.
+- "correct" is integer 0-3. Explanation: one concise sentence on why the correct answer is right.
 
 SUMMARY RULES:
 - Title: max 8 words. Sections with heading (3-6 words) and bullet points.
@@ -500,9 +503,8 @@ ${inputText}`;
         { role: 'system', content: GROK_SYSTEM_PROMPT },
         { role: 'user',   content: userContent },
       ];
-      // Token budget: cards (~150 tokens each) + quiz (~120 each) + summary (~2000) + JSON overhead
-      // Grok 4.1 Fast supports 30k output — be generous to avoid truncation causing parse failures
-      const maxTokens = Math.min(24000, 4000 + count * 200 + maxQuiz * 150);
+      // Always use full 30k output — never truncate Elite responses
+      const maxTokens = 30000;
 
       const raw    = await callGrok(messages, maxTokens);
       const parsed = parseAndValidate(raw);
