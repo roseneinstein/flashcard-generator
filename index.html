@@ -971,7 +971,7 @@ async function callAI(text,count,quizCount,opts){
   var charLimit=getCharLimit();
   var tier=getTier();
   // useWorker flag is set by gen() based on tier + selectability threshold
-  var body={text:text.substring(0,charLimit),count:count,quizCount:quizCount||null,isFileUpload:opts.isFileUpload||false,summaryDepth:opts.summaryDepth||'standard',access_token:loadToken()||undefined};
+  var body={text:text.substring(0,charLimit),count:count,quizCount:quizCount||20,isFileUpload:opts.isFileUpload||false,summaryDepth:opts.summaryDepth||'standard',access_token:loadToken()||undefined};
   if(opts.images&&opts.images.length)body.images=opts.images;
 
   // ── Routing — clean and simple ──────────────────────────────────────────
@@ -981,8 +981,7 @@ async function callAI(text,count,quizCount,opts){
   var needsWorker=isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE';
 
   if(needsWorker){
-    // Elite PDF: send to Worker and surface any error directly to user
-    // Never fall back to Groq — Groq has no images and would hallucinate on wrong topic
+    // Elite PDF → Worker only. Never fall back to Groq (no images = hallucination)
     console.log('[CogniSwift] Elite PDF → Cloudflare Worker → Grok 4.1 | images:',body.images?body.images.length:0);
     var wr=await fetch(CFG.WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     var wrData=await wr.json().catch(function(){return{error:'Worker response unreadable'};});
@@ -1831,7 +1830,7 @@ function App(){
       }
     }
     try{
-      var res=await callAI(txt,cnt,null,{isFileUpload:isFile,images:imgPayload,summaryDepth:isElite()?summaryDepth:'standard',useWorker:useWorker});
+      var res=await callAI(txt,cnt,20,{isFileUpload:isFile,images:imgPayload,summaryDepth:isElite()?summaryDepth:'standard',useWorker:useWorker});
       setCards(res.flashcards||[]);setQuiz(res.quiz||[]);setTimeout(function(){pickDailyCard(res.flashcards||[]);},0);
       var totalQ=(res.quiz||[]).length;
       var counts=totalQ>=20?[5,10,15,20]:totalQ>=15?[5,10,15]:totalQ>=10?[5,10]:[5];
@@ -2180,10 +2179,15 @@ function App(){
     var card=cards[ci];
     if(!card)return;
     var text=card.topic+'. '+card.points.split('|').join('. ');
-    // Detect Hindi using correct Devanagari Unicode range \u0900-\u097F
-    var devaCount=(text.match(/[\u0900-\u097F]/g)||[]).length;
-    var letterCount=(text.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
-    var isHindi=letterCount>0&&(devaCount/letterCount)>0.3;
+    // Detect Hindi — check points text separately since topic may be in English
+    // even when all content is Hindi (llama often writes topics in English)
+    var pointsText=card.points||'';
+    var devaInPoints=(pointsText.match(/[\u0900-\u097F]/g)||[]).length;
+    var lettersInPoints=(pointsText.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
+    var devaInAll=(text.match(/[\u0900-\u097F]/g)||[]).length;
+    var lettersInAll=(text.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
+    // Hindi if points are >40% Devanagari OR full text is >25% Devanagari
+    var isHindi=(lettersInPoints>0&&(devaInPoints/lettersInPoints)>0.4)||(lettersInAll>0&&(devaInAll/lettersInAll)>0.25);
     function speak(voices){
       var utt=new SpeechSynthesisUtterance(text);
       utt.rate=0.92;utt.pitch=1;
