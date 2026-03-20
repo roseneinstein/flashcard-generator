@@ -1,8 +1,9 @@
 // regen-card.js
 // Regenerates a single flashcard on the same topic with fresh points.
 // Routing:
-//   Free user  → Groq (unchanged)
-//   Pro/Elite  → Grok 4.1 Fast via OpenRouter (better accuracy, same topic lock)
+//   Free user  → Groq free tier (llama-3.3-70b / llama-3.1-8b, unchanged)
+//   Pro user   → llama-3.1-8b-instant via Groq paid dev plan
+//   Elite user → Grok 4.1 Fast via OpenRouter
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -70,52 +71,57 @@ RULES:
 - Every string on ONE line — no newlines inside any string
 - NO double-quote characters inside string values`;
 
-  // ── PAID PATH: Grok 4.1 Fast ─────────────────────────────────────────────
-  if (tier === 'pro' || tier === 'elite') {
+  // ── ELITE PATH: Grok 4.1 Fast via OpenRouter ──────────────────────────────
+  if (tier === 'elite') {
     try {
       const openRouterKey = process.env.OPENROUTER_API_KEY;
       if (!openRouterKey) throw new Error('OPENROUTER_API_KEY not set');
-
-      console.log('[CogniSwift] regen-card calling Grok 4.1 Fast');
-
+      console.log('[CogniSwift] regen-card → Grok 4.1 Fast (Elite)');
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openRouterKey}`,
-          'HTTP-Referer': 'https://cogniswift.in',
-          'X-Title': 'CogniSwift',
-        },
-        body: JSON.stringify({
-          model: 'x-ai/grok-4.1-fast',
-          max_tokens: 600,
-          temperature: 0.3,
-          messages: [{ role: 'user', content: prompt }],
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openRouterKey}`, 'HTTP-Referer': 'https://cogniswift.in', 'X-Title': 'CogniSwift' },
+        body: JSON.stringify({ model: 'x-ai/grok-4.1-fast', max_tokens: 600, temperature: 0.3, messages: [{ role: 'user', content: prompt }] }),
       });
-
       const data = await response.json();
-
-      if (data.error) {
-        console.error('[CogniSwift] regen-card Grok error:', JSON.stringify(data.error));
-        throw new Error(data.error.message || JSON.stringify(data.error));
-      }
-
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
       let raw = (data.choices?.[0]?.message?.content || '').trim();
       raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
       const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
       if (fi === -1 || la === -1) throw new Error('No JSON in Grok response');
       raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g,' ').replace(/,\s*([}\]])/g,'$1');
-
       const parsed = JSON.parse(raw);
       if (!parsed.topic || !parsed.points) throw new Error('Bad response shape from Grok');
-
       console.log('[CogniSwift] regen-card Grok SUCCESS');
       return res.status(200).json({ topic: parsed.topic, points: parsed.points });
-
     } catch (err) {
       console.error('[CogniSwift] regen-card Grok FAILED:', err.message, '— falling back to Groq');
-      // Fall through to Groq
+    }
+  }
+
+  // ── PRO PATH: llama-3.1-8b-instant via Groq paid dev plan ──────────────
+  if (tier === 'pro') {
+    try {
+      const proKey = process.env.GROQ_API_KEY;
+      if (!proKey) throw new Error('GROQ_API_KEY not configured');
+      console.log('[CogniSwift] regen-card → llama-3.1-8b-instant (Pro)');
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${proKey}` },
+        body: JSON.stringify({ model: 'llama-3.1-8b-instant', max_tokens: 600, temperature: 0.3, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' } }),
+      });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      let raw = (data.choices?.[0]?.message?.content || '').trim();
+      raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
+      const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
+      if (fi === -1 || la === -1) throw new Error('No JSON in llama response');
+      raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g,' ').replace(/,\s*([}\]])/g,'$1');
+      const parsed = JSON.parse(raw);
+      if (!parsed.topic || !parsed.points) throw new Error('Bad response shape from llama');
+      console.log('[CogniSwift] regen-card llama SUCCESS');
+      return res.status(200).json({ topic: parsed.topic, points: parsed.points });
+    } catch (err) {
+      console.error('[CogniSwift] regen-card llama FAILED:', err.message, '— falling back to Groq');
     }
   }
 
@@ -125,10 +131,10 @@ RULES:
   const apiKey3 = process.env.GROQ_API_KEY_3;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
+  // Active Groq free tier models only
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
     { key: apiKey,  model: 'llama-3.1-8b-instant'    },
-    { key: apiKey,  model: 'gemma2-9b-it'             },
     ...(apiKey2 ? [
       { key: apiKey2, model: 'llama-3.3-70b-versatile' },
       { key: apiKey2, model: 'llama-3.1-8b-instant'    },
