@@ -1,11 +1,12 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { text, depth } = req.body;
+  const { text, depth, tier } = req.body;
   if (!text) return res.status(400).json({ error: 'Missing text' });
 
   const apiKey  = process.env.GROQ_API_KEY;
   const apiKey2 = process.env.GROQ_API_KEY_2;
+  const apiKey3 = process.env.GROQ_API_KEY_3;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
   // Detect if text is primarily Hindi (Devanagari Unicode range: 0900–097F)
@@ -38,14 +39,23 @@ Rules: title max 8 words. heading 3-6 words. Each point = one complete fact with
 Study material:
 ${safeText}`;
 
-  const models = [
-    'llama-3.1-8b-instant',
-    'gemma2-9b-it',
-    'llama-3.3-70b-versatile',
-  ];
-
-  const keys = [apiKey, ...(apiKey2 ? [apiKey2] : [])];
-  const attempts = keys.flatMap(k => models.map(m => ({ key: k, model: m })));
+  // Pro: llama-3.1-8b-instant (paid dev plan — dedicated, fast)
+  // Free: llama-3.3-70b → llama-3.1-8b across 3 free keys (gemma2/mixtral decommissioned)
+  const isProTier = tier === 'pro';
+  const attempts = isProTier
+    ? [ { key: apiKey, model: 'llama-3.1-8b-instant' } ]
+    : [
+        { key: apiKey,  model: 'llama-3.3-70b-versatile' },
+        { key: apiKey,  model: 'llama-3.1-8b-instant'    },
+        ...(apiKey2 ? [
+          { key: apiKey2, model: 'llama-3.3-70b-versatile' },
+          { key: apiKey2, model: 'llama-3.1-8b-instant'    },
+        ] : []),
+        ...(apiKey3 ? [
+          { key: apiKey3, model: 'llama-3.3-70b-versatile' },
+          { key: apiKey3, model: 'llama-3.1-8b-instant'    },
+        ] : []),
+      ];
 
   let errors = [];
 
