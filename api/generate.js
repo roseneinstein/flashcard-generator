@@ -75,9 +75,19 @@ function parseAndValidate(raw) {
     console.error('[CogniSwift] parseAndValidate: JSON.parse failed:', jsonErr.message, '| Raw preview:', raw.substring(0, 400));
     throw new Error('JSON parse error: ' + jsonErr.message);
   }
-  if (!Array.isArray(parsed.flashcards) || !Array.isArray(parsed.quiz) || !parsed.quiz.length) {
-    console.error('[CogniSwift] parseAndValidate: Bad shape. Keys present:', Object.keys(parsed).join(','), '| flashcards:', Array.isArray(parsed.flashcards) ? parsed.flashcards.length : 'NOT ARRAY', '| quiz:', Array.isArray(parsed.quiz) ? parsed.quiz.length : 'NOT ARRAY');
-    throw new Error('Response shape invalid — missing flashcards or quiz array');
+  // flashcards must exist — they are the primary output
+  if (!Array.isArray(parsed.flashcards) || !parsed.flashcards.length) {
+    console.error('[CogniSwift] parseAndValidate: Bad shape. Keys:', Object.keys(parsed).join(','), '| flashcards:', Array.isArray(parsed.flashcards) ? parsed.flashcards.length : 'NOT ARRAY');
+    throw new Error('Response shape invalid — flashcards missing');
+  }
+  // quiz — if missing or not array, default to empty (never fail the whole request over this)
+  if (!Array.isArray(parsed.quiz)) {
+    console.warn('[CogniSwift] parseAndValidate: quiz missing or not array — defaulting to []');
+    parsed.quiz = [];
+  }
+  // summary — if missing, default to null (handled gracefully by frontend)
+  if (!parsed.summary || typeof parsed.summary !== 'object') {
+    parsed.summary = null;
   }
   return parsed;
 }
@@ -217,7 +227,38 @@ async function callGrok(messages, maxTokens) {
   return raw;
 }
 
-// ─── Groq fallback chain (free tier / plain text for all tiers) ───────────
+// ─── Llama 3.1-8b-instant for Pro tier (paid Groq dev plan) ──────────────
+// Pro users get dedicated llama-3.1-8b-instant — fast, accurate, generous limits
+// Rate limits: 1k RPM, 250k TPM, 500k RPD — no fallback needed
+
+async function callLlama(prompt) {
+  const apiKey = process.env.GROQ_API_KEY; // uses same key as free tier but paid plan
+  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
+
+  console.log('[CogniSwift] Calling llama-3.1-8b-instant for Pro user');
+
+  const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model:           'llama-3.1-8b-instant',
+      max_tokens:      6000,
+      messages:        [{ role: 'user', content: prompt }],
+      temperature:     0.15,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  const data = await groqRes.json();
+  if (data.error) {
+    console.error('[CogniSwift] Llama error:', data.error.message);
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
+  console.log('[CogniSwift] Llama success');
+  return (data.choices?.[0]?.message?.content || '').trim();
+}
+
+// ─── Groq fallback chain (free tier only) ────────────────────────────────
 
 async function callGroq(prompt) {
   const apiKey  = process.env.GROQ_API_KEY;
@@ -225,22 +266,17 @@ async function callGroq(prompt) {
   const apiKey3 = process.env.GROQ_API_KEY_3;
   if (!apiKey) throw new Error('GROQ_API_KEY not configured');
 
+  // Active Groq free tier models only (gemma2-9b-it and mixtral-8x7b-32768 decommissioned)
   const attempts = [
     { key: apiKey,  model: 'llama-3.3-70b-versatile' },
     { key: apiKey,  model: 'llama-3.1-8b-instant'    },
-    { key: apiKey,  model: 'gemma2-9b-it'             },
-    { key: apiKey,  model: 'mixtral-8x7b-32768'       },
     ...(apiKey2 ? [
       { key: apiKey2, model: 'llama-3.3-70b-versatile' },
       { key: apiKey2, model: 'llama-3.1-8b-instant'    },
-      { key: apiKey2, model: 'gemma2-9b-it'             },
-      { key: apiKey2, model: 'mixtral-8x7b-32768'       },
     ] : []),
     ...(apiKey3 ? [
       { key: apiKey3, model: 'llama-3.3-70b-versatile' },
       { key: apiKey3, model: 'llama-3.1-8b-instant'    },
-      { key: apiKey3, model: 'gemma2-9b-it'             },
-      { key: apiKey3, model: 'mixtral-8x7b-32768'       },
     ] : []),
   ];
 
@@ -337,22 +373,79 @@ export default async function handler(req, res) {
 
   // ── Routing decision ─────────────────────────────────────────────────────
   // Vercel generate.js handles:
-  //   - Text pastes (any tier)     → Groq free tier
-  //   - Free user PDF uploads      → Groq free tier (text only)
-  //   - Pro user PDF uploads       → Groq free tier (text only, PDF.js extracted)
-  //   - Elite PDF fallback only    → Grok (if Cloudflare Worker is down)
+  //   FREE  (text paste OR PDF) → Groq free tier (llama-3.3-70b / llama-3.1-8b, 3 keys)
+  //   PRO   (text paste OR PDF) → llama-3.1-8b-instant (paid Groq dev plan, dedicated)
+  //   ELITE (text paste)        → Groq free tier (same as free — text paste is always Groq)
+  //   ELITE (PDF upload)        → Normally via Cloudflare Worker → Grok 4.1 Fast
+  //                               This function only handles Elite as FALLBACK if Worker fails
   //
-  // Normal Elite PDF uploads go via Cloudflare Worker — they only reach here as fallback.
-  // Pro NEVER uses Grok — always Groq regardless of PDF type.
-  const usePaidModel = (isFileUpload === true) && (tier === 'elite'); // only Elite fallback uses Grok
+  const useProModel  = (tier === 'pro');  // Pro always uses llama-3.1-8b-instant
+  const useEliteFallback = (isFileUpload === true) && (tier === 'elite'); // Elite fallback only
   const hasImages    = Array.isArray(images) && images.length > 0;
-  // On Vercel fallback path, drop images beyond 10 to avoid payload/timeout issues
-  const sendImages   = (tier === 'elite') && hasImages;
+  const sendImages   = useEliteFallback && hasImages; // only Elite fallback may have images
 
-  console.log('[CogniSwift] routing — usePaidModel:', usePaidModel, '| sendImages:', sendImages);
+  console.log('[CogniSwift] routing — useProModel:', useProModel, '| useEliteFallback:', useEliteFallback, '| sendImages:', sendImages);
 
-  // ── PAID PATH: Grok 4.1 Fast ─────────────────────────────────────────────
-  if (usePaidModel) {
+  // ── PRO PATH: llama-3.1-8b-instant (Groq paid dev plan) ─────────────────
+  if (useProModel) {
+    const proCountNote = count > 15
+      ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
+      : `Return exactly ${count} flashcard objects.`;
+
+    const proPrompt = `You are a subject-matter expert creating high-quality revision flashcards for serious Indian competitive exam students (UPSC, JEE, NEET, CA, etc.).
+
+${langInstruction}
+
+The study notes below may cover MULTIPLE topics or editorials. You must cover ALL of them — do NOT focus only on the first topic. Distribute the ${count} flashcards proportionally across every topic present in the notes.
+
+Return ONLY a valid JSON object. No markdown, no code fences, nothing else.
+
+Schema:
+{"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}],"summary":{"title":"string","sections":[{"heading":"string","points":["string"]}]}}
+
+FLASHCARD RULES:
+- Draw the topic name DIRECTLY from the content. Cover ALL topics present.
+- Every card must have a DISTINCT topic name. Append Roman numerals for duplicates: "Topic (I)", "Topic (II)".
+- Topics must be SPECIFIC — NOT "Introduction" or "Overview".
+- Points (4-6, pipe-separated " | "): each must state a SPECIFIC fact, figure, date, name, formula, or provision.
+- Preserve ALL technical terms exactly as in the source.
+
+QUIZ RULES — CRITICAL:
+- Generate EXACTLY ${maxQuiz} quiz questions. Hard requirement — count before outputting.
+- Cover ALL topics proportionally. Test specific facts from the notes only.
+- Each question has EXACTLY 4 options. Distractors must be plausible.
+- "correct" is integer 0-3. Explanation: why correct is right AND why main wrong option is wrong.
+
+SUMMARY RULES:
+- Title: max 8 words. Sections with heading (3-6 words) and bullet points.
+- Standard depth: 4-6 sections, 3-5 bullets each. Every topic must appear.
+
+JSON FORMAT:
+1. ${proCountNote}
+2. quiz array: EXACTLY ${maxQuiz} objects.
+3. Every string on ONE line — no newlines or tabs.
+4. Points separated by " | ". NO double-quotes inside strings. NO trailing commas.
+5. All keys double-quoted. "correct" is integer 0-3. options has exactly 4 strings.
+
+Study notes:
+${inputText}`;
+
+    try {
+      const raw    = await callLlama(proPrompt);
+      const parsed = parseAndValidate(raw);
+      parsed.flashcards = deduplicateTopics(parsed.flashcards);
+      parsed.flashcards = padToCount(parsed.flashcards, count);
+      parsed.quiz       = parsed.quiz.slice(0, maxQuiz);
+      console.log('[CogniSwift] Pro llama SUCCESS — cards:', parsed.flashcards.length, '| quiz:', parsed.quiz.length);
+      return res.status(200).json(parsed);
+    } catch (err) {
+      console.error('[CogniSwift] Pro llama FAILED:', err.message, '— falling back to Groq free tier');
+      // Fall through to Groq free tier below
+    }
+  }
+
+  // ── ELITE FALLBACK PATH: Grok 4.1 Fast (only if Cloudflare Worker failed) ─
+  if (useEliteFallback) {
     try {
       const depthMap = {
         concise:     '3-4 sections, 2-3 bullet points each',
@@ -433,7 +526,7 @@ ${inputText}`;
     }
   }
 
-  // ── FREE / FALLBACK PATH: Groq (plain text paste for any tier, or free user file upload) ────
+  // ── FREE PATH: Groq free tier (free users + text paste any tier + Pro fallback) ────────────
 
   const countNote = count > 15
     ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
