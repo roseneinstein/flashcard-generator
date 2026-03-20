@@ -955,12 +955,12 @@ function isPro(){return _userCache&&(_userCache.tier==='pro'||_userCache.tier===
 function isElite(){return _userCache&&_userCache.tier==='elite';}
 function getTier(){return _userCache?_userCache.tier:'free';}
 
-async function callSummary(text,depth){
-  // Summary only needs 8000 chars max — beyond that Groq hits context limits
+async function callSummary(text,depth,tier){
+  // Summary only needs 8000 chars max — beyond that model hits context limits
   var r=await fetch('/api/summary',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text:text.substring(0,8000),depth:depth||'standard'}),
+    body:JSON.stringify({text:text.substring(0,8000),depth:depth||'standard',tier:tier||'free'}),
   });
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
@@ -1859,7 +1859,7 @@ function App(){
       if(res.summary&&res.summary.title){
         setSummary(res.summary);setSumLoad(false);
       }else{
-        callSummary(txt,isElite()?summaryDepth:'standard').then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
+        callSummary(txt,isElite()?summaryDepth:'standard',getTier()).then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
       }
     }catch(err){st('Error: '+(err.message||'Check config'));setSumLoad(false);}
     finally{setLoading(false);}
@@ -1885,14 +1885,16 @@ function App(){
         window.pdfjsLib.getDocument({data:typedArray}).promise.then(function(pdf){
           // Read tier FIRST before anything else
           var tier=getTier();
-          // Page limits by tier: Elite = 50 pages, Pro/Free = 20 pages
-          var pageLimit=(tier==='elite')?50:20;
+          // Page limits by tier: Elite=50, Pro=20, Free=10
+          var pageLimit=(tier==='elite')?50:(tier==='pro')?20:10;
           var maxPages=Math.min(pdf.numPages,pageLimit);
           if(pdf.numPages>pageLimit){
             if(tier==='elite'){
               st('PDF has '+pdf.numPages+' pages — processing first 50 (Elite limit)');
-            } else {
+            } else if(tier==='pro'){
               st('PDF has '+pdf.numPages+' pages — processing first 20. Upgrade to Elite for up to 50 pages.');
+            } else {
+              st('PDF has '+pdf.numPages+' pages — processing first 10. Upgrade to Pro for 20 pages or Elite for 50 pages.');
             }
           }
           var allText='',pagesDone=0;
@@ -1964,10 +1966,22 @@ function App(){
                   var vp=page.getViewport({scale:1.2});
                   var canvas=document.createElement('canvas');
                   canvas.width=vp.width;canvas.height=vp.height;
-                  page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise.then(function(){
-                    pageImages[pageIdx]=compressCanvas(canvas);
+                  var ctx=canvas.getContext('2d');
+                  page.render({canvasContext:ctx,viewport:vp}).promise.then(function(){
+                    // Skip blank/black pages (avg brightness <10/255) — stops Grok hallucinating
+                    try{
+                      var sample=ctx.getImageData(0,0,Math.min(canvas.width,50),Math.min(canvas.height,50));
+                      var sum=0;
+                      for(var px=0;px<sample.data.length;px+=4)sum+=sample.data[px]+sample.data[px+1]+sample.data[px+2];
+                      var avg=sum/(sample.data.length/4*3);
+                      if(avg>8){pageImages[pageIdx]=compressCanvas(canvas);}
+                      else{console.warn('[CogniSwift] Page '+(pageIdx+1)+' blank/black — skipped');}
+                    }catch(e){pageImages[pageIdx]=compressCanvas(canvas);}
                     pagesDone++;checkDone();
-                  }).catch(function(){pagesDone++;checkDone();});
+                  }).catch(function(err){
+                    console.warn('[CogniSwift] Page render failed p'+(pageIdx+1)+':',err.message);
+                    pagesDone++;checkDone();
+                  });
                 }
               });
             })(p,p-1);
@@ -2167,25 +2181,38 @@ function App(){
     var card=cards[ci];
     if(!card)return;
     var text=card.topic+'. '+card.points.split('|').join('. ');
-    var utt=new SpeechSynthesisUtterance(text);
-    utt.rate=0.92;utt.pitch=1;
-    // Detect language from card content — Hindi if >30% Devanagari characters
-    var devaCount=(text.match(/[ऀ-ॿ]/g)||[]).length;
-    var letterCount=(text.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
-    var isHindiCard=letterCount>0&&(devaCount/letterCount)>0.3;
-    if(isHindiCard){
-      utt.lang='hi-IN';
-      // Try to find a Hindi voice if available
-      var voices=window.speechSynthesis.getVoices();
-      var hindiVoice=voices.find(function(v){return v.lang==='hi-IN'||v.lang==='hi';});
-      if(hindiVoice)utt.voice=hindiVoice;
-    } else {
-      utt.lang='en-IN';
+    // Detect Hindi using correct Devanagari Unicode range \u0900-\u097F
+    var devaCount=(text.match(/[\u0900-\u097F]/g)||[]).length;
+    var letterCount=(text.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
+    var isHindi=letterCount>0&&(devaCount/letterCount)>0.3;
+    function speak(voices){
+      var utt=new SpeechSynthesisUtterance(text);
+      utt.rate=0.92;utt.pitch=1;
+      if(isHindi){
+        utt.lang='hi-IN';
+        // Find best Hindi voice — prefer hi-IN, fall back to any hi variant
+        var hv=voices.find(function(v){return v.lang==='hi-IN';})
+              ||voices.find(function(v){return v.lang&&v.lang.startsWith('hi');});
+        if(hv)utt.voice=hv;
+      } else {
+        utt.lang='en-IN';
+      }
+      utt.onend=function(){setSpeaking(false);};
+      utt.onerror=function(){setSpeaking(false);};
+      window.speechSynthesis.speak(utt);
+      setSpeaking(true);
     }
-    utt.onend=function(){setSpeaking(false);};
-    utt.onerror=function(){setSpeaking(false);};
-    window.speechSynthesis.speak(utt);
-    setSpeaking(true);
+    // getVoices() is async on Chrome/Android — must wait for voices to load
+    var v=window.speechSynthesis.getVoices();
+    if(v&&v.length){speak(v);}
+    else{
+      window.speechSynthesis.onvoiceschanged=function(){
+        speak(window.speechSynthesis.getVoices());
+        window.speechSynthesis.onvoiceschanged=null;
+      };
+      // Fallback: if onvoiceschanged never fires, speak after short delay
+      setTimeout(function(){if(!speaking){speak(window.speechSynthesis.getVoices());}},500);
+    }
   }
   useEffect(function(){
     function closeMenu(e){
@@ -2538,7 +2565,7 @@ function App(){
               },
                 e('span',{className:'upz-i'},'↑'),
                 fn ? e('p',null,e('strong',null,fn),e('br'),t('Click to replace'))
-                   : e('p',null,t('Drop PDF here or '),e('strong',null,t('click to browse')),e('br'),isElite()?'Up to 50 pages':'Up to 20 pages'+(isPro()?'':' — Elite allows 50'))
+                   : e('p',null,t('Drop PDF here or '),e('strong',null,t('click to browse')),e('br'),isElite()?'Up to 50 pages':isPro()?'Up to 20 pages':'Up to 10 pages')
               ),
               e('input',{type:'file',accept:'.pdf',ref:fref,onChange:function(ev){hFile(ev.target.files[0]);}}),
               fn&&e('textarea',{value:pdfTxt,onChange:function(ev){setPdfTxt(ev.target.value);},placeholder:'Edit extracted text if needed…',style:{borderTop:'1px solid var(--border)'}})
@@ -2588,7 +2615,7 @@ function App(){
           e('p',null,'Your text is '+itxt.length.toLocaleString('en-IN')+' characters — only the first '+getCharLimit().toLocaleString('en-IN')+' will be used. For best results across all topics, trim your input or paste one topic at a time.')
         ),
         itab==='pdf'&&e('div',{className:'pdf-disc'},
-          e('p',null,isElite()?'Elite: all visuals processed — text, tables, charts, handwriting, diagrams (up to 50 pages).':isPro()?'Pro: printed text, tables, graphs & charts only. Handwriting and diagrams require Elite.':'Free: text-based PDFs only. Upgrade to Pro or Elite for visual processing.')
+          e('p',null,isElite()?'Elite: all visuals processed — text, handwriting, diagrams, tables & charts (up to 50 pages).':isPro()?'Pro: selectable text & tables processed (up to 20 pages). Upgrade to Elite for handwriting & diagrams.':'Free: selectable text only, up to 10 pages. Upgrade to Pro (20 pages) or Elite (50 pages with full visual processing).')
         ),
         e('div',{className:'urow'},
           e('div',{className:'ut'},e('div',{className:'uf',style:{width:Math.min(100,usage/getDayLimit()*100)+'%'}})),
