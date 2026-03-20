@@ -981,20 +981,19 @@ async function callAI(text,count,quizCount,opts){
   var needsWorker=isEliteFileUpload&&CFG.WORKER_URL&&CFG.WORKER_URL!=='WORKER_URL_HERE';
 
   if(needsWorker){
-    try{
-      console.log('[CogniSwift] Elite PDF → Cloudflare Worker → Grok 4.1 | images:',body.images?body.images.length:0);
-      var wr=await fetch(CFG.WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if(!wr.ok){var werr=await wr.json().catch(function(){return{};});throw new Error(werr.error||'Worker error '+wr.status);}
-      return wr.json();
-    }catch(workerErr){
-      // Worker failed — fall back to Vercel (Grok call, may timeout on very large docs)
-      console.warn('[CogniSwift] Worker failed:',workerErr.message,'— falling back to Vercel');
-      // Trim images to stay under Vercel 4.5MB payload limit
-      if(body.images&&body.images.length>10)body.images=body.images.slice(0,10);
+    // Elite PDF: send to Worker and surface any error directly to user
+    // Never fall back to Groq — Groq has no images and would hallucinate on wrong topic
+    console.log('[CogniSwift] Elite PDF → Cloudflare Worker → Grok 4.1 | images:',body.images?body.images.length:0);
+    var wr=await fetch(CFG.WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var wrData=await wr.json().catch(function(){return{error:'Worker response unreadable'};});
+    if(!wr.ok){
+      console.error('[CogniSwift] Worker error:',wrData.error);
+      throw new Error(wrData.error||'Processing failed. Please try again.');
     }
+    return wrData;
   }
 
-  // Vercel → Groq (all non-Elite-file-upload cases, and Elite fallback)
+  // Vercel → Groq/Llama (free users, Pro, text paste — never for Elite file uploads)
   var r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error||'Server error');}
   return r.json();
