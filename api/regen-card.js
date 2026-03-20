@@ -101,8 +101,8 @@ RULES:
   // ── PRO PATH: llama-3.1-8b-instant via Groq paid dev plan ──────────────
   if (tier === 'pro') {
     try {
-      const proKey = process.env.GROQ_API_KEY;
-      if (!proKey) throw new Error('GROQ_API_KEY not configured');
+      const proKey = process.env.GROQ_PRO_KEY;
+      if (!proKey) throw new Error('GROQ_PRO_KEY not configured');
       console.log('[CogniSwift] regen-card → llama-3.1-8b-instant (Pro)');
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
