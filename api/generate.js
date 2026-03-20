@@ -233,7 +233,7 @@ async function callGrok(messages, maxTokens) {
 
 async function callLlama(prompt) {
   const proKey = process.env.GROQ_PRO_KEY; // dedicated paid Dev plan key — 250k TPM
-  if (!proKey) throw new Error('GROQ_PRO_KEY not configured');
+  if (!proKey) throw new Error('GROQ_PRO_KEY not configured on Vercel');
 
   console.log('[CogniSwift] Calling llama-3.1-8b-instant for Pro user (GROQ_PRO_KEY)');
 
@@ -327,6 +327,7 @@ export default async function handler(req, res) {
   const {
     text,           // extracted text (always present)
     count,          // number of flashcards requested
+    quizCount,      // requested quiz question count from frontend
     images,         // base64 image array — only for Elite scanned PDFs
     isFileUpload,   // boolean: true = PDF upload, false = plain text paste
     summaryDepth,   // 'concise'|'standard'|'detailed'|'deep dive' — Elite only
@@ -365,8 +366,12 @@ export default async function handler(req, res) {
   const inputText = text.substring(0, charLimit);
   const wordCount = inputText.split(/\s+/).filter(Boolean).length;
 
-  // ── Quiz count scales with content (same as original) ────────────────────
-  const maxQuiz = wordCount < 400 ? 5 : wordCount < 900 ? 10 : 20;
+  // ── Quiz count: use what the user/frontend sent, cap at 20 ─────────────
+  // quizCount from body is always set (frontend sends 20 as default)
+  // Fall back to content-based estimate only if not provided
+  const maxQuiz = quizCount
+    ? Math.min(20, Math.max(5, parseInt(quizCount, 10) || 20))
+    : (wordCount < 400 ? 5 : wordCount < 900 ? 10 : 20);
 
   // ── Language detection (same as original) ────────────────────────────────
   const langInstruction = detectLanguage(inputText);
@@ -413,11 +418,8 @@ FLASHCARD RULES:
 QUIZ RULES — CRITICAL:
 - Generate EXACTLY ${maxQuiz} quiz questions. Hard requirement — count before outputting.
 - Cover ALL topics proportionally. Test specific facts from the notes only.
-- Each question has EXACTLY 4 options (A, B, C, D). Each option is a SHORT PHRASE — maximum 8 words. NEVER write a sentence or paragraph as an option.
-- Example WRONG option: "The process by which plants convert sunlight into glucose using chlorophyll"
-- Example CORRECT option: "Photosynthesis" or "Chlorophyll absorbs light"
-- Distractors must be plausible short alternatives from the same domain.
-- "correct" is integer 0-3. Explanation: one concise sentence on why the correct answer is right.
+- Each question has EXACTLY 4 options. Distractors must be plausible.
+- "correct" is integer 0-3. Explanation: why correct is right AND why main wrong option is wrong.
 
 SUMMARY RULES:
 - Title: max 8 words. Sections with heading (3-6 words) and bullet points.
@@ -503,8 +505,7 @@ ${inputText}`;
         { role: 'system', content: GROK_SYSTEM_PROMPT },
         { role: 'user',   content: userContent },
       ];
-      // Always use full 30k output — never truncate Elite responses
-      const maxTokens = 30000;
+      const maxTokens = 30000; // always use Grok 4.1 Fast full output — never truncate
 
       const raw    = await callGrok(messages, maxTokens);
       const parsed = parseAndValidate(raw);
