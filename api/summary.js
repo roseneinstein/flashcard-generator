@@ -39,11 +39,12 @@ Rules: title max 8 words. heading 3-6 words. Each point = one complete fact with
 Study material:
 ${safeText}`;
 
-  // Pro: llama-3.1-8b-instant (paid dev plan — dedicated, fast)
-  // Free: llama-3.3-70b → llama-3.1-8b across 3 free keys (gemma2/mixtral decommissioned)
+  // Pro: GROQ_PRO_KEY + llama-3.1-8b-instant (dedicated paid Dev plan — 250k TPM)
+  // Free: GROQ_API_KEY/2/3 free tier keys only
+  const proKey = process.env.GROQ_PRO_KEY;
   const isProTier = tier === 'pro';
   const attempts = isProTier
-    ? [ { key: apiKey, model: 'llama-3.1-8b-instant' } ]
+    ? [ { key: proKey || apiKey, model: 'llama-3.1-8b-instant' } ]
     : [
         { key: apiKey,  model: 'llama-3.3-70b-versatile' },
         { key: apiKey,  model: 'llama-3.1-8b-instant'    },
