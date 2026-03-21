@@ -1999,28 +1999,42 @@ function App(){
             var allText2=pageTexts.join(' ').trim();
             var goodPages=pageImages.filter(Boolean).length;
 
-            console.log('[CogniSwift] PDF processed — tier:',tier,'| extracted chars:',allText2.length,'| good pages:',goodPages,'of',maxPages);
+            // ── Garbage OCR text detection (Elite) ────────────────────────
+            // Phone scanner apps embed their own OCR inside PDFs as invisible text.
+            // pdf.js extracts this faithfully — but scanner OCR on handwriting produces
+            // garbage: symbols, dots, random chars. Real text is >40% alphanumeric.
+            // If garbage detected, ignore text entirely and rely on images only.
+            function isUsableText(txt){
+              if(!txt||txt.length<20)return false;
+              var noSpace=txt.replace(/\s+/g,'');
+              if(noSpace.length<10)return false;
+              var alnum=(noSpace.match(/[a-zA-Z0-9ऀ-ॿ]/g)||[]).length;
+              return (alnum/noSpace.length)>0.40;
+            }
+            var useableText=(tier==='elite')?(isUsableText(allText2)?allText2:''):allText2;
+            if(tier==='elite'&&allText2.length>20&&!useableText){
+              console.log('[CogniSwift] Ignoring garbage scanner OCR text — image-only mode');
+            }
+
+            console.log('[CogniSwift] PDF done — tier:',tier,'| usable text:',!!useableText,'| good pages:',goodPages,'of',maxPages);
 
             if(tier==='elite'){
-              // ── Quality gate warning ──────────────────────────────────────
-              // If more than 60% of pages were skipped (blank/blurry), warn user
-              if(maxPages>2&&goodPages<maxPages*0.4&&goodPages===0){
-                // All pages failed quality check — block generation
+              // ── Quality gate ──────────────────────────────────────────────
+              if(maxPages>2&&goodPages===0){
                 setFn('');setPdfTxt('');window._pdfImages=[];window._pdfUseWorker=false;
-                st('All pages appear blank or too blurry to process. Please upload a clearer scan or better-lit photo.');
+                st('All pages appear blank or too blurry. Please upload a clearer scan or better-lit photo.');
                 return;
               }
               if(maxPages>3&&goodPages<maxPages*0.5){
-                // More than half failed — warn but allow
-                st('Warning: '+goodPages+' of '+maxPages+' pages passed quality check. Upload a clearer scan for better results.');
+                st('Note: '+goodPages+' of '+maxPages+' pages passed quality check. Upload a clearer scan for best results.');
               }
               window._pdfImages=pageImages.filter(Boolean);
               window._pdfUseWorker=true;
-              setPdfTxt(allText2||'[document — use images as primary source]');
+              setPdfTxt(useableText||'[document — use images as primary source]');
               if(goodPages===maxPages){
                 st('PDF ready — '+goodPages+' pages preprocessed (Elite): handwriting, diagrams, tables & charts.');
               } else if(goodPages>0){
-                st('PDF ready — '+goodPages+' of '+maxPages+' pages processed. Low quality pages were skipped.');
+                st('PDF ready — '+goodPages+' of '+maxPages+' pages processed. Low quality pages skipped.');
               }
 
             } else {
@@ -2058,20 +2072,24 @@ function App(){
                   var ctx=canvas.getContext('2d');
                   page.render({canvasContext:ctx,viewport:vp}).promise.then(function(){
                     // ── Quality gate ─────────────────────────────────────────────
-                    // 1. Blank/black check — skip pages with avg brightness < 8
+                    // 1. Blank/black check — sample center of page (not corner, which may be white border)
                     try{
-                      var smp=ctx.getImageData(0,0,Math.min(canvas.width,60),Math.min(canvas.height,60));
+                      var cx=Math.floor(canvas.width/2)-50,cy=Math.floor(canvas.height/2)-50;
+                      var smp=ctx.getImageData(Math.max(0,cx),Math.max(0,cy),100,100);
                       var bsum=0;
                       for(var bx=0;bx<smp.data.length;bx+=4)bsum+=smp.data[bx]+smp.data[bx+1]+smp.data[bx+2];
                       var bavg=bsum/(smp.data.length/4*3);
                       if(bavg<8){
-                        console.warn('[CogniSwift] p'+(pageIdx+1)+' blank — skipped');
+                        console.warn('[CogniSwift] p'+(pageIdx+1)+' blank (center avg='+bavg.toFixed(1)+') — skipped');
                         pagesDone++;checkDone();return;
                       }
                     }catch(e){}
-                    // 2. Blur check — skip extremely blurry pages (Laplacian std dev < 12)
+                    // 2. Blur check — sample center region (1/4 of page dimensions, centered)
+                    // Avoid edges/margins which are always sharp regardless of content blur
+                    var bx0=Math.floor(canvas.width*0.25),by0=Math.floor(canvas.height*0.25);
+                    var bw=Math.floor(canvas.width*0.5),bh=Math.floor(canvas.height*0.5);
                     var blurScore=computeBlurScore(ctx,canvas.width,canvas.height);
-                    if(blurScore<12){
+                    if(blurScore<10){
                       console.warn('[CogniSwift] p'+(pageIdx+1)+' too blurry (score:'+blurScore.toFixed(1)+') — skipped');
                       pagesDone++;checkDone();return;
                     }
