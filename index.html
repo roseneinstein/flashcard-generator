@@ -1961,37 +1961,63 @@ function App(){
             }catch(e){return 999;}
           }
 
-          // preprocessWithOpenCV: grayscale + adaptive threshold + slight sharpen
-          // Returns preprocessed JPEG data URL, or null if OpenCV not available
+          // preprocessWithOpenCV: CLAHE contrast + Otsu threshold with safety fallback
+          // Key insight: adaptive threshold DESTROYS handwriting for vision LLMs like Grok.
+          // Binarisation is for Tesseract OCR (needs black/white). Grok needs tonal information.
+          // Strategy: enhance contrast, then try Otsu. If result is >70% black, abort and
+          // send original (contrast-enhanced only). This preserves Grok's ability to read ink.
           function preprocessWithOpenCV(canvas){
             try{
               if(!window.cv||!window.cv.Mat)return null;
               var cv=window.cv;
               var src=cv.imread(canvas);
-              var dst=new cv.Mat();
-              // Step 1: grayscale
-              cv.cvtColor(src,dst,cv.COLOR_RGBA2GRAY);
-              // Step 2: adaptive threshold — makes ink dark, paper white
-              // Handles uneven lighting common in phone captures
-              var thresh=new cv.Mat();
-              cv.adaptiveThreshold(dst,thresh,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,15,8);
-              // Step 3: morphological close — fills small gaps in letters
-              var kernel=cv.Mat.ones(2,2,cv.CV_8U);
-              var closed=new cv.Mat();
-              cv.morphologyEx(thresh,closed,cv.MORPH_CLOSE,kernel);
-              // Step 4: convert back to RGBA for canvas
+              var gray=new cv.Mat();
+              cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
+
+              // Step 1: CLAHE — contrast limited adaptive histogram equalisation
+              // Boosts local contrast without over-brightening already dark regions
+              var clahe=new cv.CLAHE(2.0,new cv.Size(8,8));
+              var enhanced=new cv.Mat();
+              clahe.apply(gray,enhanced);
+
+              // Step 2: gentle Gaussian blur to reduce noise before thresholding
+              var blurred=new cv.Mat();
+              cv.GaussianBlur(enhanced,blurred,new cv.Size(3,3),0);
+
+              // Step 3: Otsu threshold — auto picks the best global threshold
+              var otsu=new cv.Mat();
+              cv.threshold(blurred,otsu,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU);
+
+              // Step 4: safety check — if result is >70% black pixels, the threshold
+              // destroyed the image (over-darkened handwriting). Fall back to CLAHE-only.
+              var totalPx=otsu.rows*otsu.cols;
+              var blackPx=totalPx-cv.countNonZero(otsu);
+              var blackRatio=blackPx/totalPx;
+
+              var useMat;
+              if(blackRatio>0.70){
+                // Too dark — Otsu failed on this page, use CLAHE-enhanced grayscale instead
+                console.log('[CogniSwift] Otsu over-darkened ('+Math.round(blackRatio*100)+'% black) — using CLAHE only');
+                useMat=enhanced;
+              } else {
+                useMat=otsu;
+              }
+
+              // Convert to RGBA and draw
               var rgba=new cv.Mat();
-              cv.cvtColor(closed,rgba,cv.COLOR_GRAY2RGBA);
-              // Draw to output canvas
+              cv.cvtColor(useMat,rgba,cv.COLOR_GRAY2RGBA);
               var outCanvas=document.createElement('canvas');
-              outCanvas.width=closed.cols;outCanvas.height=closed.rows;
+              outCanvas.width=useMat.cols;outCanvas.height=useMat.rows;
               cv.imshow(outCanvas,rgba);
+
               // Cleanup
-              src.delete();dst.delete();thresh.delete();kernel.delete();closed.delete();rgba.delete();
-              return outCanvas.toDataURL('image/jpeg',0.92); // higher quality after binarisation
+              src.delete();gray.delete();clahe.delete();enhanced.delete();
+              blurred.delete();otsu.delete();rgba.delete();
+
+              return outCanvas.toDataURL('image/jpeg',0.90);
             }catch(e){
               console.warn('[CogniSwift] OpenCV preprocessing failed:',e.message);
-              return null;
+              return null; // non-fatal: caller will use direct JPEG
             }
           }
           function checkDone(){
@@ -2094,15 +2120,42 @@ function App(){
                       pagesDone++;checkDone();return;
                     }
                     // ── OpenCV preprocessing (Elite only, if loaded) ──────────────
-                    // Try preprocessing: grayscale + adaptive threshold + morph close
-                    // Falls back to direct JPEG if OpenCV not available
+                    // Try CLAHE+Otsu preprocessing. If OpenCV not available, fall back to direct JPEG.
+                    // The preprocessWithOpenCV function has a safety check inside:
+                    // if Otsu over-darkens (>70% black), it falls back to CLAHE-only automatically.
                     var preprocessed=preprocessWithOpenCV(canvas);
                     if(preprocessed){
-                      pageImages[pageIdx]=preprocessed;
-                      console.log('[CogniSwift] p'+(pageIdx+1)+' preprocessed via OpenCV | blur:'+blurScore.toFixed(1));
+                      // ── Post-preprocessing brightness check ──────────────────
+                      // Check the PREPROCESSED image (not original) — this is what Grok actually sees
+                      // If preprocessing made it too dark, reject it and use original instead
+                      try{
+                        var tmpImg=new Image();
+                        tmpImg.src=preprocessed;
+                        var chkCanvas=document.createElement('canvas');
+                        chkCanvas.width=100;chkCanvas.height=100;
+                        var chkCtx=chkCanvas.getContext('2d');
+                        chkCtx.drawImage(tmpImg,
+                          Math.floor(canvas.width*0.4),Math.floor(canvas.height*0.4),
+                          Math.floor(canvas.width*0.2),Math.floor(canvas.height*0.2),
+                          0,0,100,100);
+                        var chkData=chkCtx.getImageData(0,0,100,100);
+                        var chkSum=0;
+                        for(var ci=0;ci<chkData.data.length;ci+=4)chkSum+=chkData.data[ci]+chkData.data[ci+1]+chkData.data[ci+2];
+                        var chkAvg=chkSum/(chkData.data.length/4*3);
+                        if(chkAvg<15){
+                          // Still too dark after preprocessing — use original canvas instead
+                          console.warn('[CogniSwift] p'+(pageIdx+1)+' preprocessed too dark (avg='+chkAvg.toFixed(1)+') — using original');
+                          pageImages[pageIdx]=compressCanvas(canvas,0.90);
+                        } else {
+                          pageImages[pageIdx]=preprocessed;
+                          console.log('[CogniSwift] p'+(pageIdx+1)+' preprocessed OK | blur:'+blurScore.toFixed(1)+' | center_avg:'+chkAvg.toFixed(1));
+                        }
+                      }catch(e){
+                        pageImages[pageIdx]=preprocessed; // if check fails, use preprocessed anyway
+                      }
                     } else {
                       // OpenCV not loaded — use direct compress at higher quality
-                      pageImages[pageIdx]=compressCanvas(canvas,0.88);
+                      pageImages[pageIdx]=compressCanvas(canvas,0.90);
                       console.log('[CogniSwift] p'+(pageIdx+1)+' direct compress | blur:'+blurScore.toFixed(1));
                     }
                     pagesDone++;checkDone();
