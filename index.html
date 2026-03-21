@@ -1868,6 +1868,7 @@ function App(){
     if(!file.type.includes('pdf'))return st('PDF files only');
     if(file.size>20*1024*1024)return st('PDF too large — keep under 20MB');
     setFn(file.name);setPdfTxt('');window._pdfImages=[];window._pdfUseWorker=false;st('Reading PDF…');
+    var tier0=getTier(); // capture tier before async
     var loadLib=new Promise(function(resolve,reject){
       if(window.pdfjsLib){resolve();return;}
       var s=document.createElement('script');
@@ -1876,9 +1877,28 @@ function App(){
       s.onerror=reject;
       document.head.appendChild(s);
     });
+    // Load OpenCV.js for Elite preprocessing — lazy load only when needed
+    var loadOpenCV=new Promise(function(resolve){
+      if(tier0!=='elite'){resolve();return;} // only Elite needs OpenCV
+      if(window.cv&&window.cv.Mat){resolve();return;} // already loaded
+      var s=document.createElement('script');
+      s.src='https://docs.opencv.org/4.8.0/opencv.js';
+      s.onload=function(){
+        // OpenCV.js calls onRuntimeInitialized when WASM is ready
+        if(window.cv&&window.cv.Mat){resolve();return;}
+        window.cv.onRuntimeInitialized=function(){resolve();};
+        // Fallback if already initialized
+        setTimeout(function(){resolve();},3000);
+      };
+      s.onerror=function(){
+        console.warn('[CogniSwift] OpenCV.js failed to load — skipping preprocessing');
+        resolve(); // non-fatal, continue without preprocessing
+      };
+      document.head.appendChild(s);
+    });
     var reader=new FileReader();
     reader.onload=function(ev){
-      loadLib.then(function(){
+      Promise.all([loadLib,loadOpenCV]).then(function(){
         var typedArray=new Uint8Array(ev.target.result);
         window.pdfjsLib.getDocument({data:typedArray}).promise.then(function(pdf){
           // Read tier FIRST before anything else
@@ -1901,36 +1921,107 @@ function App(){
           var needsRender=(tier==='elite'); // only Elite renders page images — Pro uses text only
           var pageTexts=new Array(maxPages).fill('');
           var pageImages=[];
-          // Target: 800px wide (portrait A4 → ~1130px tall), JPEG quality 0.82
-          // Why 800px: sharp enough for Grok to read handwriting/tables/charts clearly
-          // (equivalent to a phone screenshot — all text legible)
-          // At ~110-140KB per page × 20 pages = ~2.5MB max, safely under Vercel 4.5MB limit
-          // All maxPages are sent — no page cap, full doc coverage
-          function compressCanvas(canvas){
-            var TARGET_W=800;
+          // ── Image processing pipeline (Elite only) ────────────────────────
+          // Target: 1200px wide — higher res for handwriting legibility with OpenCV
+          var TARGET_W=1200;
+
+          // compressCanvas: resize to TARGET_W and encode as JPEG
+          function compressCanvas(canvas,quality){
             var w=canvas.width,h=canvas.height;
-            // Scale so width = TARGET_W (height scales proportionally — preserves aspect ratio)
             var scale=TARGET_W/w;
             var c2=document.createElement('canvas');
             c2.width=TARGET_W;
             c2.height=Math.round(h*scale);
             c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
-            return c2.toDataURL('image/jpeg',0.82);
+            return c2.toDataURL('image/jpeg',quality||0.88);
+          }
+
+          // computeBlurScore: Laplacian variance — measures sharpness
+          // Low variance = blurry. Returns a number; threshold ~80 for handwriting
+          function computeBlurScore(ctx,w,h){
+            try{
+              var imgData=ctx.getImageData(0,0,w,h);
+              var d=imgData.data,sum=0,sumSq=0,n=0;
+              // Sample every 4th pixel for speed — compute grayscale Laplacian approx
+              for(var y=1;y<h-1;y+=4){
+                for(var x=1;x<w-1;x+=4){
+                  var i=(y*w+x)*4;
+                  var g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+                  var lap=4*g
+                    -0.299*d[((y-1)*w+x)*4]-0.587*d[((y-1)*w+x)*4+1]-0.114*d[((y-1)*w+x)*4+2]
+                    -0.299*d[((y+1)*w+x)*4]-0.587*d[((y+1)*w+x)*4+1]-0.114*d[((y+1)*w+x)*4+2]
+                    -0.299*d[(y*w+x-1)*4]-0.587*d[(y*w+x-1)*4+1]-0.114*d[(y*w+x-1)*4+2]
+                    -0.299*d[(y*w+x+1)*4]-0.587*d[(y*w+x+1)*4+1]-0.114*d[(y*w+x+1)*4+2];
+                  sum+=lap;sumSq+=lap*lap;n++;
+                }
+              }
+              if(n===0)return 999;
+              var mean=sum/n;
+              return Math.sqrt(sumSq/n-mean*mean); // std dev of Laplacian ≈ sharpness
+            }catch(e){return 999;}
+          }
+
+          // preprocessWithOpenCV: grayscale + adaptive threshold + slight sharpen
+          // Returns preprocessed JPEG data URL, or null if OpenCV not available
+          function preprocessWithOpenCV(canvas){
+            try{
+              if(!window.cv||!window.cv.Mat)return null;
+              var cv=window.cv;
+              var src=cv.imread(canvas);
+              var dst=new cv.Mat();
+              // Step 1: grayscale
+              cv.cvtColor(src,dst,cv.COLOR_RGBA2GRAY);
+              // Step 2: adaptive threshold — makes ink dark, paper white
+              // Handles uneven lighting common in phone captures
+              var thresh=new cv.Mat();
+              cv.adaptiveThreshold(dst,thresh,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,15,8);
+              // Step 3: morphological close — fills small gaps in letters
+              var kernel=cv.Mat.ones(2,2,cv.CV_8U);
+              var closed=new cv.Mat();
+              cv.morphologyEx(thresh,closed,cv.MORPH_CLOSE,kernel);
+              // Step 4: convert back to RGBA for canvas
+              var rgba=new cv.Mat();
+              cv.cvtColor(closed,rgba,cv.COLOR_GRAY2RGBA);
+              // Draw to output canvas
+              var outCanvas=document.createElement('canvas');
+              outCanvas.width=closed.cols;outCanvas.height=closed.rows;
+              cv.imshow(outCanvas,rgba);
+              // Cleanup
+              src.delete();dst.delete();thresh.delete();kernel.delete();closed.delete();rgba.delete();
+              return outCanvas.toDataURL('image/jpeg',0.92); // higher quality after binarisation
+            }catch(e){
+              console.warn('[CogniSwift] OpenCV preprocessing failed:',e.message);
+              return null;
+            }
           }
           function checkDone(){
             if(pagesDone!==maxPages)return;
             var allText2=pageTexts.join(' ').trim();
+            var goodPages=pageImages.filter(Boolean).length;
 
-            console.log('[CogniSwift] PDF processed — tier:',tier,'| extracted chars:',allText2.length,'| images:',pageImages.filter(Boolean).length);
+            console.log('[CogniSwift] PDF processed — tier:',tier,'| extracted chars:',allText2.length,'| good pages:',goodPages,'of',maxPages);
 
             if(tier==='elite'){
-              // Elite → Cloudflare Worker → Grok 4.1 — full vision, everything
-              // Always send all page images regardless of selectability
-              // Always provide non-empty text (placeholder if fully handwritten/scanned)
+              // ── Quality gate warning ──────────────────────────────────────
+              // If more than 60% of pages were skipped (blank/blurry), warn user
+              if(maxPages>2&&goodPages<maxPages*0.4&&goodPages===0){
+                // All pages failed quality check — block generation
+                setFn('');setPdfTxt('');window._pdfImages=[];window._pdfUseWorker=false;
+                st('All pages appear blank or too blurry to process. Please upload a clearer scan or better-lit photo.');
+                return;
+              }
+              if(maxPages>3&&goodPages<maxPages*0.5){
+                // More than half failed — warn but allow
+                st('Warning: '+goodPages+' of '+maxPages+' pages passed quality check. Upload a clearer scan for better results.');
+              }
               window._pdfImages=pageImages.filter(Boolean);
               window._pdfUseWorker=true;
               setPdfTxt(allText2||'[document — use images as primary source]');
-              st('PDF ready — full visual processing (Elite): text, handwriting, diagrams, tables & charts.');
+              if(goodPages===maxPages){
+                st('PDF ready — '+goodPages+' pages preprocessed (Elite): handwriting, diagrams, tables & charts.');
+              } else if(goodPages>0){
+                st('PDF ready — '+goodPages+' of '+maxPages+' pages processed. Low quality pages were skipped.');
+              }
 
             } else {
               // Free & Pro → Vercel → Groq — text only from PDF.js extraction
@@ -1961,23 +2052,44 @@ function App(){
                 // Render to canvas for paid users — all pages
                 // scale:1.2 gives good resolution for AI reading without oversizing
                 if(needsRender){
-                  var vp=page.getViewport({scale:1.2});
+                  var vp=page.getViewport({scale:1.5}); // higher scale → sharper for OpenCV
                   var canvas=document.createElement('canvas');
                   canvas.width=vp.width;canvas.height=vp.height;
                   var ctx=canvas.getContext('2d');
                   page.render({canvasContext:ctx,viewport:vp}).promise.then(function(){
-                    // Skip blank/black pages (avg brightness <10/255) — stops Grok hallucinating
+                    // ── Quality gate ─────────────────────────────────────────────
+                    // 1. Blank/black check — skip pages with avg brightness < 8
                     try{
-                      var sample=ctx.getImageData(0,0,Math.min(canvas.width,50),Math.min(canvas.height,50));
-                      var sum=0;
-                      for(var px=0;px<sample.data.length;px+=4)sum+=sample.data[px]+sample.data[px+1]+sample.data[px+2];
-                      var avg=sum/(sample.data.length/4*3);
-                      if(avg>8){pageImages[pageIdx]=compressCanvas(canvas);}
-                      else{console.warn('[CogniSwift] Page '+(pageIdx+1)+' blank/black — skipped');}
-                    }catch(e){pageImages[pageIdx]=compressCanvas(canvas);}
+                      var smp=ctx.getImageData(0,0,Math.min(canvas.width,60),Math.min(canvas.height,60));
+                      var bsum=0;
+                      for(var bx=0;bx<smp.data.length;bx+=4)bsum+=smp.data[bx]+smp.data[bx+1]+smp.data[bx+2];
+                      var bavg=bsum/(smp.data.length/4*3);
+                      if(bavg<8){
+                        console.warn('[CogniSwift] p'+(pageIdx+1)+' blank — skipped');
+                        pagesDone++;checkDone();return;
+                      }
+                    }catch(e){}
+                    // 2. Blur check — skip extremely blurry pages (Laplacian std dev < 12)
+                    var blurScore=computeBlurScore(ctx,canvas.width,canvas.height);
+                    if(blurScore<12){
+                      console.warn('[CogniSwift] p'+(pageIdx+1)+' too blurry (score:'+blurScore.toFixed(1)+') — skipped');
+                      pagesDone++;checkDone();return;
+                    }
+                    // ── OpenCV preprocessing (Elite only, if loaded) ──────────────
+                    // Try preprocessing: grayscale + adaptive threshold + morph close
+                    // Falls back to direct JPEG if OpenCV not available
+                    var preprocessed=preprocessWithOpenCV(canvas);
+                    if(preprocessed){
+                      pageImages[pageIdx]=preprocessed;
+                      console.log('[CogniSwift] p'+(pageIdx+1)+' preprocessed via OpenCV | blur:'+blurScore.toFixed(1));
+                    } else {
+                      // OpenCV not loaded — use direct compress at higher quality
+                      pageImages[pageIdx]=compressCanvas(canvas,0.88);
+                      console.log('[CogniSwift] p'+(pageIdx+1)+' direct compress | blur:'+blurScore.toFixed(1));
+                    }
                     pagesDone++;checkDone();
                   }).catch(function(err){
-                    console.warn('[CogniSwift] Page render failed p'+(pageIdx+1)+':',err.message);
+                    console.warn('[CogniSwift] render failed p'+(pageIdx+1)+':',err.message);
                     pagesDone++;checkDone();
                   });
                 }
