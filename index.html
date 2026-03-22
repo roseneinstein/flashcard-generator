@@ -1802,32 +1802,11 @@ function App(){
     // Images only sent for Elite file uploads (Pro and Free use text-only Groq)
     var imgPayload=(isFile&&tier==='elite'&&window._pdfImages&&window._pdfImages.length)?window._pdfImages:[];
     var useWorker=false; // routing decision now made inside callAI based on tier
-    // Safety check: if images exceed 3.8MB total (leaving room for text payload + headers)
-    // Re-compress at lower quality rather than dropping — preserves all pages
+    // Cloudflare Worker accepts large payloads (up to 100MB) — no need to compress for it
+    // Only log the size for monitoring purposes
     if(imgPayload.length){
       var totalSize=imgPayload.reduce(function(sum,b64){return sum+(b64?b64.length:0);},0);
-      console.log('[CogniSwift] Image payload size: '+Math.round(totalSize/1024)+'KB across '+imgPayload.length+' pages');
-      if(totalSize>3.8*1024*1024){
-        // Re-compress at lower quality to fit — still readable by Grok
-        console.warn('[CogniSwift] Payload too large, re-compressing at 0.65 quality');
-        imgPayload=imgPayload.map(function(b64){
-          if(!b64)return b64;
-          var img=new Image();
-          img.src=b64;
-          var c=document.createElement('canvas');
-          c.width=img.width||800;c.height=img.height||1100;
-          c.getContext('2d').drawImage(img,0,0);
-          return c.toDataURL('image/jpeg',0.65);
-        });
-        var newSize=imgPayload.reduce(function(sum,b64){return sum+(b64?b64.length:0);},0);
-        console.log('[CogniSwift] Re-compressed size: '+Math.round(newSize/1024)+'KB');
-        // If still too large after recompression, drop images as last resort
-        if(newSize>4*1024*1024){
-          console.warn('[CogniSwift] Still too large after recompression — dropping images');
-          st('Document too large for visual processing — using extracted text only');
-          imgPayload=[];
-        }
-      }
+      console.log('[CogniSwift] Image payload: '+Math.round(totalSize/1024)+'KB across '+imgPayload.length+' pages → sending to Worker');
     }
     try{
       var res=await callAI(txt,cnt,20,{isFileUpload:isFile,images:imgPayload,summaryDepth:isElite()?summaryDepth:'standard',useWorker:useWorker});
