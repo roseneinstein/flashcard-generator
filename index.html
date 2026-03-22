@@ -799,8 +799,8 @@ footer{border-top:1px solid var(--border);padding:52px 40px 36px;display:flex;fl
 // App() syncs window._lang on every render so t() always reflects current lang.
 var HI_MAP={
   'Features':'विशेषताएं','Plans':'प्लान्स','Sign in':'साइन इन','Sign out':'साइन आउट',
-  'Notes become':'नोट्स बनें','flashcards':'फ्लैशकार्ड्स',
-  'Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.':'अपना टेक्स्ट पेस्ट करें। तुरंत फ्लैशकार्ड्स, सारांश और क्विज़ पाएं।',
+  'From Notes':'नोट्स से','To Memory':'स्मृति तक',
+  'Stop forgetting. Start remembering — notes transformed into your personal Revision Engine.':'भूलना बंद करें। याद रखना शुरू करें — नोट्स से स्मृति तक।',
   'Start for free →':'मुफ़्त में शुरू करें →',
   'What you get':'आपको क्या मिलेगा','Built for how':'बनाया गया है','Indian students':'भारतीय छात्रों','actually study':'की पढ़ाई के लिए',
   'Instant study cards':'तुरंत स्टडी कार्ड्स',
@@ -878,7 +878,7 @@ const{useState,useRef,useEffect}=React;
 const e=React.createElement;
 
 const CFG={
-  FREE_LIMIT:10,
+  FREE_LIMIT:5,
   PRO_LIMIT:20,
   ELITE_LIMIT:40,
   FREE_CHARS:8000,
@@ -1810,7 +1810,24 @@ function App(){
     }
     try{
       var res=await callAI(txt,cnt,20,{isFileUpload:isFile,images:imgPayload,summaryDepth:isElite()?summaryDepth:'standard',useWorker:useWorker});
-      setCards(res.flashcards||[]);setQuiz(res.quiz||[]);setTimeout(function(){pickDailyCard(res.flashcards||[]);},0);
+      // Shuffle quiz options so correct answer is evenly distributed across A/B/C/D
+      // Without this, AI tends to favour option A or B as correct answer
+      var rawQuiz=res.quiz||[];
+      var shuffledQuiz=rawQuiz.map(function(q,qi){
+        if(!q.options||q.options.length!==4)return q;
+        // Assign target correct position in round-robin: 0,1,2,3,0,1,2,3,...
+        // This guarantees even distribution across all questions
+        var targetPos=qi%4;
+        var currentPos=q.correct;
+        if(targetPos===currentPos)return q; // already in right position
+        // Swap: move correct answer to targetPos, move whatever was at targetPos to currentPos
+        var newOptions=q.options.slice();
+        var tmp=newOptions[targetPos];
+        newOptions[targetPos]=newOptions[currentPos];
+        newOptions[currentPos]=tmp;
+        return {question:q.question,options:newOptions,correct:targetPos,explanation:q.explanation};
+      });
+      setCards(res.flashcards||[]);setQuiz(shuffledQuiz);setTimeout(function(){pickDailyCard(res.flashcards||[]);},0);
       var totalQ=(res.quiz||[]).length;
       var counts=totalQ>=20?[5,10,15,20]:totalQ>=15?[5,10,15]:totalQ>=10?[5,10]:[5];
       setQuizCounts(counts);
@@ -2191,15 +2208,20 @@ function App(){
     var card=cards[ci];
     if(!card)return;
     var text=card.topic+'. '+card.points.split('|').join('. ');
-    // Detect Hindi — check points text separately since topic may be in English
-    // even when all content is Hindi (llama often writes topics in English)
+    // Detect Hindi — check points, full card text, AND source notes/pdf text
+    // llama (Pro) often writes topics in English even for Hindi input, so check all sources
     var pointsText=card.points||'';
-    var devaInPoints=(pointsText.match(/[\u0900-\u097F]/g)||[]).length;
-    var lettersInPoints=(pointsText.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
-    var devaInAll=(text.match(/[\u0900-\u097F]/g)||[]).length;
-    var lettersInAll=(text.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
-    // Hindi if points are >40% Devanagari OR full text is >25% Devanagari
-    var isHindi=(lettersInPoints>0&&(devaInPoints/lettersInPoints)>0.4)||(lettersInAll>0&&(devaInAll/lettersInAll)>0.25);
+    var devaInPoints=(pointsText.match(/[ऀ-ॿ]/g)||[]).length;
+    var lettersInPoints=(pointsText.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
+    var devaInAll=(text.match(/[ऀ-ॿ]/g)||[]).length;
+    var lettersInAll=(text.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
+    // Also check the source input (notes or pdfTxt) — if source is Hindi, read in Hindi
+    var srcText=(itab==='text'?notes:pdfTxt)||'';
+    var devaInSrc=(srcText.match(/[ऀ-ॿ]/g)||[]).length;
+    var lettersInSrc=(srcText.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
+    var srcIsHindi=lettersInSrc>0&&(devaInSrc/lettersInSrc)>0.4;
+    // Hindi if: points >40% Devanagari OR full card text >25% Devanagari OR source was Hindi
+    var isHindi=(lettersInPoints>0&&(devaInPoints/lettersInPoints)>0.4)||(lettersInAll>0&&(devaInAll/lettersInAll)>0.25)||srcIsHindi;
     function speak(voices){
       var utt=new SpeechSynthesisUtterance(text);
       utt.rate=0.92;utt.pitch=1;
@@ -2264,7 +2286,7 @@ function App(){
   // ── Pro: regenerate single card (5/day limit, topic-targeted) ──
   async function regenCard(idx){
     if(!isPro()&&!isElite()){setPw(true);return;}
-    if(regenCount>=5){st('Redo limit reached — max 5 per day');return;}
+    if(regenCount>=3){st('Redo limit reached — max 3 per day');return;}
     var card=cards[idx];
     if(!card){return;}
     var txt=itab==='text'?notes:pdfTxt;
@@ -2531,13 +2553,13 @@ function App(){
       e('div',{className:'h-glow'}),
       e('div',{className:'hero-logo'},
         e('img',{src:dark?'/icons/icon-dark-192.png':'/icons/icon-light-192.png',alt:'CogniSwift'}),
-        e('div',{className:'hero-logo-name'},'CogniSwift')
+        e('div',{className:'hero-logo-name'},e(React.Fragment,null,'CogniSwift',e('sup',{style:{fontSize:'0.45em',verticalAlign:'super',letterSpacing:'0',opacity:0.7}},'™')))
       ),
       e('h1',{style:window._lang==='hi'?{lineHeight:1.2,letterSpacing:'-0.01em',fontSize:'clamp(2.8rem,7vw,6rem)'}:{}},
         window._lang==='hi'
           ? e(React.Fragment,null,'नोट्स',e('br'),e('em',null,'बनें'),e('br'),'फ्लैशकार्ड्स')
-          : e(React.Fragment,null,'Notes become',e('br'),' ',e('em',null,'flashcards'))),
-      e('p',{className:'h-sub'},t('Paste any text. Get flashcards, a structured summary, and a self-test quiz — in seconds.')),
+          : e(React.Fragment,null,t('From Notes'),e('br'),e('em',null,t('To Memory')))),
+      e('p',{className:'h-sub'},t('Stop forgetting. Start remembering — notes transformed into your personal Revision Engine.')),
       e('div',{className:'pill-row'},
         ['UPSC','JEE','NEET','GATE','SSC','RRB','IBPS','TET','CUET','CBSE/ICSE','Distance Learning'].map(function(exam){return e('span',{key:exam,className:'pill'},exam);})
       ),
@@ -2579,7 +2601,7 @@ function App(){
                 onDrop:function(ev){ev.preventDefault();setDrag(false);hFile(ev.dataTransfer.files[0]);}
               },
                 e('span',{className:'upz-i'},'↑'),
-                fn ? e('p',null,e('strong',null,fn),e('br'),t('Click to replace'))
+                fn ? e('p',null,e('strong',null,fn),e('br'),t('Click to replace'),e('br',null),e('span',{style:{fontSize:'0.75em',opacity:0.6}},'PDF is being prepared — Generate will unlock shortly'))
                    : e('p',null,t('Drop PDF here or '),e('strong',null,t('click to browse')),e('br'),isElite()?'Up to 50 pages':isPro()?'Up to 20 pages':'Up to 10 pages')
               ),
               e('input',{type:'file',accept:'.pdf',ref:fref,onChange:function(ev){hFile(ev.target.files[0]);}}),
