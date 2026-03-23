@@ -2275,18 +2275,33 @@ function App(){
     var isHindi=(lettersInPoints>0&&(devaInPoints/lettersInPoints)>0.4)||(lettersInAll>0&&(devaInAll/lettersInAll)>0.25)||srcIsHindi||(hasAnyDeva&&srcIsHindi);
     function speak(voices){
       var utt=new SpeechSynthesisUtterance(text);
-      utt.rate=0.92;utt.pitch=1;
+      utt.pitch=1;
       if(isHindi){
-        utt.lang='hi-IN';
-        utt.rate=0.85; // slightly slower for Hindi — improves clarity
-        // Find best Hindi voice — prefer hi-IN, fall back to any hi variant
+        // Look for any Hindi voice
         var hv=voices.find(function(v){return v.lang==='hi-IN';})
-              ||voices.find(function(v){return v.lang&&v.lang.startsWith('hi');})
-              ||voices.find(function(v){return v.lang&&v.lang.indexOf('IN')>=0;}); // any Indian English voice as last resort
-        if(hv)utt.voice=hv;
-        // lang is set regardless — browser will use default voice for hi-IN
+              ||voices.find(function(v){return v.lang&&v.lang.startsWith('hi');});
+        if(hv){
+          // Hindi voice found — use it
+          utt.lang='hi-IN';
+          utt.voice=hv;
+          utt.rate=0.82;
+        } else {
+          // No Hindi voice on this device — browser will silence Devanagari with hi-IN lang
+          // Use en-IN lang but keep text — at least English words/numbers will be read
+          // User needs to install Hindi TTS (Settings > Accessibility > TTS on Android)
+          utt.lang='en-IN';
+          utt.rate=0.88;
+          // Show a one-time hint about installing Hindi TTS
+          if(!window._hindiTTSHintShown){
+            window._hindiTTSHintShown=true;
+            setTimeout(function(){
+              st('Hindi voice not found on this device. To enable: Settings → Accessibility → Text-to-Speech → Install Hindi language.');
+            },200);
+          }
+        }
       } else {
         utt.lang='en-IN';
+        utt.rate=0.92;
       }
       utt.onend=function(){setSpeaking(false);};
       utt.onerror=function(){setSpeaking(false);};
@@ -2633,12 +2648,12 @@ function App(){
       e('div',{className:'feat-eyebrow'},t('What you get')),
       e('h2',{className:'feat-heading'},t('Built for how'),e('br'),e('em',null,t('Indian students')),' ',t('actually study')),
       e('div',{className:'fg'},
-        e(HFeat,{icon:'🧠',title:t('Memory-first flashcards'),desc:t('Memory-first flashcards desc')||'Subtle pointers that help you actively recall — because what your mind retrieves, it retains.'}),
-        e(HFeat,{icon:'📋',title:t('Instant structured summary'),desc:t('Instant structured summary desc')||'Turn any topic or chapter into a logical, hierarchical summary with a Key Concepts First policy.'}),
-        e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:t('Self-test quiz desc')||'Identify knowledge gaps immediately with automated grading.'}),
-        e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:t('PDF upload & export desc')||'Upload your content as PDF. Export cards and summary as PDF. Cards can also be shared directly.'}),
-        e(HFeat,{icon:'📱',title:t('Mobile first (PWA)'),desc:t('Mobile first (PWA) desc')||'Install on Android or iOS and review cards and summaries even off the grid — just a sign-up away, visible in your profile.'}),
-        e(HFeat,{icon:'🔒',title:t('No sign-in needed'),desc:t('No sign-in needed desc')||'No account needed for the free tier. Cards, summary and quiz remain safe in your browser.'})
+        e(HFeat,{icon:'🧠',title:t('Memory-first flashcards'),desc:window._lang==='hi'?t('Memory-first flashcards desc'):'Subtle pointers that help you actively recall — because what your mind retrieves, it retains.'}),
+        e(HFeat,{icon:'📋',title:t('Instant structured summary'),desc:window._lang==='hi'?t('Instant structured summary desc'):'Turn any topic or chapter into a logical, hierarchical summary with a Key Concepts First policy.'}),
+        e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:window._lang==='hi'?t('Self-test quiz desc'):'Identify knowledge gaps immediately with automated grading.'}),
+        e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:window._lang==='hi'?t('PDF upload & export desc'):'Upload your content as PDF. Export cards and summary as PDF. Cards can also be shared directly.'}),
+        e(HFeat,{icon:'📱',title:t('Mobile first (PWA)'),desc:window._lang==='hi'?t('Mobile first (PWA) desc'):'Install on Android or iOS and review cards and summaries even off the grid — just a sign-up away, visible in your profile.'}),
+        e(HFeat,{icon:'🔒',title:t('No sign-in needed'),desc:window._lang==='hi'?t('No sign-in needed desc'):'No account needed for the free tier. Cards, summary and quiz remain safe in your browser.'})
       )
     ),
 
