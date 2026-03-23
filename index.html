@@ -12,7 +12,24 @@
   <link rel="apple-touch-icon" href="/icons/icon-pwa-180.png"/>
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-light-192.png"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CogniSwift</title>
+<title>CogniSwift™ — AI Flashcards, Summary & Quiz for UPSC, JEE, NEET, CA | Free Study Tool</title>
+<meta name="description" content="CogniSwift converts your notes into AI-powered flashcards, structured summaries and self-test quizzes in seconds. Free for UPSC, JEE, NEET, CA, SSC, GATE, CUET, CBSE students. No signup needed."/>
+<meta name="keywords" content="AI flashcards India, UPSC flashcards, JEE study cards, NEET revision cards, CA exam flashcards, SSC study tool, GATE preparation, CUET notes, CBSE revision, free AI study tool, notes to flashcards, automatic quiz generator, study summary AI, competitive exam preparation India, flashcard maker online, MCQ generator, spaced repetition India, pdf to flashcards, handwritten notes to cards, study app India"/>
+<meta name="author" content="CogniSwift"/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://cogniswift.in"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://cogniswift.in"/>
+<meta property="og:title" content="CogniSwift™ — AI Flashcards & Quiz for Indian Competitive Exams"/>
+<meta property="og:description" content="Turn your UPSC, JEE, NEET, CA notes into flashcards, summaries and quizzes in seconds. Free AI study tool built for Indian students."/>
+<meta property="og:image" content="https://cogniswift.in/icons/icon-light-192.png"/>
+<meta property="og:site_name" content="CogniSwift"/>
+<meta property="og:locale" content="en_IN"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="CogniSwift™ — AI Flashcards for UPSC, JEE, NEET, CA"/>
+<meta name="twitter:description" content="Paste your notes. Get flashcards, summary and quiz instantly. Free for Indian competitive exam students."/>
+<meta name="twitter:image" content="https://cogniswift.in/icons/icon-light-192.png"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"CogniSwift","url":"https://cogniswift.in","description":"AI-powered flashcard, summary and quiz generator for Indian competitive exam students — UPSC, JEE, NEET, CA, SSC, GATE, CUET","applicationCategory":"EducationApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"audience":{"@type":"Audience","audienceType":"Students preparing for UPSC, JEE, NEET, CA, SSC, GATE, CUET, CBSE exams in India"}}</script>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-542JZC8H9K"></script>
 <script>
@@ -800,7 +817,7 @@ footer{border-top:1px solid var(--border);padding:52px 40px 36px;display:flex;fl
 var HI_MAP={
   'Features':'विशेषताएं','Plans':'प्लान्स','Sign in':'साइन इन','Sign out':'साइन आउट',
   'From Notes':'नोट्स से','To Memory':'स्मृति तक',
-  'Stop forgetting. Start remembering — notes transformed into your personal Revision Engine.':'भूलना बंद करें। याद रखना शुरू करें — नोट्स से स्मृति तक।',
+  'Stop forgetting. Start remembering — notes transformed into your personal Revision Engine.':'भूलना बंद करें। याद रखना शुरू करें — नोट्स आपके व्यक्तिगत \'रिवीजन इंजन\' में बदल गए।',
   'Start for free →':'मुफ़्त में शुरू करें →',
   'What you get':'आपको क्या मिलेगा','Built for how':'बनाया गया है','Indian students':'भारतीय छात्रों','actually study':'की पढ़ाई के लिए',
   'Instant study cards':'तुरंत स्टडी कार्ड्स',
@@ -881,6 +898,8 @@ const CFG={
   FREE_LIMIT:5,
   PRO_LIMIT:20,
   ELITE_LIMIT:40,
+  PRO_MONTH_LIMIT:100,
+  ELITE_MONTH_LIMIT:100,
   FREE_CHARS:8000,
   PRO_CHARS:20000,
   ELITE_CHARS:30000,
@@ -933,6 +952,10 @@ function getUsage(){var t=new Date().toDateString();var s=JSON.parse(localStorag
 function setLocalUsage(n){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:n}));}
 function bumpUsage(){setLocalUsage(getUsage()+1);}
 function getDayLimit(){var t=getTier();return t==='elite'?CFG.ELITE_LIMIT:t==='pro'?CFG.PRO_LIMIT:CFG.FREE_LIMIT;}
+function getMonthLimit(){var t=getTier();return t==='elite'?CFG.ELITE_MONTH_LIMIT:t==='pro'?CFG.PRO_MONTH_LIMIT:null;}
+function getMonthKey(){return 'cs_mu_'+new Date().getFullYear()+'_'+(new Date().getMonth()+1);}
+function getMonthUsage(){try{var s=JSON.parse(localStorage.getItem(getMonthKey())||'{}');return s.c||0;}catch(e){return 0;}}
+function bumpMonthUsage(){try{var k=getMonthKey();var s=JSON.parse(localStorage.getItem(k)||'{}');localStorage.setItem(k,JSON.stringify({c:(s.c||0)+1}));}catch(e){}}
 function getCharLimit(){var t=getTier();return t==='elite'?CFG.ELITE_CHARS:t==='pro'?CFG.PRO_CHARS:CFG.FREE_CHARS;}
 // API helpers — all authenticated calls share this
 function authHeader(){return {Authorization:'Bearer '+loadToken(),'Content-Type':'application/json'};}
@@ -1589,7 +1612,7 @@ function App(){
       });
       var data=await r.json();
       if(data.error)throw new Error(data.error);
-      var url=window.location.origin+'/s/'+data.id;
+      var url='https://cogniswift.in/s/'+data.id; // always use canonical domain regardless of which URL user opened
       setShareUrl(url);
       var _sd={title:'CogniSwift Study Cards',text:'Check out these flashcards I made on CogniSwift!',url:url};
       if(navigator.share&&navigator.canShare&&navigator.canShare(_sd)){navigator.share(_sd).catch(function(){});}
@@ -1796,6 +1819,12 @@ function App(){
     if(!txt.trim())return st('Paste some notes first');
     var dayLimit=getDayLimit();
     if(usage>=dayLimit){setPw(true);return;}
+    // Monthly limit check for Pro and Elite
+    var monthLimit=getMonthLimit();
+    if(monthLimit&&getMonthUsage()>=monthLimit){
+      st('Monthly generation limit ('+monthLimit+') reached. Resets on the 1st of next month.');
+      return;
+    }
     setLoading(true);setCards([]);setQuiz([]);setSummary(null);setSumLoad(true);
     var isFile=itab==='pdf'; // true only when coming from PDF upload tab
     var tier=getTier();
@@ -1846,8 +1875,16 @@ function App(){
       }
       setActiveSetName(''); // clear set name on fresh generation
       if(isElite())bumpStreak();
+      bumpMonthUsage(); // track monthly usage for Pro and Elite limits
       st((res.flashcards||[]).length+' cards ready');
       setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
+      // Show save-before-quiz reminder for signed-in Pro/Elite users
+      if((isPro()||isElite())&&loadToken()){
+        setTimeout(function(){
+          var el=document.getElementById('cs-save-hint');
+          if(el){el.style.opacity='1';setTimeout(function(){if(el)el.style.opacity='0';},8000);}
+        },1200);
+      }
       // Paid users: summary comes bundled in generate response (single Grok call)
       // Free users: fire separate summary call in background as before
       if(res.summary&&res.summary.title){
@@ -2220,17 +2257,21 @@ function App(){
     var devaInSrc=(srcText.match(/[ऀ-ॿ]/g)||[]).length;
     var lettersInSrc=(srcText.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
     var srcIsHindi=lettersInSrc>0&&(devaInSrc/lettersInSrc)>0.4;
-    // Hindi if: points >40% Devanagari OR full card text >25% Devanagari OR source was Hindi
-    var isHindi=(lettersInPoints>0&&(devaInPoints/lettersInPoints)>0.4)||(lettersInAll>0&&(devaInAll/lettersInAll)>0.25)||srcIsHindi;
+    // Hindi if: points >40% Deva OR full card >25% Deva OR source was Hindi OR any points have Deva chars
+    var hasAnyDeva=devaInPoints>0||devaInAll>0;
+    var isHindi=(lettersInPoints>0&&(devaInPoints/lettersInPoints)>0.4)||(lettersInAll>0&&(devaInAll/lettersInAll)>0.25)||srcIsHindi||(hasAnyDeva&&srcIsHindi);
     function speak(voices){
       var utt=new SpeechSynthesisUtterance(text);
       utt.rate=0.92;utt.pitch=1;
       if(isHindi){
         utt.lang='hi-IN';
+        utt.rate=0.85; // slightly slower for Hindi — improves clarity
         // Find best Hindi voice — prefer hi-IN, fall back to any hi variant
         var hv=voices.find(function(v){return v.lang==='hi-IN';})
-              ||voices.find(function(v){return v.lang&&v.lang.startsWith('hi');});
+              ||voices.find(function(v){return v.lang&&v.lang.startsWith('hi');})
+              ||voices.find(function(v){return v.lang&&v.lang.indexOf('IN')>=0;}); // any Indian English voice as last resort
         if(hv)utt.voice=hv;
+        // lang is set regardless — browser will use default voice for hi-IN
       } else {
         utt.lang='en-IN';
       }
@@ -2313,7 +2354,7 @@ function App(){
         var newCount=regenCount+1;
         setRegenCount(newCount);
         try{localStorage.setItem('cs_regen',JSON.stringify({d:new Date().toDateString(),c:newCount}));}catch(e){}
-        st('Card refreshed — '+(5-newCount)+' redos left today');
+        st('Card refreshed — '+(3-newCount)+' redos left today');
       }
     }catch(err){st('Redo failed: '+err.message);}
     finally{setRegenIdx(null);}
@@ -2437,13 +2478,18 @@ function App(){
 
   useEffect(function(){
     if(!user){
-      var t=setTimeout(function(){setTw(true);},1400);
+      // Non-signed-in users: show Leo after 5s delay
+      var t=setTimeout(function(){setTw(true);},5000);
       return function(){clearTimeout(t);};
     }else{
+      // Signed-in users: only show Leo once ever (after they first sign in)
+      // Never show on refresh — cs_td is set after they dismiss Leo
       if(!localStorage.getItem('cs_td')){
-        var t2=setTimeout(function(){setTw(true);},900);
+        // First time signed-in user — show Leo after 5s (enough time for auth to settle)
+        var t2=setTimeout(function(){setTw(true);},5000);
         return function(){clearTimeout(t2);};
       }
+      // cs_td is set — user has seen Leo before, never show again on refresh
     }
   },[user]);
 
@@ -2574,12 +2620,12 @@ function App(){
       e('div',{className:'feat-eyebrow'},t('What you get')),
       e('h2',{className:'feat-heading'},t('Built for how'),e('br'),e('em',null,t('Indian students')),' ',t('actually study')),
       e('div',{className:'fg'},
-        e(HFeat,{icon:'⚡',title:t('Instant study cards'),desc:t('Instant study cards desc')||'Paste any notes — UPSC, JEE, NEET, CA. Get precise topic cards with pointers, tables and flows in seconds.'}),
-        e(HFeat,{icon:'🧠',title:t('Memory-first flashcards'),desc:t('Memory-first flashcards desc')||'Cards show topic → key pointers → flowcharts. Built for memorisation, not just reading.'}),
-        e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:t('Self-test quiz desc')||'After your cards, test yourself with MCQs from the same content. Know exactly what sticks.'}),
-        e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:t('PDF upload & export desc')||'Upload your study material as PDF. Download all flashcards as a clean printable PDF too.'}),
-        e(HFeat,{icon:'📱',title:t('Mobile first'),desc:t('Mobile first desc')||'Designed for phone screens. Study on the bus, in the hostel, between lectures — anywhere.'}),
-        e(HFeat,{icon:'🔒',title:t('No signup needed'),desc:t('No signup needed desc')||'Start immediately, no account required for free tier. Your notes stay private in your browser.'})
+        e(HFeat,{icon:'🧠',title:t('Memory-first flashcards'),desc:t('Memory-first flashcards desc')||'Subtle, targeted pointers engineered for active recall — not passive reading. Your brain remembers what it works to retrieve.'}),
+        e(HFeat,{icon:'📋',title:t('Instant structured summary'),desc:t('Instant structured summary desc')||'Turn any topic or chapter into a logical, hierarchical summary — key concepts always surface first.'}),
+        e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:t('Self-test quiz desc')||'Identify knowledge gaps instantly with auto-graded MCQs drawn directly from your own material.'}),
+        e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:t('PDF upload & export desc')||'Upload your study material as PDF. Export cards and summary as PDF, or share any card set directly with a link.'}),
+        e(HFeat,{icon:'📱',title:t('Mobile first (PWA)'),desc:t('Mobile first (PWA) desc')||'Install on Android or iOS and review cards and summaries even offline. Just sign in once — accessible from your profile anytime.'}),
+        e(HFeat,{icon:'🔒',title:t('No sign-in needed'),desc:t('No sign-in needed desc')||'No account required for the free tier. Cards, summary and quiz stay safe in your browser — sign up only when you want to save.'})
       )
     ),
 
@@ -2656,11 +2702,17 @@ function App(){
         ),
         e('div',{className:'urow'},
           e('div',{className:'ut'},e('div',{className:'uf',style:{width:Math.min(100,usage/getDayLimit()*100)+'%'}})),
-          e('span',{className:'utx'},usage+'/'+getDayLimit()+' today')
+          e('span',{className:'utx'},usage+'/'+getDayLimit()+' today'),
+          getMonthLimit()&&e('span',{className:'utx',style:{marginLeft:10,opacity:0.7}},getMonthUsage()+'/'+getMonthLimit()+' this month')
         )
       ),
 
       e('div',{id:'ra'}),
+      (isPro()||isElite())&&loadToken()&&e('div',{id:'cs-save-hint',style:{
+        opacity:0,transition:'opacity 0.5s',textAlign:'center',padding:'6px 0 0',
+        fontSize:'0.72rem',color:'var(--muted)',letterSpacing:'0.01em',fontWeight:300,
+        pointerEvents:'none'
+      }},'Save your card set before attempting the quiz to enable progress tracking & analytics.'),
       loading&&e('div',{className:'ld'},e('div',{className:'dots'},e('span'),e('span'),e('span')),e('p',null,t('Generating your cards…')),e('p',{style:{fontSize:'0.7rem',color:'var(--muted)',marginTop:6,fontWeight:300}},'Please wait, this may take a few seconds…')),
 
       !loading&&cards.length>0&&e('div',{className:'rev',style:{marginTop:4}},
@@ -2790,12 +2842,13 @@ function App(){
         e(PCard,{name:'Pro',price:'99',period:t('per month'),bill:bill,pop:true,
           priceAnnual:'899',perMonth:'75',strikeAnnual:'1,188',saveAmt:'289',
           feats:[
-            '20 generations per day',
+            '20 generations per day (100/month)',
             'Up to 20,000 characters per input',
             'Save sets to your account (cloud-synced)',
             'Mistake tracker — review wrong quiz answers',
             'Voice readout of every card',
-            'Regenerate any single card (5/day)',
+            'Regenerate any single card (3/day)',
+            'Selectable tables, charts & graphs processing',
             'Quiz history across all saved sets',
             'Custom card count up to 30',
             'Card of the day',
@@ -2804,8 +2857,9 @@ function App(){
           priceAnnual:'1,799',perMonth:'150',strikeAnnual:'2,388',saveAmt:'589',
           feats:[
             'Everything in Pro',
-            '40 generations per day',
+            '40 generations per day (100/month)',
             'Up to 30,000 characters per input',
+            'Scanned docs, diagrams & handwritten PDFs',
             'Spaced repetition for weak cards',
             'Weak area report & progress analytics',
             'Study streak calendar & heatmap',
@@ -3310,8 +3364,9 @@ function App(){
       // Pro users see Elite-only. Free/guest see both.
       var eliteFeats=[
         'Everything in Pro, plus:',
-        '40 generations per day',
+        '40 generations per day (100/month)',
         '30,000 characters per input',
+        'Scanned docs, diagrams & handwritten PDFs',
         'Spaced repetition for weak cards',
         'Weak area report & analytics',
         'Study streak calendar & heatmap',
@@ -3321,12 +3376,13 @@ function App(){
         'Custom card count up to 50',
       ];
       var proFeats=[
-        '20 generations per day',
+        '20 generations per day (100/month)',
         '20,000 characters per input',
         'Save sets to your account',
         'Mistake tracker with solutions',
         'Voice readout of cards',
-        'Regenerate any single card',
+        'Regenerate any single card (3/day)',
+        'Selectable tables, charts & graphs processing',
         'Quiz history across saved sets',
         'Custom card count up to 30',
         'Card of the day',
