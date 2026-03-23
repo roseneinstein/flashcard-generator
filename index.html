@@ -1891,12 +1891,19 @@ function App(){
           if(el){el.style.opacity='1';setTimeout(function(){if(el)el.style.opacity='0';},8000);}
         },1200);
       }
-      // Paid users: summary comes bundled in generate response (single Grok call)
-      // Free users: fire separate summary call in background as before
-      if(res.summary&&res.summary.title&&Array.isArray(res.summary.sections)&&res.summary.sections.length){
+      // Summary routing:
+      // Elite: always bundled from Worker (Grok). Pro: always bundled from generate.js (llama).
+      // Free: separate callSummary (Groq free tier).
+      // NEVER fire callSummary for Pro/Elite — that would double-charge the paid key.
+      var hasBundledSummary=res.summary&&res.summary.title&&Array.isArray(res.summary.sections)&&res.summary.sections.length>0;
+      if(hasBundledSummary){
         setSummary(res.summary);setSumLoad(false);
+      }else if(isPro()||isElite()){
+        // Paid tier but no bundled summary — set null, do NOT fire a second API call
+        setSummary(null);setSumLoad(false);
       }else{
-        callSummary(txt,isElite()?summaryDepth:'standard',getTier()).then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
+        // Free tier — fire separate summary call (Groq free, no cost issue)
+        callSummary(txt,'standard','free').then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
       }
     }catch(err){st('Error: '+(err.message||'Check config'));setSumLoad(false);}
     finally{setLoading(false);}
@@ -2255,13 +2262,13 @@ function App(){
     // llama (Pro) often writes topics in English even for Hindi input, so check all sources
     var pointsText=card.points||'';
     var devaInPoints=(pointsText.match(/[\u0900-\u097F]/g)||[]).length;
-    var lettersInPoints=(pointsText.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
+    var lettersInPoints=(pointsText.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
     var devaInAll=(text.match(/[\u0900-\u097F]/g)||[]).length;
-    var lettersInAll=(text.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
+    var lettersInAll=(text.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
     // Also check the source input (notes or pdfTxt) — if source is Hindi, read in Hindi
     var srcText=(itab==='text'?notes:pdfTxt)||'';
     var devaInSrc=(srcText.match(/[\u0900-\u097F]/g)||[]).length;
-    var lettersInSrc=(srcText.match(/[a-zA-Zऀ-ॿ]/g)||[]).length;
+    var lettersInSrc=(srcText.match(/[a-zA-Z\u0900-\u097F]/g)||[]).length;
     var srcIsHindi=lettersInSrc>0&&(devaInSrc/lettersInSrc)>0.4;
     // Hindi if: points >40% Deva OR full card >25% Deva OR source was Hindi OR any points have Deva chars
     var hasAnyDeva=devaInPoints>0||devaInAll>0;
@@ -2626,12 +2633,12 @@ function App(){
       e('div',{className:'feat-eyebrow'},t('What you get')),
       e('h2',{className:'feat-heading'},t('Built for how'),e('br'),e('em',null,t('Indian students')),' ',t('actually study')),
       e('div',{className:'fg'},
-        e(HFeat,{icon:'🧠',title:t('Memory-first flashcards'),desc:t('Memory-first flashcards desc')||'Subtle pointers built for active recall — your brain retains what it works to retrieve, not what it passively reads.'}),
+        e(HFeat,{icon:'🧠',title:t('Memory-first flashcards'),desc:t('Memory-first flashcards desc')||'Subtle pointers that help you actively recall — because what your mind retrieves, it retains.'}),
         e(HFeat,{icon:'📋',title:t('Instant structured summary'),desc:t('Instant structured summary desc')||'Turn any topic or chapter into a logical, hierarchical summary with a Key Concepts First policy.'}),
-        e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:t('Self-test quiz desc')||'Identify knowledge gaps immediately with automated grading — MCQs drawn from your own material.'}),
-        e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:t('PDF upload & export desc')||'Upload your content as PDF. Export cards and summary as PDF, or share your card set directly with a link.'}),
-        e(HFeat,{icon:'📱',title:t('Mobile first (PWA)'),desc:t('Mobile first (PWA) desc')||'Install on Android or iOS and review cards and summaries even off the grid — just sign in once, visible in your profile.'}),
-        e(HFeat,{icon:'🔒',title:t('No sign-in needed'),desc:t('No sign-in needed desc')||'No account needed for the free tier. Cards, summary and quiz stay safe in your browser until you choose to sign up.'})
+        e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:t('Self-test quiz desc')||'Identify knowledge gaps immediately with automated grading.'}),
+        e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:t('PDF upload & export desc')||'Upload your content as PDF. Export cards and summary as PDF. Cards can also be shared directly.'}),
+        e(HFeat,{icon:'📱',title:t('Mobile first (PWA)'),desc:t('Mobile first (PWA) desc')||'Install on Android or iOS and review cards and summaries even off the grid — just a sign-up away, visible in your profile.'}),
+        e(HFeat,{icon:'🔒',title:t('No sign-in needed'),desc:t('No sign-in needed desc')||'No account needed for the free tier. Cards, summary and quiz remain safe in your browser.'})
       )
     ),
 
