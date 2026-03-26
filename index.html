@@ -9,8 +9,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
   <meta name="apple-mobile-web-app-title" content="CogniSwift"/>
-  <link rel="apple-touch-icon" href="/icons/icon-pwa-180.png"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-light-192.png"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-pwa-180.png"/>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png"/>
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-dark-192.png"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CogniSwift™ — AI Flashcards, Summary & Quiz for UPSC, JEE, NEET, CA | Free Study Tool</title>
 <meta name="description" content="CogniSwift converts your notes into AI-powered flashcards, structured summaries and self-test quizzes in seconds. Free for UPSC, JEE, NEET, CA, SSC, GATE, CUET, CBSE students. No signup needed."/>
@@ -22,13 +25,13 @@
 <meta property="og:url" content="https://cogniswift.in"/>
 <meta property="og:title" content="CogniSwift™ — AI Flashcards & Quiz for Indian Competitive Exams"/>
 <meta property="og:description" content="Turn your UPSC, JEE, NEET, CA notes into flashcards, summaries and quizzes in seconds. Free AI study tool built for Indian students."/>
-<meta property="og:image" content="https://cogniswift.in/icons/icon-light-192.png"/>
+<meta property="og:image" content="https://cogniswift.in/icons/icon-dark-192.png"/>
 <meta property="og:site_name" content="CogniSwift"/>
 <meta property="og:locale" content="en_IN"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="CogniSwift™ — AI Flashcards for UPSC, JEE, NEET, CA"/>
 <meta name="twitter:description" content="Paste your notes. Get flashcards, summary and quiz instantly. Free for Indian competitive exam students."/>
-<meta name="twitter:image" content="https://cogniswift.in/icons/icon-light-192.png"/>
+<meta name="twitter:image" content="https://cogniswift.in/icons/icon-dark-192.png"/>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"CogniSwift","url":"https://cogniswift.in","description":"AI-powered flashcard, summary and quiz generator for Indian competitive exam students — UPSC, JEE, NEET, CA, SSC, GATE, CUET","applicationCategory":"EducationApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"audience":{"@type":"Audience","audienceType":"Students preparing for UPSC, JEE, NEET, CA, SSC, GATE, CUET, CBSE exams in India"}}</script>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-542JZC8H9K"></script>
@@ -42,6 +45,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<style>
+#cs-splash{position:fixed;inset:0;background:#22203a;z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.6s ease;pointer-events:none;}
+#cs-splash.fade-out{opacity:0;}
+#cs-splash-logo{width:96px;height:96px;object-fit:contain;animation:cs-pop 0.7s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes cs-pop{from{opacity:0;transform:scale(0.6);}to{opacity:1;transform:scale(1);}}
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
 
 
@@ -808,6 +817,7 @@ footer{border-top:1px solid var(--border);padding:52px 40px 36px;display:flex;fl
 <body>
 <div id="cur"></div>
 <div id="cur-r"></div>
+<div id="cs-splash"><img id="cs-splash-logo" src="/icons/icon-dark-192.png" alt="CogniSwift"/></div>
 <div id="root"></div>
 
 <script>
@@ -3476,6 +3486,17 @@ function App(){
   );
 }
 
+// Dismiss splash screen once React starts rendering
+(function(){
+  var splash=document.getElementById('cs-splash');
+  if(splash){
+    // Small delay so React has painted first frame
+    setTimeout(function(){
+      splash.classList.add('fade-out');
+      setTimeout(function(){splash.style.display='none';},650);
+    },400);
+  }
+})();
 ReactDOM.createRoot(document.getElementById('root')).render(e(App,null));
 </script>
 <script>(function(){var s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';document.head.appendChild(s);})()</script>
