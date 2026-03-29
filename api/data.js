@@ -142,5 +142,80 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── FSRS — card_reviews and user settings ─────────────────────────────
+  if (resource === 'fsrs') {
+
+    // GET settings: retention target, exam date
+    if (req.method === 'GET' && req.query.type === 'settings') {
+      const { data } = await supabase
+        .from('users').select('fsrs_settings').eq('id', user.id).single();
+      return res.status(200).json({ settings: data?.fsrs_settings || { retention: 0.92, examDate: null } });
+    }
+
+    // POST settings: save retention + exam date
+    if (req.method === 'POST' && req.query.type === 'settings') {
+      const { retention, examDate } = req.body;
+      await supabase.from('users')
+        .update({ fsrs_settings: { retention: retention || 0.92, examDate: examDate || null } })
+        .eq('id', user.id);
+      return res.status(200).json({ ok: true });
+    }
+
+    // GET reviews: all card_reviews for this user
+    if (req.method === 'GET' && req.query.type === 'reviews') {
+      const { data, error } = await supabase
+        .from('card_reviews')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('due_date', { ascending: true });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ reviews: data || [] });
+    }
+
+    // POST reviews: upsert a batch of card review results after quiz
+    if (req.method === 'POST' && req.query.type === 'reviews') {
+      const { reviews } = req.body;
+      if (!Array.isArray(reviews) || !reviews.length)
+        return res.status(400).json({ error: 'Missing reviews array' });
+
+      // Upsert each review — on conflict (user_id, card_key) update the FSRS state
+      const rows = reviews.map(r => ({
+        id: r.id,
+        user_id: user.id,
+        set_id: r.set_id,
+        set_name: r.set_name,
+        card_key: r.card_key,       // unique identifier: set_id + '::' + card_index
+        card_topic: r.card_topic,
+        rating: r.rating,           // 1=Again, 3=Good
+        stability: r.stability,     // FSRS internal
+        difficulty: r.difficulty,   // FSRS internal
+        due_date: r.due_date,       // ISO date string YYYY-MM-DD
+        reps: r.reps,               // total review count
+        lapses: r.lapses,           // times marked Again
+        last_reviewed: r.last_reviewed,
+      }));
+
+      const { error } = await supabase.from('card_reviews').upsert(rows, {
+        onConflict: 'user_id,card_key',
+        ignoreDuplicates: false,
+      });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // POST progress: record that user viewed cards/summary in a revision session
+    if (req.method === 'POST' && req.query.type === 'progress') {
+      const { set_id, viewed_cards, viewed_summary, quiz_score, quiz_total } = req.body;
+      // Update session progress in card_reviews — mark all cards of this set as seen today
+      if (viewed_cards && set_id) {
+        await supabase.from('card_reviews')
+          .update({ last_card_view: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .eq('set_id', set_id);
+      }
+      return res.status(200).json({ ok: true });
+    }
+  }
+
   return res.status(400).json({ error: 'Unknown resource or method' });
 }
