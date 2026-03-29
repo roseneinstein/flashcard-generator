@@ -189,7 +189,10 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .fsrs-setup-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
 .fsrs-label{font-size:0.72rem;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;min-width:90px;}
 .fsrs-select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:0.78rem;padding:5px 10px;font-family:'Geist',sans-serif;cursor:none;}
-.fsrs-date-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:0.78rem;padding:5px 10px;font-family:'Geist',sans-serif;cursor:none;}
+.fsrs-date-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:0.78rem;padding:5px 10px;font-family:'Geist',sans-serif;cursor:pointer;color-scheme:dark;appearance:none;-webkit-appearance:none;}
+.fsrs-date-input::-webkit-calendar-picker-indicator{filter:invert(0.7) sepia(1) saturate(3) hue-rotate(5deg);cursor:pointer;opacity:0.7;}
+.fsrs-date-input::-webkit-inner-spin-button{display:none;}
+.fsrs-date-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,213,176,0.12);}
 .fsrs-progress-wrap{margin-bottom:18px;}
 .fsrs-progress-label{display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);margin-bottom:6px;}
 .fsrs-progress-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
@@ -222,6 +225,15 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .fsrs-complete-msg{font-size:0.95rem;color:var(--text);margin-bottom:6px;}
 .fsrs-complete-sub{font-size:0.75rem;color:var(--muted);}
 .fsrs-exam-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(232,213,176,0.08);border:1px solid rgba(232,213,176,0.2);border-radius:50px;padding:3px 10px;font-size:0.68rem;color:var(--accent);margin-left:8px;}
+/* ── Confidence tab ── */
+.conf-intro{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:18px;font-size:0.75rem;color:var(--muted);line-height:1.7;}
+.conf-intro strong{color:var(--text);}
+.conf-set-row{margin-bottom:14px;}
+.conf-set-name{font-size:0.82rem;color:var(--text);font-weight:500;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
+.conf-pct{font-size:0.78rem;font-weight:600;}
+.conf-bar-bg{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.conf-bar-fill{height:100%;border-radius:4px;transition:width .6s ease;}
+.conf-sub{font-size:0.68rem;color:var(--muted);margin-top:4px;}
 
 .share-btn-label{font-size:0.64rem;color:var(--muted);text-align:center}
 .share-url-row{display:flex;gap:8px;margin-top:4px}
@@ -2144,13 +2156,15 @@ function App(){
       // NEVER fire callSummary for Pro/Elite — that would double-charge the paid key.
       var hasBundledSummary=res.summary&&res.summary.title&&Array.isArray(res.summary.sections)&&res.summary.sections.length>0;
       if(hasBundledSummary){
+        // Bundled summary came back from Grok/Llama — use it directly
         setSummary(res.summary);setSumLoad(false);
-      }else if(isPro()||isElite()){
-        // Paid tier but no bundled summary — set null, do NOT fire a second API call
+      }else if(isPro()){
+        // Pro: summary is always bundled from generate.js — if missing, show nothing (avoid double GROQ_PRO_KEY call)
         setSummary(null);setSumLoad(false);
       }else{
-        // Free tier — fire separate summary call (Groq free, no cost issue)
-        callSummary(txt,'standard','free').then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
+        // Free tier and Elite fallback: fire separate summary call
+        // Elite uses callSummary which routes to Grok (not GROQ_PRO_KEY), so no double-charge
+        callSummary(txt,isElite()?summaryDepth:'standard',getTier()).then(function(s){setSummary(s);}).catch(function(e){setSummary({_error:e.message||'Summary failed'});}).finally(function(){setSumLoad(false);});
       }
     }catch(err){st('Error: '+(err.message||'Check config'));setSumLoad(false);}
     finally{setLoading(false);}
@@ -3486,9 +3500,9 @@ function App(){
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
-              (isElite()?['today','revise','sets','favs','history','mistakes','streak','weak']:['today','sets','history','mistakes']).map(function(tab){
-                var labels={today:'⭐ Today',revise:'🔁 Revise Today',sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
-                var fsrsDue=isElite()?getFsrsTotalDue():0;var counts={today:'',revise:fsrsDue||'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
+              (isElite()?['today','revise','confidence','sets','favs','history','mistakes','streak','weak']:['today','sets','history','mistakes']).map(function(tab){
+                var labels={today:'⭐ Today',revise:'🔁 Revise Today',confidence:'📈 Confidence',sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
+                var fsrsDue=isElite()?getFsrsTotalDue():0;var counts={today:'',revise:fsrsDue||'',confidence:'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
                 return e('button',{key:tab,
                   onClick:function(){setWsTab(tab);},
                   style:{
@@ -3848,7 +3862,7 @@ function App(){
                       }
                     },'📖 Review cards'),
                     e('button',{className:'fsrs-btn',
-                      onClick:function(){setShowWs(false);loadEntry(s);}
+                      onClick:function(){loadSet(s);}
                     },'View set →')
                   )
                 );
@@ -3977,6 +3991,112 @@ function App(){
                   e('div',{className:'weak-topic',title:t},t),
                   e('div',{className:'weak-bar-bg'},e('div',{className:'weak-bar-fill',style:{width:(topicCounts[t]/max*100)+'%'}})),
                   e('div',{className:'weak-count'},topicCounts[t])
+                );
+              })
+            );
+          })(),
+
+
+          /* ── CONFIDENCE TAB (Elite only) ── */
+          wsTab==='confidence'&&isElite()&&(function(){
+            var today=FSRS.todayIST();
+
+            // Confidence color: VIBGYOR — violet(low) → red(high)
+            function confColor(pct){
+              // Map 0-100 to hue 270 (violet) → 0 (red) going through VIBGYOR
+              // VIBGYOR in reverse: R=0°, O=30°, Y=60°, G=120°, B=240°, I=260°, V=270°
+              // Low confidence=violet(270°), high=red(0°/360°)
+              var hue = Math.round(270 - (pct/100)*270);
+              var sat = 70 + Math.round((pct/100)*20); // 70-90%
+              var lit = 45 + Math.round((pct/100)*15); // 45-60%
+              return 'hsl('+hue+','+sat+'%,'+lit+'%)';
+            }
+
+            function computeSetConfidence(set){
+              var allCards=set.cards||[];
+              if(!allCards.length)return null;
+              var totalP=0;
+              allCards.forEach(function(card,idx){
+                var cardKey=set.id+'::'+idx;
+                var review=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+                if(!review||!review.stability||!review.last_reviewed){
+                  // Never reviewed — assign baseline confidence of 20%
+                  totalP+=0.20;
+                  return;
+                }
+                // Days since last review
+                var elapsed=Math.max(0,Math.round((new Date(today)-new Date(review.last_reviewed.slice(0,10)))/(1000*86400)));
+                // P(recall) from FSRS forgetting curve
+                var p=FSRS.forgettingCurve(elapsed,review.stability);
+                // Penalise lapses — each lapse slightly reduces confidence floor
+                var lapsePenalty=Math.min((review.lapses||0)*0.04,0.25);
+                p=Math.max(p-lapsePenalty,0.05);
+                totalP+=p;
+              });
+              return Math.round((totalP/allCards.length)*100);
+            }
+
+            if(savedSets.length===0){
+              return e('div',{className:'ws-empty'},
+                e('div',{style:{fontSize:'2rem',marginBottom:12}},'📈'),
+                'No saved sets yet.',e('br'),
+                e('span',{style:{color:'var(--muted)'}},'Save card sets and complete quizzes to see your confidence scores.')
+              );
+            }
+
+            var setScores=savedSets.map(function(s){
+              return {set:s, pct:computeSetConfidence(s)};
+            }).sort(function(a,b){return (a.pct||0)-(b.pct||0)}); // weakest first
+
+            var reviewed=setScores.filter(function(x){return x.pct!==null&&x.pct>20;});
+            var avgConf=reviewed.length?Math.round(reviewed.reduce(function(acc,x){return acc+x.pct;},0)/reviewed.length):0;
+
+            return e('div',null,
+              e('div',{className:'conf-intro'},
+                e('strong',null,'How confidence is calculated'),e('br'),
+                'Each card set score is derived from the FSRS memory model — specifically your probability of recall for each card right now, averaged across the full set. Cards reviewed recently and answered correctly push the score up. Cards missed, skipped, or not yet reviewed pull it down. Pure mathematics, no guesswork.',
+                reviewed.length>0&&e('div',{style:{marginTop:10,paddingTop:10,borderTop:'1px solid var(--border)',display:'flex',gap:16}},
+                  e('div',null,e('div',{style:{fontSize:'1.1rem',fontWeight:600,color:'var(--accent)'}},avgConf+'%'),e('div',{style:{fontSize:'0.68rem',color:'var(--muted)',marginTop:2}},'Overall avg')),
+                  e('div',null,e('div',{style:{fontSize:'1.1rem',fontWeight:600,color:'var(--text)'}},reviewed.length+'/'+savedSets.length),e('div',{style:{fontSize:'0.68rem',color:'var(--muted)',marginTop:2}},'Sets tracked'))
+                )
+              ),
+              e('div',{className:'streak-head',style:{marginBottom:14}},'Confidence on each card set'),
+              setScores.map(function(item){
+                var s=item.set;
+                var pct=item.pct;
+                var allCards=s.cards||[];
+                var reviewedCards=allCards.filter(function(card,idx){
+                  var cardKey=s.id+'::'+idx;
+                  return fsrsReviews.some(function(r){return r.card_key===cardKey&&r.reps>0;});
+                }).length;
+                var dueCount=getFsrsDueCards(s.id,allCards).length;
+
+                if(pct===null){
+                  return e('div',{key:s.id,className:'conf-set-row'},
+                    e('div',{className:'conf-set-name'},
+                      e('span',null,s.name),
+                      e('span',{className:'conf-pct',style:{color:'var(--muted)'}},'No data')
+                    ),
+                    e('div',{className:'conf-bar-bg'},e('div',{className:'conf-bar-fill',style:{width:'0%',background:'var(--muted2)'}})),
+                    e('div',{className:'conf-sub'},'Attempt the quiz from this set to start tracking')
+                  );
+                }
+
+                var col=confColor(pct);
+                var label=pct>=85?'Strong':pct>=70?'Good':pct>=50?'Building':pct>=30?'Weak':'Very weak';
+
+                return e('div',{key:s.id,className:'conf-set-row'},
+                  e('div',{className:'conf-set-name'},
+                    e('span',null,s.name),
+                    e('span',{className:'conf-pct',style:{color:col}},pct+'%  — '+label)
+                  ),
+                  e('div',{className:'conf-bar-bg'},
+                    e('div',{className:'conf-bar-fill',style:{width:pct+'%',background:col}})
+                  ),
+                  e('div',{className:'conf-sub'},
+                    reviewedCards+' of '+allCards.length+' cards reviewed',
+                    dueCount>0?' · '+dueCount+' due for revision today':' · All up to date ✓'
+                  )
                 );
               })
             );
