@@ -184,6 +184,45 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .share-btn-item{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:none;background:none;border:none;color:var(--text);padding:0}
 .share-btn-item:hover{opacity:0.75}
 .share-btn-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border:1px solid var(--border)}
+/* ── FSRS Revise Today tab ── */
+.fsrs-setup{padding:8px 0 18px;border-bottom:1px solid var(--border);margin-bottom:18px;}
+.fsrs-setup-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.fsrs-label{font-size:0.72rem;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;min-width:90px;}
+.fsrs-select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:0.78rem;padding:5px 10px;font-family:'Geist',sans-serif;cursor:none;}
+.fsrs-date-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:0.78rem;padding:5px 10px;font-family:'Geist',sans-serif;cursor:none;}
+.fsrs-progress-wrap{margin-bottom:18px;}
+.fsrs-progress-label{display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);margin-bottom:6px;}
+.fsrs-progress-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.fsrs-progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),rgba(167,139,250,0.8));transition:width .5s ease;}
+.fsrs-set-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:10px;}
+.fsrs-set-name{font-size:0.85rem;font-weight:500;color:var(--text);margin-bottom:4px;}
+.fsrs-set-meta{font-size:0.7rem;color:var(--muted);margin-bottom:10px;}
+.fsrs-btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+.fsrs-btn{padding:6px 14px;border-radius:50px;border:1px solid var(--border);font-size:0.72rem;font-family:'Geist',sans-serif;cursor:none;background:transparent;color:var(--muted);transition:all .2s;}
+.fsrs-btn:hover{border-color:var(--accent);color:var(--accent);}
+.fsrs-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:500;}
+.fsrs-session-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px;}
+.fsrs-session-q{font-size:0.88rem;color:var(--text);line-height:1.6;margin-bottom:14px;font-family:'Geist',sans-serif;}
+.fsrs-session-opts{display:flex;flex-direction:column;gap:7px;margin-bottom:14px;}
+.fsrs-opt{padding:10px 14px;border-radius:var(--r-sm);border:1px solid var(--border);font-size:0.8rem;text-align:left;cursor:none;background:var(--surface2);color:var(--text);transition:all .15s;font-family:'Geist',sans-serif;}
+.fsrs-opt.cor{border-color:#4ade80;background:rgba(74,222,128,0.1);color:#4ade80;}
+.fsrs-opt.wrg{border-color:var(--red);background:rgba(239,68,68,0.08);color:var(--red);}
+.fsrs-opt.dim{opacity:0.4;}
+.fsrs-rating-row{display:flex;gap:8px;margin-top:12px;}
+.fsrs-rating-btn{flex:1;padding:8px 0;border-radius:var(--r-sm);font-size:0.75rem;font-family:'Geist',sans-serif;cursor:none;transition:all .15s;font-weight:500;}
+.fsrs-rating-btn.again{border:1px solid rgba(239,68,68,0.4);color:var(--red);background:rgba(239,68,68,0.06);}
+.fsrs-rating-btn.again:hover{background:rgba(239,68,68,0.15);}
+.fsrs-rating-btn.good{border:1px solid rgba(74,222,128,0.4);color:#4ade80;background:rgba(74,222,128,0.06);}
+.fsrs-rating-btn.good:hover{background:rgba(74,222,128,0.15);}
+.fsrs-flipcard{background:var(--surface2);border:1px solid var(--accent);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:10px;}
+.fsrs-flipcard-topic{font-family:'Instrument Serif',serif;font-size:1rem;color:var(--accent);margin-bottom:8px;}
+.fsrs-flipcard-pts{font-size:0.78rem;color:var(--muted);line-height:1.7;}
+.fsrs-complete{text-align:center;padding:32px 0;}
+.fsrs-complete-icon{font-size:2.5rem;margin-bottom:12px;}
+.fsrs-complete-msg{font-size:0.95rem;color:var(--text);margin-bottom:6px;}
+.fsrs-complete-sub{font-size:0.75rem;color:var(--muted);}
+.fsrs-exam-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(232,213,176,0.08);border:1px solid rgba(232,213,176,0.2);border-radius:50px;padding:3px 10px;font-size:0.68rem;color:var(--accent);margin-left:8px;}
+
 .share-btn-label{font-size:0.64rem;color:var(--muted);text-align:center}
 .share-url-row{display:flex;gap:8px;margin-top:4px}
 .share-url-row input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);color:var(--text);font-size:0.76rem;font-family:'Geist',sans-serif}
@@ -866,6 +905,146 @@ footer{border-top:1px solid var(--border);padding:52px 40px 36px;display:flex;fl
 <div id="root"></div>
 
 <script>
+
+// ── FSRS-4.5 Algorithm (MIT licence, pure JS) ──────────────────────────────
+// Based on the FSRS-4.5 paper by Jarrett Ye. Zero dependencies, zero API calls.
+// Inputs: card state + rating → outputs: new state + next due date
+var FSRS = (function(){
+  // FSRS-4.5 default weights (from the paper, trained on 400M+ reviews)
+  var W = [0.4072,1.1829,3.1262,15.4722,7.2102,0.5316,1.0651,0.0589,1.5330,
+           0.14,1.0124,1.9813,0.0953,0.2975,2.2042,0.2407,2.9466,0.5034,0.6567];
+
+  function forgettingCurve(t, s){
+    // Probability of recall after t days with stability s
+    return Math.pow(1 + 0.9*(t / Math.max(s, 0.001)), -1);
+  }
+
+  function initCard(){
+    return { stability:0, difficulty:0, reps:0, lapses:0 };
+  }
+
+  function initStability(rating){
+    // Initial stability from first review rating (1=Again,3=Good)
+    return Math.max(W[rating-1] || W[0], 0.1);
+  }
+
+  function initDifficulty(rating){
+    // d0(G) = W[4] - exp(W[5] * (G - 1)) + 1
+    return Math.min(Math.max(W[4] - Math.exp(W[5] * (rating - 1)) + 1, 1), 10);
+  }
+
+  function nextDifficulty(d, rating){
+    // ΔD = W[6] * (rating - 3)
+    var dd = W[6] * (rating - 3);
+    // Mean reversion: keep difficulty from drifting too far
+    var target = W[4] - Math.exp(W[5] * (3 - 1)) + 1;
+    return Math.min(Math.max(d + dd * ((10 - d) / 9) + W[7] * (target - d), 1), 10);
+  }
+
+  function shortTermStability(s, rating){
+    // For same-day re-review (lapse recovery)
+    return s * Math.exp(W[17] * (rating - 3 + W[18]));
+  }
+
+  function nextStability(d, s, r, rating){
+    if(rating === 1){
+      // Forgot — stability drops
+      return W[11] * Math.pow(d, -W[12]) * (Math.pow(s + 1, W[13]) - 1) * Math.exp(W[14] * (1 - r));
+    }
+    // Remembered — stability grows
+    var hardPen  = rating === 2 ? W[15] : 1;
+    var easyBonus = rating === 4 ? W[16] : 1;
+    return s * Math.exp(W[8]) * (11 - d) * Math.pow(s, -W[9]) * (Math.exp(W[10] * (1 - r)) - 1) * hardPen * easyBonus;
+  }
+
+  function intervalFromStability(s, retention){
+    // Solve for t in forgettingCurve(t,s) = retention
+    // t = s / 0.9 * (retention^(-1) - 1)
+    var t = (s / 0.9) * (Math.pow(retention, -1) - 1);
+    return Math.max(Math.round(t), 1);
+  }
+
+  // Adjust interval based on days until exam
+  function examAdjustedInterval(interval, daysToExam){
+    if(!daysToExam || daysToExam <= 0) return interval;
+    // Don't schedule beyond exam date
+    if(interval >= daysToExam) return Math.max(Math.floor(daysToExam * 0.7), 1);
+    // In final 14 days before exam, cap intervals at 3 days max for active review
+    if(daysToExam <= 14) return Math.min(interval, 3);
+    // In final 30 days, cap at 7 days
+    if(daysToExam <= 30) return Math.min(interval, 7);
+    return interval;
+  }
+
+  function addDays(dateStr, days){
+    var d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0,10);
+  }
+
+  function todayIST(){
+    // Returns YYYY-MM-DD in IST
+    var now = new Date();
+    var ist = new Date(now.getTime() + 5.5*60*60*1000);
+    return ist.toISOString().slice(0,10);
+  }
+
+  return {
+    // Schedule a new card (first ever review)
+    scheduleNew: function(rating, retention, examDate){
+      var s = initStability(rating);
+      var d = initDifficulty(rating);
+      var today = todayIST();
+      var interval = rating === 1 ? 1 : intervalFromStability(s, retention);
+      if(examDate) interval = examAdjustedInterval(interval, Math.max(0, Math.round((new Date(examDate)-new Date(today))/(1000*86400))));
+      return {
+        stability: parseFloat(s.toFixed(4)),
+        difficulty: parseFloat(d.toFixed(4)),
+        due_date: addDays(today, interval),
+        reps: 1,
+        lapses: rating === 1 ? 1 : 0,
+        interval: interval,
+      };
+    },
+
+    // Schedule an existing card (repeat review)
+    scheduleReview: function(card, rating, retention, examDate){
+      var today = todayIST();
+      var lastReview = card.last_reviewed ? card.last_reviewed.slice(0,10) : today;
+      var elapsed = Math.max(1, Math.round((new Date(today)-new Date(lastReview))/(1000*86400)));
+      var r = forgettingCurve(elapsed, card.stability);
+
+      var newS, newD;
+      if(card.reps === 0){
+        newS = initStability(rating);
+        newD = initDifficulty(rating);
+      } else {
+        newD = nextDifficulty(card.difficulty, rating);
+        newS = rating === 1
+          ? nextStability(newD, card.stability, r, 1)
+          : nextStability(newD, card.stability, r, rating);
+      }
+      newS = Math.max(parseFloat(newS.toFixed(4)), 0.1);
+      newD = parseFloat(Math.min(Math.max(newD, 1), 10).toFixed(4));
+
+      var interval = rating === 1 ? 1 : intervalFromStability(newS, retention);
+      if(examDate) interval = examAdjustedInterval(interval, Math.max(0, Math.round((new Date(examDate)-new Date(today))/(1000*86400))));
+
+      return {
+        stability: newS,
+        difficulty: newD,
+        due_date: addDays(today, interval),
+        reps: (card.reps || 0) + 1,
+        lapses: (card.lapses || 0) + (rating === 1 ? 1 : 0),
+        interval: interval,
+      };
+    },
+
+    todayIST: todayIST,
+    forgettingCurve: forgettingCurve,
+  };
+})();
+
 // ── Module-level Hindi map & translator ──────────────────────────
 // t() lives here so ALL components (AuthModal, HFeat, PCard, etc.) can call it.
 // App() syncs window._lang on every render so t() always reflects current lang.
@@ -1355,9 +1534,15 @@ function Quiz(props){
     if(dx<-40)goQ('next');else if(dx>40&&qi>0)goQ('prev');
   }
 
-  // Fire onFinish once when quiz completes — must be unconditional hook
+  // Fire onFinish once when quiz completes — pass per-question results for FSRS
   useEffect(function(){
-    if(done&&onFinish)onFinish(sc,qs.length);
+    if(done&&onFinish){
+      // Build per-question results array for FSRS rating
+      var perQ=qs.map(function(q,i){
+        return {question:q.question,correct:wrongRef.current.indexOf(q)<0,qIdx:i};
+      });
+      onFinish(sc,qs.length,perQ);
+    }
   },[done]);
 
 
@@ -1613,6 +1798,11 @@ function App(){
   var fontSzS=useState(1),setFontSz=fontSzS[1];var fontSz=fontSzS[0];
   var summaryDepthS=useState('standard'),setSummaryDepth=summaryDepthS[1];var summaryDepth=summaryDepthS[0];
   var favsS=useState({}),setFavs=favsS[1];var favs=favsS[0];
+  // ── FSRS state (Elite only) ──
+  var fsrsReviewsS=useState([]),setFsrsReviews=fsrsReviewsS[1];var fsrsReviews=fsrsReviewsS[0];
+  var fsrsSettingsS=useState({retention:0.92,examDate:null}),setFsrsSettings=fsrsSettingsS[1];var fsrsSettings=fsrsSettingsS[0];
+  var fsrsSessionS=useState(null),setFsrsSession=fsrsSessionS[1];var fsrsSession=fsrsSessionS[0];
+  // fsrsSession: {setId, setName, cards, quiz, mode:'quiz'|'cards'|'complete', qIdx, cIdx, answers, progress}
   var notesMapS=useState({}),setNotesMap=notesMapS[1];var notesMap=notesMapS[0];
   var srQueueS=useState([]),setSrQueue=srQueueS[1];var srQueue=srQueueS[0];
   var srModeS=useState(false),setSrMode=srModeS[1];var srMode=srModeS[0];
@@ -1841,6 +2031,8 @@ function App(){
     try{
       var mr=await fetch('/api/data?resource=mistakes',{headers:authHeader()});
       if(mr.ok){var md=await mr.json();setMistakes(md.mistakes||[]);}
+      // Elite: also load FSRS data
+      if(isElite())loadFsrsData();
     }catch(e){}
     try{
       var hr=await fetch('/api/data?resource=history',{headers:authHeader()});
@@ -2443,6 +2635,109 @@ function App(){
     finally{setRegenIdx(null);}
   }
 
+  // ── Elite: load FSRS data ──
+  async function loadFsrsData(){
+    if(!isElite()||!loadToken())return;
+    try{
+      var sr=await fetch('/api/data?resource=fsrs&type=settings',{headers:authHeader()});
+      if(sr.ok){var sd=await sr.json();setFsrsSettings(sd.settings||{retention:0.92,examDate:null});}
+      var rr=await fetch('/api/data?resource=fsrs&type=reviews',{headers:authHeader()});
+      if(rr.ok){var rd=await rr.json();setFsrsReviews(rd.reviews||[]);}
+    }catch(e){}
+  }
+
+  // ── Elite: save FSRS settings ──
+  function saveFsrsSettings(settings){
+    setFsrsSettings(settings);
+    if(loadToken()){
+      fetch('/api/data?resource=fsrs&type=settings',{method:'POST',headers:authHeader(),
+        body:JSON.stringify(settings)}).catch(function(){});
+    }
+  }
+
+  // ── Elite: record FSRS results after quiz — called on quiz completion ──
+  // quizResults: array of {question, correct, userAnswer, setId, setName, cardKey, cardTopic}
+  function recordFsrsResults(quizResults, setId, setName){
+    if(!isElite()||!loadToken()||!quizResults||!quizResults.length)return;
+    var today=FSRS.todayIST();
+    var retention=fsrsSettings.retention||0.92;
+    var examDate=fsrsSettings.examDate||null;
+
+    var newReviews=[];
+    quizResults.forEach(function(qr){
+      var rating=qr.correct?3:1; // right=Good(3), wrong=Again(1)
+      var cardKey=qr.cardKey; // set_id::card_topic_hash
+
+      // Find existing review state for this card
+      var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+
+      var newState;
+      if(!existing||!existing.reps){
+        newState=FSRS.scheduleNew(rating,retention,examDate);
+      }else{
+        newState=FSRS.scheduleReview(existing,rating,retention,examDate);
+      }
+
+      var reviewRow={
+        id:(existing&&existing.id)||cardKey+'_'+Date.now().toString(36),
+        set_id:setId,
+        set_name:setName,
+        card_key:cardKey,
+        card_topic:qr.cardTopic||'',
+        rating:rating,
+        stability:newState.stability,
+        difficulty:newState.difficulty,
+        due_date:newState.due_date,
+        reps:newState.reps,
+        lapses:newState.lapses,
+        last_reviewed:today,
+      };
+      newReviews.push(reviewRow);
+    });
+
+    // Update local state
+    setFsrsReviews(function(prev){
+      var updated=prev.slice();
+      newReviews.forEach(function(nr){
+        var idx=updated.findIndex(function(r){return r.card_key===nr.card_key;});
+        if(idx>=0)updated[idx]=nr; else updated.push(nr);
+      });
+      return updated;
+    });
+
+    // Persist to Supabase
+    fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),
+      body:JSON.stringify({reviews:newReviews})}).catch(function(){});
+  }
+
+  // ── Elite: get cards due today for a given set ──
+  function getFsrsDueCards(setId, allCards){
+    var today=FSRS.todayIST();
+    return allCards.map(function(card,idx){
+      var cardKey=setId+'::'+idx;
+      var review=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+      return {card:card, cardKey:cardKey, idx:idx, review:review,
+        due: !review||review.due_date<=today, // new cards are always due
+        daysUntilDue: review?Math.max(0,Math.round((new Date(review.due_date)-new Date(today))/(1000*86400))):0
+      };
+    }).filter(function(c){return c.due;});
+  }
+
+  // ── Elite: total due cards count across all saved sets (for tab badge) ──
+  function getFsrsTotalDue(){
+    if(!isElite())return 0;
+    var today=FSRS.todayIST();
+    var due=0;
+    savedSets.forEach(function(s){
+      (s.cards||[]).forEach(function(card,idx){
+        var cardKey=s.id+'::'+idx;
+        var review=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+        if(!review||review.due_date<=today)due++;
+      });
+    });
+    return due;
+  }
+
   // ── Pro: record mistake — only for saved sets ──
   function recordMistake(question,options,correct,explanation){
     if(!activeSetName)return;
@@ -2633,6 +2928,8 @@ function App(){
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');loadProData();setShowWs(true);}},
                   '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
                 ),
+                isElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('revise');loadProData();setShowWs(true);}},
+                '🔁 Revise Today'),
                 isElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('favs');setShowWs(true);}},
                   '♥ Favourites'+(Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length?' ('+Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length+')':'')
                 ),
@@ -2876,7 +3173,26 @@ function App(){
                 ? e(Quiz,{qs:activeQuiz,
                     onReset:quizCounts.length>1?function(){setActiveQuiz(null);setPickAnim(null);}:null,
                     onMistake:(isPro()||isElite())?function(q){recordMistake(q.question,q.options,q.correct,q.explanation);}:null,
-                    onFinish:(isPro()||isElite())?function(sc,tot){saveQuizResult(sc,tot);}:null,
+                    onFinish:(isPro()||isElite())?function(sc,tot,perQ){
+                      saveQuizResult(sc,tot);
+                      // Elite: record FSRS results from this quiz
+                      if(isElite()&&activeSetName&&perQ&&perQ.length){
+                        var setObj=savedSets.find(function(s){return s.name===activeSetName;});
+                        if(setObj){
+                          var qResults=perQ.map(function(pq){
+                            // Match quiz question to a card topic for the card key
+                            // Use question index to build card key
+                            return {
+                              cardKey:setObj.id+'::'+pq.qIdx,
+                              cardTopic:setObj.cards&&setObj.cards[pq.qIdx]?setObj.cards[pq.qIdx].topic:'Q'+pq.qIdx,
+                              correct:pq.correct,
+                              question:pq.question,
+                            };
+                          });
+                          recordFsrsResults(qResults,setObj.id,setObj.name);
+                        }
+                      }
+                    }:null,
                     onReview:isElite()?function(wqs){
                       setSrQueue(wqs);
                       setSrIdx(0);setSrMode(true);setRtab('cards');
@@ -3170,9 +3486,9 @@ function App(){
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
-              (isElite()?['today','sets','favs','history','mistakes','streak','weak']:['today','sets','history','mistakes']).map(function(tab){
-                var labels={today:'⭐ Today',sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
-                var counts={today:'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
+              (isElite()?['today','revise','sets','favs','history','mistakes','streak','weak']:['today','sets','history','mistakes']).map(function(tab){
+                var labels={today:'⭐ Today',revise:'🔁 Revise Today',sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
+                var fsrsDue=isElite()?getFsrsTotalDue():0;var counts={today:'',revise:fsrsDue||'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
                 return e('button',{key:tab,
                   onClick:function(){setWsTab(tab);},
                   style:{
@@ -3245,6 +3561,300 @@ function App(){
                   })
                 )
           ),
+
+
+          /* ── REVISE TODAY TAB (Elite only) ── */
+          wsTab==='revise'&&isElite()&&(function(){
+            var today=FSRS.todayIST();
+            var retention=fsrsSettings.retention||0.92;
+            var examDate=fsrsSettings.examDate||null;
+
+            // If a session is active, show session UI
+            if(fsrsSession){
+              var sess=fsrsSession;
+              var totalItems=sess.totalItems||1;
+              var doneItems=sess.doneItems||0;
+              var pct=Math.round(doneItems/totalItems*100);
+
+              // ── Session complete screen ──
+              if(sess.mode==='complete'){
+                return e('div',null,
+                  e('div',{className:'fsrs-progress-wrap'},
+                    e('div',{className:'fsrs-progress-label'},
+                      e('span',null,'Today revision'),e('span',null,'100%')),
+                    e('div',{className:'fsrs-progress-bar'},e('div',{className:'fsrs-progress-fill',style:{width:'100%'}}))
+                  ),
+                  e('div',{className:'fsrs-complete'},
+                    e('div',{className:'fsrs-complete-icon'},'🎯'),
+                    e('div',{className:'fsrs-complete-msg'},'Revision complete for today!'),
+                    e('div',{className:'fsrs-complete-sub',style:{marginBottom:16}},
+                      sess.setName+' — '+sess.reviewedCount+' card'+(sess.reviewedCount!==1?'s':'')+' reviewed'),
+                    e('div',{className:'fsrs-complete-sub'},
+                      'Next review: cards will reappear based on your retention schedule.'),
+                    e('button',{className:'fsrs-btn primary',style:{marginTop:18},
+                      onClick:function(){setFsrsSession(null);}
+                    },'← Back to sets')
+                  )
+                );
+              }
+
+              // ── Progress bar ──
+              var progressEl=e('div',{className:'fsrs-progress-wrap'},
+                e('div',{className:'fsrs-progress-label'},
+                  e('span',null,sess.setName),
+                  e('span',null,doneItems+' / '+totalItems+' done')),
+                e('div',{className:'fsrs-progress-bar'},
+                  e('div',{className:'fsrs-progress-fill',style:{width:pct+'%'}}))
+              );
+
+              // ── Quiz mode: show MCQ cards with rating buttons ──
+              if(sess.mode==='quiz'){
+                var dueQs=sess.dueQuestions||[];
+                var qi=sess.qIdx||0;
+                if(qi>=dueQs.length){
+                  // Quiz phase done → move to cards phase
+                  setFsrsSession(function(s){return Object.assign({},s,{mode:'cards',cIdx:0,doneItems:(s.doneItems||0)});});
+                  return e('div',{className:'ws-empty'},e('div',{style:{fontSize:'1.5rem',marginBottom:8}},'✓'),
+                    'Quiz done — reviewing cards next…');
+                }
+                var q=dueQs[qi];
+                var answered=sess.answered||false;
+                var userChoice=sess.userChoice;
+                return e('div',null,
+                  progressEl,
+                  e('div',{className:'streak-head',style:{marginBottom:10}},
+                    'Quiz review — Q '+(qi+1)+' of '+dueQs.length),
+                  e('div',{className:'fsrs-session-card'},
+                    e('div',{className:'fsrs-session-q'},q.question),
+                    e('div',{className:'fsrs-session-opts'},
+                      (q.options||[]).map(function(opt,oi){
+                        var cls='fsrs-opt';
+                        if(answered){
+                          if(oi===q.correct)cls+=' cor';
+                          else if(oi===userChoice&&oi!==q.correct)cls+=' wrg';
+                          else cls+=' dim';
+                        }
+                        return e('button',{key:oi,className:cls,
+                          disabled:answered,
+                          onClick:function(){
+                            if(answered)return;
+                            setFsrsSession(function(s){return Object.assign({},s,{answered:true,userChoice:oi});});
+                          }},
+                          e('span',{style:{opacity:.4,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}},['A','B','C','D'][oi]),
+                          opt
+                        );
+                      })
+                    ),
+                    answered&&e('div',null,
+                      e('div',{className:'qex'},
+                        e('strong',null,userChoice===q.correct?'Correct. ':'Incorrect. '),
+                        q.explanation),
+                      e('div',{className:'fsrs-rating-row'},
+                        e('button',{className:'fsrs-rating-btn again',
+                          onClick:function(){
+                            // Record rating 1 (Again), advance
+                            var rating=1;
+                            var cardKey=sess.setId+'::'+qi;
+                            var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+                            var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
+                            var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                            setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
+                            fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
+                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,doneItems:(s.doneItems||0)+1});});
+                          }
+                        },'✗ Missed it'),
+                        e('button',{className:'fsrs-rating-btn good',
+                          onClick:function(){
+                            var rating=userChoice===q.correct?3:1;
+                            var cardKey=sess.setId+'::'+qi;
+                            var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+                            var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
+                            var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                            setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
+                            fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
+                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,doneItems:(s.doneItems||0)+1});});
+                          }
+                        },'✓ Got it')
+                      )
+                    )
+                  )
+                );
+              }
+
+              // ── Cards mode: show full card set for review ──
+              if(sess.mode==='cards'){
+                var allCards=sess.allCards||[];
+                var ci=sess.cIdx||0;
+                if(ci>=allCards.length){
+                  // Cards done — complete
+                  setFsrsSession(function(s){return Object.assign({},s,{mode:'complete',reviewedCount:allCards.length});});
+                  return e('div',{className:'ws-empty'},'Wrapping up…');
+                }
+                var card=allCards[ci];
+                var pts=(card.points||'').split('|').filter(function(p){return p.trim();});
+                return e('div',null,
+                  progressEl,
+                  e('div',{className:'streak-head',style:{marginBottom:10}},
+                    'Card review — '+(ci+1)+' of '+allCards.length),
+                  e('div',{className:'fsrs-flipcard'},
+                    e('div',{className:'fsrs-flipcard-topic'},card.topic),
+                    pts.length>0&&e('div',{className:'fsrs-flipcard-pts'},
+                      pts.map(function(pt,pi){
+                        return e('div',{key:pi,style:{display:'flex',gap:6,marginBottom:4}},
+                          e('span',{style:{color:'var(--accent)',flexShrink:0}},'→'),
+                          e('span',null,pt)
+                        );
+                      })
+                    )
+                  ),
+                  e('div',{className:'fsrs-rating-row'},
+                    e('button',{className:'fsrs-rating-btn again',
+                      onClick:function(){
+                        // Card not recalled — rate 1
+                        var rating=1;
+                        var cardKey=sess.setId+'::'+ci;
+                        var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+                        var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
+                        var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                        setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
+                        fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
+                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,doneItems:(s.doneItems||0)+1});});
+                      }
+                    },'✗ Need more review'),
+                    e('button',{className:'fsrs-rating-btn good',
+                      onClick:function(){
+                        var rating=3;
+                        var cardKey=sess.setId+'::'+ci;
+                        var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+                        var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
+                        var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                        setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
+                        fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
+                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,doneItems:(s.doneItems||0)+1});});
+                      }
+                    },'✓ Know it')
+                  ),
+                  e('div',{style:{textAlign:'right',marginTop:8}},
+                    e('button',{className:'fsrs-btn',style:{fontSize:'0.68rem'},
+                      onClick:function(){setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,doneItems:(s.doneItems||0)+1});});}
+                    },'Skip →')
+                  )
+                );
+              }
+            }
+
+            // ── Overview screen (no active session) ──
+            // Settings row
+            var settingsEl=e('div',{className:'fsrs-setup'},
+              e('div',{className:'fsrs-setup-row'},
+                e('span',{className:'fsrs-label'},'Target retention'),
+                e('select',{className:'fsrs-select',value:retention,
+                  onChange:function(ev){saveFsrsSettings({retention:parseFloat(ev.target.value),examDate:examDate});}},
+                  e('option',{value:0.80},'80% — Relaxed'),
+                  e('option',{value:0.85},'85% — Moderate'),
+                  e('option',{value:0.90},'90% — Standard'),
+                  e('option',{value:0.92},'92% — Recommended'),
+                  e('option',{value:0.95},'95% — Intensive'),
+                  e('option',{value:0.98},'98% — Near-perfect')
+                )
+              ),
+              e('div',{className:'fsrs-setup-row'},
+                e('span',{className:'fsrs-label'},'Exam date'),
+                e('input',{type:'date',className:'fsrs-date-input',
+                  value:examDate||'',
+                  min:today,
+                  onChange:function(ev){saveFsrsSettings({retention:retention,examDate:ev.target.value||null});}}),
+                examDate&&e('button',{className:'fsrs-btn',style:{fontSize:'0.68rem'},
+                  onClick:function(){saveFsrsSettings({retention:retention,examDate:null});}
+                },'Clear'),
+                examDate&&e('span',{className:'fsrs-exam-badge'},'📅 '+Math.max(0,Math.round((new Date(examDate)-new Date(today))/(1000*86400)))+' days to exam')
+              )
+            );
+
+            // Due cards by set
+            var totalDue=0;
+            var setDueList=savedSets.map(function(s){
+              var due=getFsrsDueCards(s.id,s.cards||[]);
+              totalDue+=due.length;
+              return {set:s,due:due};
+            }).filter(function(x){return x.due.length>0;});
+
+            // Overall progress bar: how many have been reviewed today
+            var reviewedToday=fsrsReviews.filter(function(r){return r.last_reviewed===today;}).length;
+            var totalCards=savedSets.reduce(function(acc,s){return acc+(s.cards||[]).length;},0);
+
+            var overallProgress=totalCards>0?Math.min(100,Math.round(reviewedToday/Math.max(totalDue+reviewedToday,1)*100)):0;
+
+            return e('div',null,
+              settingsEl,
+              totalDue>0&&e('div',{className:'fsrs-progress-wrap'},
+                e('div',{className:'fsrs-progress-label'},
+                  e('span',null,"Today's revision progress"),
+                  e('span',null,reviewedToday+' reviewed · '+totalDue+' due')),
+                e('div',{className:'fsrs-progress-bar'},
+                  e('div',{className:'fsrs-progress-fill',style:{width:overallProgress+'%'}}))
+              ),
+              totalDue===0&&savedSets.length>0&&e('div',{className:'fsrs-complete',style:{paddingTop:16}},
+                e('div',{className:'fsrs-complete-icon'},'✅'),
+                e('div',{className:'fsrs-complete-msg'},'All caught up for today!'),
+                e('div',{className:'fsrs-complete-sub'},'No cards are due right now. Check back tomorrow.')
+              ),
+              totalDue===0&&savedSets.length===0&&e('div',{className:'ws-empty'},
+                e('div',{style:{fontSize:'2rem',marginBottom:12}},'🔁'),
+                'No saved sets yet.',e('br'),
+                e('span',{style:{color:'var(--muted)'}},'Save a card set and attempt its quiz — FSRS will schedule your revision automatically.')
+              ),
+              setDueList.map(function(item){
+                var s=item.set;
+                var dueCards=item.due;
+                var dueQs=(s.quiz||[]).filter(function(q,qi){
+                  var cardKey=s.id+'::'+qi;
+                  var rev=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+                  return !rev||rev.due_date<=today;
+                });
+                return e('div',{key:s.id,className:'fsrs-set-block'},
+                  e('div',{className:'fsrs-set-name'},s.name),
+                  e('div',{className:'fsrs-set-meta'},
+                    dueCards.length+' card'+(dueCards.length!==1?'s':'')+' due today',
+                    dueQs.length>0&&(' · '+dueQs.length+' quiz Q'+(dueQs.length!==1?'s':'')+' to revisit')
+                  ),
+                  e('div',{className:'fsrs-btn-row'},
+                    dueQs.length>0&&e('button',{className:'fsrs-btn primary',
+                      onClick:function(){
+                        // Start quiz mode first, then cards mode
+                        var totalItems=dueQs.length+dueCards.length;
+                        setFsrsSession({
+                          setId:s.id,setName:s.name,
+                          mode:'quiz',
+                          dueQuestions:dueQs,
+                          allCards:s.cards||[],
+                          qIdx:0,cIdx:0,
+                          answered:false,userChoice:null,
+                          totalItems:totalItems,doneItems:0,
+                        });
+                      }
+                    },'🧠 Start revision'),
+                    dueQs.length===0&&e('button',{className:'fsrs-btn primary',
+                      onClick:function(){
+                        setFsrsSession({
+                          setId:s.id,setName:s.name,
+                          mode:'cards',
+                          dueQuestions:[],
+                          allCards:s.cards||[],
+                          qIdx:0,cIdx:0,
+                          answered:false,userChoice:null,
+                          totalItems:dueCards.length,doneItems:0,
+                        });
+                      }
+                    },'📖 Review cards'),
+                    e('button',{className:'fsrs-btn',
+                      onClick:function(){setShowWs(false);loadEntry(s);}
+                    },'View set →')
+                  )
+                );
+              })
+            );
+          })(),
 
           /* ── MISTAKES TAB ── */
           wsTab==='today'&&(function(){
