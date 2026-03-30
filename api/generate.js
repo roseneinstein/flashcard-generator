@@ -242,7 +242,7 @@ async function callLlama(prompt) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${proKey}` },
     body: JSON.stringify({
       model:           'llama-3.1-8b-instant',
-      max_tokens:      8000,
+      max_tokens:      12000,
       messages:        [{ role: 'user', content: prompt }],
       temperature:     0.15,
       response_format: { type: 'json_object' },
@@ -380,16 +380,16 @@ export default async function handler(req, res) {
   // Vercel generate.js handles:
   //   FREE  (text paste OR PDF) → Groq free tier (llama-3.3-70b / llama-3.1-8b, 3 keys)
   //   PRO   (text paste OR PDF) → llama-3.1-8b-instant (paid Groq dev plan, dedicated)
-  //   ELITE (text paste)        → Groq free tier (same as free — text paste is always Groq)
+  //   ELITE (text paste)        → Grok 4.1 Fast via OpenRouter (NOT free Groq — Elite pays for premium)
   //   ELITE (PDF upload)        → Normally via Cloudflare Worker → Grok 4.1 Fast
-  //                               This function only handles Elite as FALLBACK if Worker fails
+  //                               If Worker fails, this function handles as fallback (with images)
   //
-  const useProModel  = (tier === 'pro');  // Pro always uses llama-3.1-8b-instant
-  const useEliteFallback = (isFileUpload === true) && (tier === 'elite'); // Elite fallback only
-  const hasImages    = Array.isArray(images) && images.length > 0;
-  const sendImages   = useEliteFallback && hasImages; // only Elite fallback may have images
+  const useProModel      = (tier === 'pro');   // Pro always uses llama-3.1-8b-instant
+  const useEliteGrok     = (tier === 'elite'); // Elite ALWAYS uses Grok — text or PDF fallback
+  const hasImages        = Array.isArray(images) && images.length > 0;
+  const sendImages       = useEliteGrok && hasImages; // images only when Elite PDF fallback
 
-  console.log('[CogniSwift] routing — useProModel:', useProModel, '| useEliteFallback:', useEliteFallback, '| sendImages:', sendImages);
+  console.log('[CogniSwift] routing — useProModel:', useProModel, '| useEliteGrok:', useEliteGrok, '| sendImages:', sendImages);
 
   // ── PRO PATH: llama-3.1-8b-instant (Groq paid dev plan) ─────────────────
   if (useProModel) {
@@ -421,9 +421,12 @@ QUIZ RULES — CRITICAL:
 - Each question has EXACTLY 4 options. Distractors must be plausible.
 - "correct" is integer 0-3. Explanation: why correct is right AND why main wrong option is wrong.
 
-SUMMARY RULES:
-- Title: max 8 words. Sections with heading (3-6 words) and bullet points.
-- Standard depth: 4-6 sections, 3-5 bullets each. Every topic must appear.
+SUMMARY RULES — MANDATORY: You MUST always generate the summary. It is NOT optional.
+- Title: max 8 words capturing the core subject.
+- Standard depth: 4-6 sections, 3-5 bullet points each.
+- Every major topic in the material must appear in at least one section.
+- Each bullet = one specific fact with numbers/names/dates where available.
+- NEVER return an empty summary object or omit the summary key.
 
 JSON FORMAT:
 1. ${proCountNote}
@@ -449,8 +452,8 @@ ${inputText}`;
     }
   }
 
-  // ── ELITE FALLBACK PATH: Grok 4.1 Fast (only if Cloudflare Worker failed) ─
-  if (useEliteFallback) {
+  // ── ELITE PATH: Grok 4.1 Fast — text paste AND PDF fallback ─────────────
+  if (useEliteGrok) {
     try {
       const depthMap = {
         concise:     '3-4 sections, 2-3 bullet points each',
