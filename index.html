@@ -3244,7 +3244,7 @@ function App(){
       ),
       e('div',{className:'plans rev'},
         e(PCard,{name:'Free',price:'0',period:t('forever'),bill:bill,feats:[
-          '10 generations per day',
+          '5 generations per day',
           'Up to 8,000 characters per input',
           'AI flashcards with flip animation',
           'Structured summary of your notes',
@@ -3257,6 +3257,7 @@ function App(){
           feats:[
             '20 generations per day (100/month)',
             'Up to 20,000 characters per input',
+            'PDF uploads up to 20 pages',
             'Save sets to your account (cloud-synced)',
             'Mistake tracker — review wrong quiz answers',
             'Voice readout of every card',
@@ -3265,6 +3266,7 @@ function App(){
             'Quiz history across all saved sets',
             'Custom card count up to 30',
             'Card of the day',
+            'Ad-free forever',
           ],onSel:function(){setSp('pro');setPwBill(bill);if(user&&(user.tier==='pro'||user.tier==='elite')){setSp('elite');}setPw(true);}}),
         e(PCard,{name:'Elite',price:'199',period:t('per month'),bill:bill,
           priceAnnual:'1,799',perMonth:'150',strikeAnnual:'2,388',saveAmt:'589',
@@ -3272,8 +3274,11 @@ function App(){
             'Everything in Pro',
             '40 generations per day (100/month)',
             'Up to 30,000 characters per input',
+            'PDF uploads up to 50 pages',
             'Scanned docs, diagrams & handwritten PDFs',
-            'Spaced repetition for weak cards',
+            'FSRS spaced repetition — best-in-class globally',
+            'Exam date selector — FSRS auto-syncs for max retention',
+            'Confidence Score per set — mathematically calculated',
             'Weak area report & progress analytics',
             'Study streak calendar & heatmap',
             'Custom deck themes & favourite cards',
@@ -4006,8 +4011,8 @@ function App(){
               // Map 0-100 to hue 270 (violet) → 0 (red), VIBGYOR dynamics
               // Toned down: lower saturation + higher lightness = softer on eyes
               var hue = Math.round(270 - (pct/100)*270);
-              var sat = 42 + Math.round((pct/100)*18); // 42-60% — muted, not harsh
-              var lit = 54 + Math.round((pct/100)*8);  // 54-62% — lighter, gentler
+              var sat = 28 + Math.round((pct/100)*14); // 28-42% — very muted, easy on dark bg
+              var lit = 58 + Math.round((pct/100)*8);  // 58-66% — bright enough to read, not harsh
               return 'hsl('+hue+','+sat+'%,'+lit+'%)';
             }
 
@@ -4178,8 +4183,11 @@ function App(){
         'Everything in Pro, plus:',
         '40 generations per day (100/month)',
         '30,000 characters per input',
+        'PDF uploads up to 50 pages',
         'Scanned docs, diagrams & handwritten PDFs',
-        'Spaced repetition for weak cards',
+        'FSRS spaced repetition — best-in-class globally',
+        'Exam date selector — FSRS auto-syncs for max retention',
+        'Confidence Score per set — mathematically calculated',
         'Weak area report & analytics',
         'Study streak calendar & heatmap',
         'Custom deck themes & favourite cards',
@@ -4190,6 +4198,7 @@ function App(){
       var proFeats=[
         '20 generations per day (100/month)',
         '20,000 characters per input',
+        'PDF uploads up to 20 pages',
         'Save sets to your account',
         'Mistake tracker with solutions',
         'Voice readout of cards',
@@ -4198,6 +4207,7 @@ function App(){
         'Quiz history across saved sets',
         'Custom card count up to 30',
         'Card of the day',
+        'Ad-free forever',
       ];
       var isAnnPw=pwBill==='annual';
       var plans=isProUser
