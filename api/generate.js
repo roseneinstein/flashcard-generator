@@ -278,7 +278,7 @@ async function callLlama(prompt) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${proKey}` },
     body: JSON.stringify({
       model:           'llama-3.1-8b-instant',
-      max_tokens:      15000,
+      max_tokens:      8000,  // cards + quiz only — summary is a separate parallel call
       messages:        [{ role: 'user', content: prompt }],
       temperature:     0.15,
       response_format: { type: 'json_object' },
@@ -293,6 +293,35 @@ async function callLlama(prompt) {
   console.log('[CogniSwift] Llama success');
   return (data.choices?.[0]?.message?.content || '').trim();
 }
+
+// ─── Llama for Pro summary only — smaller token budget, faster ───────────────
+async function callLlamaSummary(prompt) {
+  const proKey = process.env.GROQ_PRO_KEY;
+  if (!proKey) throw new Error('GROQ_PRO_KEY not configured on Vercel');
+
+  console.log('[CogniSwift] Calling llama for Pro summary (GROQ_PRO_KEY)');
+
+  const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${proKey}` },
+    body: JSON.stringify({
+      model:           'llama-3.1-8b-instant',
+      max_tokens:      3000,
+      messages:        [{ role: 'user', content: prompt }],
+      temperature:     0.1,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  const data = await groqRes.json();
+  if (data.error) {
+    console.error('[CogniSwift] Llama summary error:', data.error.message);
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
+  console.log('[CogniSwift] Llama summary call complete');
+  return (data.choices?.[0]?.message?.content || '').trim();
+}
+
 
 // ─── Groq fallback chain (free tier only) ────────────────────────────────
 
@@ -428,25 +457,30 @@ export default async function handler(req, res) {
   console.log('[CogniSwift] routing — useProModel:', useProModel, '| useEliteGrok:', useEliteGrok, '| sendImages:', sendImages);
 
   // ── PRO PATH: llama-3.1-8b-instant (Groq paid dev plan) ─────────────────
+  // Two parallel calls: call 1 = cards + quiz, call 2 = summary only.
+  // Reason: llama-3.1-8b-instant (8b params) exhausts 15k tokens on cards+quiz
+  // alone for 20+ card requests, leaving zero tokens for summary in a single call.
+  // Running both calls in parallel with Promise.all means same latency for the user.
   if (useProModel) {
     const proCountNote = count > 15
       ? `CRITICAL: You MUST return EXACTLY ${count} flashcard objects. Count them before responding. Not ${count-2}, not ${count+2} — exactly ${count}.`
       : `Return exactly ${count} flashcard objects.`;
 
-    const proPrompt = `You are a subject-matter expert creating high-quality revision flashcards for serious Indian competitive exam students (UPSC, JEE, NEET, CA, etc.).
+    // ── Call 1: Cards + Quiz only ──────────────────────────────────────────
+    const proCardsPrompt = `You are a subject-matter expert creating high-quality revision flashcards for serious Indian competitive exam students (UPSC, JEE, NEET, CA, etc.).
 
 ${langInstruction}
 
-The study notes below may cover MULTIPLE topics or editorials. You must cover ALL of them — do NOT focus only on the first topic. Distribute the ${count} flashcards proportionally across every topic present in the notes.
+The study notes below may cover MULTIPLE topics. Cover ALL of them — distribute the ${count} flashcards proportionally across every topic present.
 
 Return ONLY a valid JSON object. No markdown, no code fences, nothing else.
 
 Schema:
-{"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}],"summary":{"title":"string","sections":[{"heading":"string","points":["string"]}]}}
+{"flashcards":[{"topic":"string","points":"string"}],"quiz":[{"question":"string","options":["string","string","string","string"],"correct":0,"explanation":"string"}]}
 
 FLASHCARD RULES:
-- Draw the topic name DIRECTLY from the content. Cover ALL topics present.
-- Every card must have a DISTINCT topic name. Append Roman numerals for duplicates: "Topic (I)", "Topic (II)".
+- Draw topic name DIRECTLY from content. Every card must have a DISTINCT topic name.
+- Append Roman numerals for duplicates: "Topic (I)", "Topic (II)".
 - Topics must be SPECIFIC — NOT "Introduction" or "Overview".
 - Points (4-6, pipe-separated " | "): each must state a SPECIFIC fact, figure, date, name, formula, or provision.
 - Preserve ALL technical terms exactly as in the source.
@@ -454,38 +488,73 @@ FLASHCARD RULES:
 QUIZ RULES — CRITICAL:
 - Generate EXACTLY ${maxQuiz} quiz questions. Hard requirement — count before outputting.
 - Cover ALL topics proportionally. Test specific facts from the notes only.
-- Each question has EXACTLY 4 options. Distractors must be plausible.
+- Each question has EXACTLY 4 options. Distractors must be plausible alternatives.
 - "correct" is integer 0-3. Explanation: why correct is right AND why main wrong option is wrong.
-
-SUMMARY RULES — MANDATORY: You MUST always generate the summary. It is NOT optional.
-- Title: max 8 words capturing the core subject.
-- Standard depth: 4-6 sections, 3-5 bullet points each.
-- Every major topic in the material must appear in at least one section.
-- Each bullet = one specific fact with numbers/names/dates where available.
-- NEVER return an empty summary object or omit the summary key.
 
 JSON FORMAT:
 1. ${proCountNote}
 2. quiz array: EXACTLY ${maxQuiz} objects.
-3. Every string on ONE line — no newlines or tabs.
+3. Every string on ONE line — no newlines or tabs inside strings.
 4. Points separated by " | ". NO double-quotes inside strings. NO trailing commas.
 5. All keys double-quoted. "correct" is integer 0-3. options has exactly 4 strings.
 
 Study notes:
 ${inputText}`;
 
+    // ── Call 2: Summary only ───────────────────────────────────────────────
+    const proSummaryPrompt = `You are a study notes summariser for Indian competitive exams (UPSC, JEE, NEET, CA).
+
+${langInstruction}
+
+Write a STANDARD summary: 4-6 sections, 3-5 bullet points each.
+
+Return ONLY a JSON object. No markdown, no code fences.
+Schema: {"title":"string","sections":[{"heading":"string","points":["string"]}]}
+
+Rules:
+- title: max 8 words, captures the core subject.
+- heading: 3-6 words per section.
+- Each point = one complete specific fact with numbers/names/dates where available.
+- Cover every major topic in the material.
+- Every string on ONE line. NO double-quotes inside strings. NO trailing commas.
+
+Study material:
+${inputText}`;
+
     try {
-      const raw    = await callLlama(proPrompt);
-      const parsed = parseAndValidate(raw);
+      // Run both calls in parallel — same latency as single call, guaranteed summary
+      console.log('[CogniSwift] Pro: firing cards+quiz and summary in parallel');
+      const [cardsRaw, summaryRaw] = await Promise.all([
+        callLlama(proCardsPrompt),
+        callLlamaSummary(proSummaryPrompt),
+      ]);
+
+      const parsed = parseAndValidate(cardsRaw);
       parsed.flashcards = deduplicateTopics(parsed.flashcards);
       parsed.flashcards = padToCount(parsed.flashcards, count);
       parsed.quiz       = parsed.quiz.slice(0, maxQuiz);
-      console.log('[CogniSwift] Pro llama SUCCESS — cards:', parsed.flashcards.length, '| quiz:', parsed.quiz.length);
+
+      // Parse summary separately
+      try {
+        let sRaw = summaryRaw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
+        const fi = sRaw.indexOf('{'), la = sRaw.lastIndexOf('}');
+        if (fi >= 0 && la >= 0) {
+          sRaw = sRaw.slice(fi, la+1).replace(/[\r\n\t]+/g,' ').replace(/,\s*([}\]])/g,'$1');
+          const sp = JSON.parse(sRaw);
+          if (sp.title && Array.isArray(sp.sections) && sp.sections.length) {
+            parsed.summary = sp;
+          }
+        }
+      } catch (sErr) {
+        console.warn('[CogniSwift] Pro summary parse failed:', sErr.message, '— cards+quiz still returned');
+        parsed.summary = null;
+      }
+
+      console.log('[CogniSwift] Pro SUCCESS — cards:', parsed.flashcards.length, '| quiz:', parsed.quiz.length, '| summary:', !!parsed.summary);
       return res.status(200).json(parsed);
+
     } catch (err) {
-      console.error('[CogniSwift] Pro llama FAILED:', err.message);
-      // Do NOT fall to Groq free tier — that prompt has no summary schema
-      // Return error to user; better than silent degradation to free-tier output
+      console.error('[CogniSwift] Pro FAILED:', err.message);
       return res.status(503).json({
         error: 'Generation failed. Please try again in a moment.',
         _debug: err.message,
