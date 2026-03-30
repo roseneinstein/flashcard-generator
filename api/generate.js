@@ -59,22 +59,58 @@ function isRateLimitGroq(status, errObj) {
          code.includes('rate') || code.includes('limit') || code.includes('quota');
 }
 
+function repairJSON(raw) {
+  // Strip markdown fences
+  raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
+
+  // Find the outermost JSON object
+  const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
+  if (fi === -1) return raw; // can't repair, let caller handle
+
+  // If truncated (no closing brace or truncated mid-object), try to salvage
+  let candidate = (la === -1) ? raw.slice(fi) : raw.slice(fi, la + 1);
+
+  // Normalise whitespace, fix trailing commas
+  candidate = candidate.replace(/[\r\n\t]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
+
+  // If it parses cleanly, return as-is
+  try { JSON.parse(candidate); return candidate; } catch (_) {}
+
+  // Try progressive truncation — find last complete flashcard entry
+  // Strategy: find last occurrence of a well-formed closing pattern and close the object
+  const attempts = [
+    // Try closing after last complete quiz entry
+    candidate.replace(/,?\s*\{[^}]*$/, '') + ']},"summary":{"title":"Summary","sections":[]}}',
+    // Try closing after last complete flashcard
+    candidate.replace(/,?\s*\{[^}]*$/, '') + ']},"quiz":[],"summary":{"title":"Summary","sections":[]}}',
+    // Try wrapping what we have
+    candidate + ']},"quiz":[],"summary":{"title":"Summary","sections":[]}}',
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const cleaned = attempt.replace(/,\s*([}\]])/g, '$1');
+      JSON.parse(cleaned);
+      console.warn('[CogniSwift] repairJSON: Used repair strategy');
+      return cleaned;
+    } catch (_) {}
+  }
+
+  return candidate; // return best effort, let caller throw
+}
+
 function parseAndValidate(raw) {
   const preview = raw ? raw.substring(0, 300) : '(empty)';
-  raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
-  const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
-  if (fi === -1 || la === -1) {
-    console.error('[CogniSwift] parseAndValidate: No JSON braces found. Raw preview:', preview);
-    throw new Error('No JSON found in response');
-  }
-  raw = raw.slice(fi, la + 1).replace(/[\r\n\t]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
+  raw = repairJSON(raw);
+
   let parsed;
   try {
     parsed = JSON.parse(raw);
   } catch (jsonErr) {
-    console.error('[CogniSwift] parseAndValidate: JSON.parse failed:', jsonErr.message, '| Raw preview:', raw.substring(0, 400));
+    console.error('[CogniSwift] parseAndValidate: JSON.parse failed:', jsonErr.message, '| Raw preview:', preview);
     throw new Error('JSON parse error: ' + jsonErr.message);
   }
+
   // flashcards must exist — they are the primary output
   if (!Array.isArray(parsed.flashcards) || !parsed.flashcards.length) {
     console.error('[CogniSwift] parseAndValidate: Bad shape. Keys:', Object.keys(parsed).join(','), '| flashcards:', Array.isArray(parsed.flashcards) ? parsed.flashcards.length : 'NOT ARRAY');
@@ -82,11 +118,11 @@ function parseAndValidate(raw) {
   }
   // quiz — if missing or not array, default to empty (never fail the whole request over this)
   if (!Array.isArray(parsed.quiz)) {
-    console.warn('[CogniSwift] parseAndValidate: quiz missing or not array — defaulting to []');
+    console.warn('[CogniSwift] parseAndValidate: quiz missing — defaulting to []');
     parsed.quiz = [];
   }
-  // summary — if missing, default to null (handled gracefully by frontend)
-  if (!parsed.summary || typeof parsed.summary !== 'object') {
+  // summary — if missing or malformed, default to null
+  if (!parsed.summary || typeof parsed.summary !== 'object' || !parsed.summary.title) {
     parsed.summary = null;
   }
   return parsed;
@@ -172,9 +208,9 @@ async function callGrok(messages, maxTokens) {
 
   console.log('[CogniSwift] Calling Grok 4.1 Fast via OpenRouter, maxTokens:', maxTokens);
 
-  // 55-second timeout — stays under Vercel's 60s function limit
+  // 50-second timeout — leaves 10s buffer under Vercel's 60s function limit
   const controller = new AbortController();
-  const timeoutId  = setTimeout(() => controller.abort(), 55000);
+  const timeoutId  = setTimeout(() => controller.abort(), 50000);
 
   let response;
   try {
@@ -447,8 +483,13 @@ ${inputText}`;
       console.log('[CogniSwift] Pro llama SUCCESS — cards:', parsed.flashcards.length, '| quiz:', parsed.quiz.length);
       return res.status(200).json(parsed);
     } catch (err) {
-      console.error('[CogniSwift] Pro llama FAILED:', err.message, '— falling back to Groq free tier');
-      // Fall through to Groq free tier below
+      console.error('[CogniSwift] Pro llama FAILED:', err.message);
+      // Do NOT fall to Groq free tier — that prompt has no summary schema
+      // Return error to user; better than silent degradation to free-tier output
+      return res.status(503).json({
+        error: 'Generation failed. Please try again in a moment.',
+        _debug: err.message,
+      });
     }
   }
 
@@ -508,7 +549,9 @@ ${inputText}`;
         { role: 'system', content: GROK_SYSTEM_PROMPT },
         { role: 'user',   content: userContent },
       ];
-      const maxTokens = 30000; // always use Grok 4.1 Fast full output — never truncate
+      // Text-only: 10000 tokens is sufficient and stays well within Vercel's 60s timeout.
+      // PDF fallback with images: 30000 needed for large multi-page documents.
+      const maxTokens = sendImages ? 30000 : 10000;
 
       const raw    = await callGrok(messages, maxTokens);
       const parsed = parseAndValidate(raw);
