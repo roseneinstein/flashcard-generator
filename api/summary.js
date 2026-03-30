@@ -39,10 +39,55 @@ Rules: title max 8 words. heading 3-6 words. Each point = one complete fact with
 Study material:
 ${safeText}`;
 
-  // Pro: GROQ_PRO_KEY + llama-3.1-8b-instant (dedicated paid Dev plan — 250k TPM)
-  // Free: GROQ_API_KEY/2/3 free tier keys only
+  // Routing:
+  // Pro:   GROQ_PRO_KEY + llama-3.1-8b-instant (paid dev plan, no free key usage)
+  // Elite: Grok 4.1 Fast via OpenRouter (premium — never touches free Groq keys)
+  // Free:  GROQ_API_KEY/2/3 free tier keys
   const proKey = process.env.GROQ_PRO_KEY;
-  const isProTier = tier === 'pro';
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  const isProTier   = tier === 'pro';
+  const isEliteTier = tier === 'elite';
+
+  // Elite: call Grok directly, return immediately
+  if (isEliteTier && openRouterKey) {
+    try {
+      const grokRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openRouterKey}`,
+          'HTTP-Referer': 'https://cogniswift.in',
+          'X-Title': 'CogniSwift',
+        },
+        body: JSON.stringify({
+          model: 'x-ai/grok-4.1-fast',
+          max_tokens: 4000,
+          temperature: 0.1,
+          messages: [
+            { role: 'system', content: 'You are a concise study notes summariser. Return only valid JSON.' },
+            { role: 'user', content: prompt },
+          ],
+        }),
+      });
+      const grokData = await grokRes.json();
+      if (!grokData.error && grokData.choices?.[0]?.message?.content) {
+        let raw = grokData.choices[0].message.content.trim();
+        raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
+        const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
+        if (fi >= 0 && la >= 0) {
+          raw = raw.slice(fi, la+1).replace(/[\r\n\t]+/g,' ').replace(/,\s*([}\]])/g,'$1');
+          const parsed = JSON.parse(raw);
+          if (parsed.title && Array.isArray(parsed.sections)) {
+            return res.status(200).json(parsed);
+          }
+        }
+      }
+    } catch (eliteErr) {
+      console.error('[CogniSwift] summary.js Elite Grok failed:', eliteErr.message);
+    }
+    // Elite Grok failed — fall through to free keys as last resort
+  }
+
   const attempts = isProTier
     ? [ { key: proKey || apiKey, model: 'llama-3.1-8b-instant' } ]
     : [
