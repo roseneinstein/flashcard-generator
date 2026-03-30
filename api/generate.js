@@ -63,40 +63,77 @@ function repairJSON(raw) {
   // Strip markdown fences
   raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
 
-  // Find the outermost JSON object
-  const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
-  if (fi === -1) return raw; // can't repair, let caller handle
+  // Find the outermost JSON object start
+  const fi = raw.indexOf('{');
+  if (fi === -1) return raw;
 
-  // If truncated (no closing brace or truncated mid-object), try to salvage
-  let candidate = (la === -1) ? raw.slice(fi) : raw.slice(fi, la + 1);
+  raw = raw.slice(fi);
 
-  // Normalise whitespace, fix trailing commas
-  candidate = candidate.replace(/[\r\n\t]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
+  // Normalise whitespace and fix trailing commas (do this first regardless)
+  raw = raw.replace(/[\r\n\t]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
 
-  // If it parses cleanly, return as-is
-  try { JSON.parse(candidate); return candidate; } catch (_) {}
+  // If it parses cleanly, we are done
+  try { JSON.parse(raw); return raw; } catch (_) {}
 
-  // Try progressive truncation — find last complete flashcard entry
-  // Strategy: find last occurrence of a well-formed closing pattern and close the object
-  const attempts = [
-    // Try closing after last complete quiz entry
-    candidate.replace(/,?\s*\{[^}]*$/, '') + ']},"summary":{"title":"Summary","sections":[]}}',
-    // Try closing after last complete flashcard
-    candidate.replace(/,?\s*\{[^}]*$/, '') + ']},"quiz":[],"summary":{"title":"Summary","sections":[]}}',
-    // Try wrapping what we have
-    candidate + ']},"quiz":[],"summary":{"title":"Summary","sections":[]}}',
-  ];
+  // --- Truncation repair ---
+  // Grok truncates mid-string (e.g. "points":"some text that gets cut
+  // Strategy: find all complete flashcard objects, rescue them, discard the incomplete tail
 
-  for (const attempt of attempts) {
+  // Step 1: find the last complete top-level closing brace before truncation
+  // Walk the string char by char tracking depth — find last position where depth==1
+  // (that means we are inside the root object but a top-level value just closed)
+  let lastSafePos = -1;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"' && !escape) { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') {
+      depth--;
+      if (depth === 1) lastSafePos = i; // just closed a top-level value
+    }
+  }
+
+  // Step 2: if we found a safe truncation point, close the object there
+  if (lastSafePos > 0) {
+    const salvaged = raw.slice(0, lastSafePos + 1).replace(/,\s*$/, '');
+
+    // Try closing as-is first (might be self-contained)
+    const closingAttempts = [
+      salvaged + '}',
+      salvaged + ']}',
+      salvaged + ']},"quiz":[],"summary":{"title":"","sections":[]}}',
+      salvaged + '],"quiz":[],"summary":{"title":"","sections":[]}}}',
+    ];
+    for (const attempt of closingAttempts) {
+      try {
+        const cleaned = attempt.replace(/,\s*([}\]])/g, '$1');
+        JSON.parse(cleaned);
+        console.warn('[CogniSwift] repairJSON: Salvaged truncated JSON at pos', lastSafePos);
+        return cleaned;
+      } catch (_) {}
+    }
+  }
+
+  // Step 3: last resort — try to extract just the flashcards array directly
+  const fcMatch = raw.match(/"flashcards"\s*:\s*(\[[\s\S]*?\])\s*[,}]/);
+  if (fcMatch) {
     try {
-      const cleaned = attempt.replace(/,\s*([}\]])/g, '$1');
-      JSON.parse(cleaned);
-      console.warn('[CogniSwift] repairJSON: Used repair strategy');
-      return cleaned;
+      const fcArr = JSON.parse(fcMatch[1]);
+      if (Array.isArray(fcArr) && fcArr.length) {
+        const fallback = JSON.stringify({ flashcards: fcArr, quiz: [], summary: null });
+        console.warn('[CogniSwift] repairJSON: Extracted flashcards array only');
+        return fallback;
+      }
     } catch (_) {}
   }
 
-  return candidate; // return best effort, let caller throw
+  return raw; // return best effort — caller will throw with helpful message
 }
 
 function parseAndValidate(raw) {
@@ -618,15 +655,22 @@ ${inputText}`;
         { role: 'system', content: GROK_SYSTEM_PROMPT },
         { role: 'user',   content: userContent },
       ];
-      // Text-only: 10000 tokens is sufficient and stays well within Vercel's 60s timeout.
+      // Text-only: 6000 tokens — enough for 20 cards+quiz+summary, completes in ~10-15s.
       // PDF fallback with images: 30000 needed for large multi-page documents.
-      const maxTokens = sendImages ? 30000 : 10000;
+      const maxTokens = sendImages ? 30000 : 6000;
 
       const raw    = await callGrok(messages, maxTokens);
       const parsed = parseAndValidate(raw);
 
+      // Remove blank cards (empty points) — happen when Grok runs out of context on large PDFs
+      const beforeFilter = parsed.flashcards.length;
+      parsed.flashcards = parsed.flashcards.filter(c => c.points && c.points.trim().length > 5);
+      if (parsed.flashcards.length < beforeFilter) {
+        console.warn('[CogniSwift] Filtered', beforeFilter - parsed.flashcards.length, 'blank cards from Grok response');
+      }
       parsed.flashcards = deduplicateTopics(parsed.flashcards);
-      parsed.flashcards = padToCount(parsed.flashcards, count);
+      // Only pad if we have at least some real cards — don't pad all-blank result
+      if (parsed.flashcards.length > 0) parsed.flashcards = padToCount(parsed.flashcards, Math.min(count, parsed.flashcards.length + 5));
       parsed.quiz       = parsed.quiz.slice(0, maxQuiz);
 
       console.log('[CogniSwift] Grok path SUCCESS — cards:', parsed.flashcards.length, '| quiz:', parsed.quiz.length, '| has summary:', !!parsed.summary);
