@@ -278,7 +278,7 @@ async function callLlama(prompt) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${proKey}` },
     body: JSON.stringify({
       model:           'llama-3.1-8b-instant',
-      max_tokens:      12000,
+      max_tokens:      15000,
       messages:        [{ role: 'user', content: prompt }],
       temperature:     0.15,
       response_format: { type: 'json_object' },
