@@ -240,6 +240,18 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .conf-card:hover{transform:translateY(-3px) scale(1.01);background:var(--surface2);
   border-color:rgba(232,213,176,0.15);box-shadow:0 12px 36px rgba(0,0,0,0.35);}
 .conf-card:hover::before{opacity:1}
+/* Revision focus mode — dims workspace when revision session active */
+.revise-focus-overlay{
+  position:fixed;inset:0;z-index:580;
+  background:rgba(0,0,0,0.72);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+  transition:opacity 0.4s ease;
+  pointer-events:all;
+}
+.revise-focus-overlay.fading-out{opacity:0;pointer-events:none;}
+/* ws-box gets elevated above the overlay when revision is active */
+.ws-box.revise-focused{z-index:590;box-shadow:0 0 0 1px rgba(232,213,176,0.15),0 32px 80px rgba(0,0,0,0.7);}
 .conf-card-title{font-family:'Instrument Serif',serif;font-size:1rem;color:var(--text);
   margin-bottom:8px;letter-spacing:-0.01em;}
 .conf-card-body{font-size:0.78rem;color:var(--muted);line-height:1.75;font-weight:300;}
@@ -3630,8 +3642,22 @@ function App(){
 
 
     /* WORKSPACE MODAL */
-    showWs&&e('div',{className:'ws-ov',onClick:function(ev){if(ev.target===ev.currentTarget)setShowWs(false);}},
-      e('div',{className:'ws-box'},
+    /* Revision focus dim overlay — appears behind ws-box when session active */
+    showWs&&fsrsSession&&wsTab==='revise'&&e('div',{
+      className:'revise-focus-overlay',
+      onClick:function(){
+        // Clicking outside workspace during revision exits focus mode
+        setFsrsSession(null);setShowWs(false);
+      }
+    }),
+    showWs&&e('div',{className:'ws-ov',onClick:function(ev){
+      // If in revision session and clicking the ws-ov bg, exit session gracefully
+      if(ev.target===ev.currentTarget){
+        if(fsrsSession&&wsTab==='revise'){setFsrsSession(null);}
+        setShowWs(false);
+      }
+    }},
+      e('div',{className:'ws-box'+(fsrsSession&&wsTab==='revise'?' revise-focused':'')},
         e('div',{className:'ws-head'},
           e('div',{style:{display:'flex',flexDirection:'column',gap:10}},
             e('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between'}},
@@ -3883,6 +3909,7 @@ function App(){
                   return e('div',{className:'ws-empty'},'Wrapping up…');
                 }
                 var card=allCards[ci];
+                var cardOrigIdx=sess.dueCardIdxs?sess.dueCardIdxs[ci]:ci; // original index in full set
                 var pts=(card.points||'').split('|').filter(function(p){return p.trim();});
                 // Start L_d timer when card renders (no L_r in card mode — content shown directly)
                 if(!(sess.ldTimerStarted)){
@@ -3910,7 +3937,7 @@ function App(){
                     e('button',{className:'fsrs-rating-btn again',
                       onClick:function(){
                         var rating=1; // Need more review — no latency penalty
-                        var cardKey=sess.setId+'::'+ci;
+                        var cardKey=sess.setId+'::'+cardOrigIdx;
                         var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
                         var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
                         var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,interval_fsrs:ns.interval,r_eff:null,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
@@ -3923,7 +3950,7 @@ function App(){
                       onClick:function(){
                         var rating=3; // Know it — apply L_d latency correction
                         var ldSec=timerReadSec(sess.ldTimer||makeTimer());
-                        var cardKey=sess.setId+'::'+ci;
+                        var cardKey=sess.setId+'::'+cardOrigIdx;
                         var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
                         var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
                         // L_r is null for card mode (no question/recall phase)
@@ -4018,7 +4045,8 @@ function App(){
                 var dueQs=(s.quiz||[]).filter(function(q,qi){
                   var cardKey=s.id+'::'+qi;
                   var rev=fsrsReviews.find(function(r){return r.card_key===cardKey;});
-                  return !rev||rev.due_date<=today;
+                  var reviewedToday=rev&&rev.last_reviewed&&rev.last_reviewed.slice(0,10)===today;
+                  return !rev||(rev.due_date<=today&&!reviewedToday);
                 });
                 return e('div',{key:s.id,className:'fsrs-set-block'},
                   e('div',{className:'fsrs-set-name'},s.name),
@@ -4029,34 +4057,35 @@ function App(){
                   e('div',{className:'fsrs-btn-row'},
                     dueQs.length>0&&e('button',{className:'fsrs-btn primary',
                       onClick:function(){
-                        // Start quiz mode first, then cards mode
-                        var totalItems=dueQs.length+dueCards.length;
+                        // Pass ONLY due cards — not full set — so session stays within scheduled count
+                        var dueCardObjs=dueCards.map(function(dc){return dc.card;});
+                        var totalItems=dueQs.length+dueCardObjs.length;
                         setFsrsSession({
                           setId:s.id,setName:s.name,
                           mode:'quiz',
                           dueQuestions:dueQs,
-                          allCards:s.cards||[],
+                          allCards:dueCardObjs,        // only scheduled cards
+                          dueCardIdxs:dueCards.map(function(dc){return dc.idx;}), // original indices for card_key
                           qIdx:0,cIdx:0,
                           answered:false,userChoice:null,
                           totalItems:totalItems,doneItems:0,
-                          // Latency timers — focus-aware
-                          lrTimer:makeTimer(),  // recall latency (quiz only)
-                          ldTimer:makeTimer(),  // decision latency
-                          lrSec:null,           // captured L_r seconds
-                          lrTimerStarted:false, // whether L_r timer started this Q
+                          lrTimer:makeTimer(),ldTimer:makeTimer(),
+                          lrSec:null,lrTimerStarted:false,
                         });
                       }
                     },'🧠 Start revision'),
                     dueQs.length===0&&e('button',{className:'fsrs-btn primary',
                       onClick:function(){
+                        var dueCardObjs=dueCards.map(function(dc){return dc.card;});
                         setFsrsSession({
                           setId:s.id,setName:s.name,
                           mode:'cards',
                           dueQuestions:[],
-                          allCards:s.cards||[],
+                          allCards:dueCardObjs,        // only scheduled cards
+                          dueCardIdxs:dueCards.map(function(dc){return dc.idx;}),
                           qIdx:0,cIdx:0,
                           answered:false,userChoice:null,
-                          totalItems:dueCards.length,doneItems:0,
+                          totalItems:dueCardObjs.length,doneItems:0,
                           lrTimer:makeTimer(),ldTimer:timerStart(makeTimer()),
                           lrSec:null,lrTimerStarted:false,
                         });
@@ -4241,15 +4270,32 @@ function App(){
 
             // Leo rule-based comment
             function leoComment(ms, tc, reffCount, totalCards){
+              // Insufficient data
               if(reffCount < Math.ceil(totalCards*0.3)){
-                return 'Complete a timed revision session to unlock True Confidence for this set.';
+                return 'Complete a timed revision session to unlock True Confidence for this set. Once at least 30% of cards are reviewed with the timer running, personalised insights will appear here.';
               }
-              var gap=(ms-tc)/100;
-              if(gap>0.20) return 'Your predicted recall looks strong, but response times suggest the memory is not yet automatic. Review intervals have been shortened to reinforce it.';
-              if(gap<-0.10) return 'You are recalling faster than the model expected. Intervals are extending — good momentum on this set.';
-              if(ms>75&&tc>75) return 'Memory and behaviour are aligned. Solid mastery on this set.';
-              if(ms<40&&tc<40) return 'Both scores are low. Start a revision session — this set needs active work.';
-              return 'Scores are broadly aligned. Keep up the regular revision sessions.';
+              var gap=ms-tc; // positive = overconfident, negative = underconfident
+
+              // Negative gap — recalling faster than model expects
+              if(gap<-10) return 'You are recalling significantly faster than the FSRS model predicted. This is a strong signal — the memory for this set is solidly wired. Intervals are being extended automatically. Keep up the active revision pace.';
+              if(gap<-5) return 'Your response times are slightly better than the model expected. Confidence is growing ahead of schedule. Continue at the same revision frequency to lock in this advantage.';
+
+              // Positive gap by 10% bands
+              if(gap>=90) return 'The model sees very strong predicted recall, but your response times tell a very different story — near-complete disconnect. Avoid passive re-reading. Switch to active retrieval: cover the card, attempt recall, then check. Response intervals have been significantly shortened.';
+              if(gap>=80) return 'Extreme overconfidence signal. Memory Strength is high but True Confidence is far lower. Your brain is recognising content rather than retrieving it independently. Active recall drills urgently needed. Intervals shortened sharply.';
+              if(gap>=70) return 'Very large gap — the model expects you to remember this well, but your slow response times contradict it. This is classic illusion of competence. Schedule an intensive revision session and focus on cards you hesitated on most.';
+              if(gap>=60) return 'Large confidence gap. You are likely familiar with the material at a surface level but struggle with instant retrieval. Try recalling key points before opening each card. Intervals have been compressed to reinforce retention.';
+              if(gap>=50) return 'Significant gap. Your predicted recall is solid but real-world recall speed is lagging. The FSRS schedule has been adjusted to bring reviews closer together. Focus especially on cards where you hesitated before clicking Know it.';
+              if(gap>=40) return 'Noticeable overconfidence. Response times are slower than a well-retained concept would produce. Consistent, shorter revision sessions will close this gap faster than occasional long ones. Intervals shortened.';
+              if(gap>=30) return 'Moderate gap — Memory Strength is ahead of True Confidence. Your recall is present but not yet automatic. Regular short revision sessions with full attention will consolidate this. Avoid multitasking during review.';
+              if(gap>=20) return 'Slight overconfidence — normal at this stage of learning. Response times are a little slow relative to predicted recall. A few more focused revision sessions should bring True Confidence up to match Memory Strength.';
+              if(gap>=10) return 'Small confidence gap. Memory is forming well and your recall is mostly quick. Continue the current revision rhythm. True Confidence should catch up to Memory Strength over the next few sessions.';
+
+              // Near-zero gap — check absolute levels
+              if(ms>=75&&tc>=75) return 'Memory and behaviour are aligned at a high level — solid mastery on this set. Maintain revision at the scheduled intervals to prevent decay. The gap is negligible.';
+              if(ms>=50&&tc>=50) return 'Both scores are in a healthy range and well-aligned. You are on track. Keep attending revision sessions as scheduled and this set will strengthen steadily.';
+              if(ms<40&&tc<40) return 'Both Memory Strength and True Confidence are low, but they are aligned — at least there is no false confidence here. This set needs focused attention. Start a revision session and work through every card deliberately.';
+              return 'Scores are broadly aligned. Maintain your current revision schedule to continue building retention on this set.';
             }
 
             if(savedSets.length===0){
@@ -4293,9 +4339,11 @@ function App(){
                 e('div',{className:'conf-card-title'},'Two Views of Your Confidence'),
                 e('div',{className:'conf-card-body'},
                   e('strong',{className:'conf-mem-color'},'Memory Strength'),
-                  ' — what the FSRS model predicts your recall probability is right now, based on your revision history. Cards skipped during revision are included in this calculation.',e('br'),e('br'),
+                  ' — what the FSRS model predicts your recall probability is right now, based on your revision history. Cards skipped are also taken into consideration.',e('br'),e('br'),
                   e('strong',{className:'conf-true-color'},'True Confidence'),
                   ' — Memory Strength adjusted for how quickly you actually recalled during revision, and whether you switched tabs or lost focus. Slow recall despite a correct answer lowers this score, revealing the gap between perceived and actual memory strength.',e('br'),e('br'),
+                  e('strong',{style:{color:'var(--text)'}},'Confidence Gap'),
+                  ' — the difference between the two. A positive gap means the model thinks you know it better than your behaviour shows. Close it by revising actively and with full focus — slow or distracted recall widens the gap; quick, confident recall narrows it.',e('br'),e('br'),
                   e('em',null,'Memory Strength predicts if you will remember it (theory). True Confidence measures how fast and confidently you recall it (reality check).')
                 )
               ),
@@ -4379,7 +4427,7 @@ function App(){
                     dueCount>0?' · '+dueCount+' due for revision today':' · All up to date ✓'
                   ),
                   e('div',{className:'conf-leo-box'},
-                    e('span',{className:'conf-leo-label'},'Leo AI Insight:'),
+                    e('span',{className:'conf-leo-label'},'Leo AI\'s Insight:'),
                     leo
                   )
                 );
