@@ -189,7 +189,9 @@ export default async function handler(req, res) {
         rating: r.rating,           // 1=Again, 3=Good
         stability: r.stability,     // FSRS internal
         difficulty: r.difficulty,   // FSRS internal
-        due_date: r.due_date,       // ISO date string YYYY-MM-DD
+        due_date: r.due_date,       // latency-corrected final due date
+        interval_fsrs: r.interval_fsrs || null,  // raw FSRS interval before latency correction
+        r_eff: r.r_eff || null,     // latency-adjusted retrievability (for True Confidence)
         reps: r.reps,               // total review count
         lapses: r.lapses,           // times marked Again
         last_reviewed: r.last_reviewed,
