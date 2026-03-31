@@ -228,6 +228,20 @@ html.light nav{background:rgba(244,241,235,0.92)}
 /* ── Confidence tab ── */
 .conf-intro{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:18px;font-size:0.75rem;color:var(--muted);line-height:1.7;}
 .conf-intro strong{color:var(--text);}
+/* Two-metric confidence bars */
+.conf-metric-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.conf-metric-label{font-size:0.65rem;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;width:100px;flex-shrink:0;}
+.conf-bar-wrap{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.conf-bar-inner{height:100%;border-radius:3px;transition:width .6s ease;}
+.conf-mem-bar{background:rgba(139,120,180,0.55);} /* soft violet — memory strength */
+.conf-true-bar{background:rgba(94,163,154,0.55);}  /* soft teal — true confidence */
+.conf-gap-row{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.conf-gap-label{font-size:0.63rem;color:var(--muted);letter-spacing:0.03em;}
+.conf-gap-val{font-size:0.7rem;font-weight:600;}
+.conf-leo{font-size:0.7rem;color:var(--muted);line-height:1.6;margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:var(--r-sm);border-left:2px solid rgba(139,120,180,0.4);}
+.conf-legend{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+.conf-legend-item{display:flex;align-items:center;gap:5px;font-size:0.65rem;color:var(--muted);}
+.conf-legend-dot{width:10px;height:6px;border-radius:2px;}
 .conf-set-row{margin-bottom:14px;}
 .conf-set-name{font-size:0.82rem;color:var(--text);font-weight:500;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
 .conf-pct{font-size:0.78rem;font-weight:600;}
@@ -1054,6 +1068,53 @@ var FSRS = (function(){
 
     todayIST: todayIST,
     forgettingCurve: forgettingCurve,
+
+    // ── Latency-aware R_eff computation ─────────────────────────────────────
+    // K1=0.08 (recall latency — stronger signal), K2=0.03 (decision latency — weaker)
+    // L values are in seconds (active attention time only, paused on tab switch)
+    computeReff: function(rFsrs, rating, lrSeconds, ldSeconds){
+      // Rating 1 (Missed it / Need more review): no latency penalty — FSRS already handles it
+      if(rating !== 3) return null; // signal: skip latency for this card
+
+      var K1 = 0.08, K2 = 0.03;
+      var LR_FREE = 5, LD_FREE = 5; // seconds below which no penalty
+
+      // Recall latency penalty — only meaningful for quiz mode (L_r passed as null for card mode)
+      var penaltyR = 1.0;
+      if(lrSeconds !== null && lrSeconds !== undefined){
+        var lrAdj = Math.max(0, lrSeconds - LR_FREE);
+        penaltyR = 1 / (1 + K1 * Math.log(1 + lrAdj));
+      }
+
+      // Decision latency penalty — only apply when L_r was fast (fast recall, slow decision = hesitation)
+      // Condition: L_d > threshold AND (L_r < 5s OR L_r is null — card mode)
+      var penaltyD = 1.0;
+      var lrFast = (lrSeconds === null) || (lrSeconds < LR_FREE);
+      if(ldSeconds !== null && ldSeconds !== undefined && ldSeconds > LD_FREE && lrFast){
+        var ldAdj = Math.max(0, ldSeconds - LD_FREE);
+        penaltyD = 1 / (1 + K2 * Math.log(1 + ldAdj));
+      }
+
+      var rEff = rFsrs * penaltyR * penaltyD;
+      return Math.min(Math.max(parseFloat(rEff.toFixed(4)), 0.05), 0.99);
+    },
+
+    // Apply latency correction to FSRS interval
+    // Returns corrected due_date string. FSRS stability/difficulty remain UNCHANGED.
+    applyLatencyInterval: function(nsInterval, rFsrs, rEff, examDate, today){
+      if(rEff === null || rFsrs <= 0) return null; // no correction
+      var ratio = Math.min(rEff / rFsrs, 1.0); // never extend interval, only shorten
+      var correctedInterval = Math.max(1, Math.round(nsInterval * ratio));
+      // Exam date cap still applies after latency correction
+      if(examDate){
+        var daysToExam = Math.max(0, Math.round((new Date(examDate) - new Date(today)) / (1000*86400)));
+        if(daysToExam <= 0) correctedInterval = 1;
+        else if(daysToExam <= 14) correctedInterval = Math.min(correctedInterval, 3);
+        else if(daysToExam <= 30) correctedInterval = Math.min(correctedInterval, 7);
+        else correctedInterval = Math.min(correctedInterval, daysToExam);
+      }
+      return correctedInterval;
+    },
   };
 })();
 
@@ -1810,6 +1871,14 @@ function App(){
   var fontSzS=useState(1),setFontSz=fontSzS[1];var fontSz=fontSzS[0];
   var summaryDepthS=useState('standard'),setSummaryDepth=summaryDepthS[1];var summaryDepth=summaryDepthS[0];
   var favsS=useState({}),setFavs=favsS[1];var favs=favsS[0];
+  // ── Focus-aware latency timer (client-side only, never persisted) ──────────
+  // Measures active attention time — pauses when user switches tab/window
+  function makeTimer(){return {startMs:null,accMs:0,running:false};}
+  function timerStart(t){return {startMs:Date.now(),accMs:t.accMs,running:true};}
+  function timerPause(t){if(!t.running)return t;return {startMs:null,accMs:t.accMs+(Date.now()-t.startMs),running:false};}
+  function timerReset(){return makeTimer();}
+  function timerReadSec(t){var ms=t.accMs+(t.running?(Date.now()-t.startMs):0);return ms/1000;}
+
   // ── FSRS state (Elite only) ──
   var fsrsReviewsS=useState([]),setFsrsReviews=fsrsReviewsS[1];var fsrsReviews=fsrsReviewsS[0];
   var fsrsSettingsS=useState({retention:0.92,examDate:null}),setFsrsSettings=fsrsSettingsS[1];var fsrsSettings=fsrsSettingsS[0];
@@ -2885,6 +2954,40 @@ function App(){
     }
   },[user]);
 
+  // Pause latency timers when user switches tabs — focus-aware measurement
+  useEffect(function(){
+    if(!fsrsSession)return;
+    function onHide(){
+      setFsrsSession(function(s){
+        if(!s)return s;
+        return Object.assign({},s,{
+          lrTimer:timerPause(s.lrTimer||makeTimer()),
+          ldTimer:timerPause(s.ldTimer||makeTimer()),
+        });
+      });
+    }
+    function onShow(){
+      setFsrsSession(function(s){
+        if(!s)return s;
+        // Only resume timers that were running before
+        return Object.assign({},s,{
+          lrTimer:s.lrTimer&&s.lrTimer.running?timerStart(s.lrTimer):s.lrTimer,
+          ldTimer:s.ldTimer&&s.ldTimer.running?timerStart(s.ldTimer):s.ldTimer,
+        });
+      });
+    }
+    document.addEventListener('visibilitychange',function(){
+      if(document.hidden)onHide();else onShow();
+    });
+    window.addEventListener('blur',onHide);
+    window.addEventListener('focus',onShow);
+    return function(){
+      document.removeEventListener('visibilitychange',onHide);
+      window.removeEventListener('blur',onHide);
+      window.removeEventListener('focus',onShow);
+    };
+  },[!!fsrsSession]);
+
   useEffect(function(){
     if(!ta)return;
     function upd(){if(ts<TSTEPS.length)setTb(tBox(TSTEPS[ts].sel));}
@@ -3639,6 +3742,20 @@ function App(){
                 var q=dueQs[qi];
                 var answered=sess.answered||false;
                 var userChoice=sess.userChoice;
+                // Start L_r timer when question first appears (not yet answered)
+                if(!answered&&!(sess.lrTimerStarted)){
+                  setFsrsSession(function(s){return Object.assign({},s,{
+                    lrTimer:timerStart(s.lrTimer||makeTimer()),
+                    lrTimerStarted:true,
+                  });});
+                }
+                // Start L_d timer when answer is revealed
+                if(answered&&!(sess.ldTimerStarted)){
+                  setFsrsSession(function(s){return Object.assign({},s,{
+                    ldTimer:timerStart(s.ldTimer||makeTimer()),
+                    ldTimerStarted:true,
+                  });});
+                }
                 return e('div',null,
                   progressEl,
                   e('div',{className:'streak-head',style:{marginBottom:10}},
@@ -3657,7 +3774,13 @@ function App(){
                           disabled:answered,
                           onClick:function(){
                             if(answered)return;
-                            setFsrsSession(function(s){return Object.assign({},s,{answered:true,userChoice:oi});});
+                            // Capture L_r on answer selection
+                            var lrSec=timerReadSec(sess.lrTimer||makeTimer());
+                            setFsrsSession(function(s){return Object.assign({},s,{
+                              answered:true,userChoice:oi,
+                              lrSec:lrSec,
+                              lrTimer:timerPause(s.lrTimer||makeTimer()),
+                            });});
                           }},
                           e('span',{style:{opacity:.4,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}},['A','B','C','D'][oi]),
                           opt
@@ -3671,27 +3794,39 @@ function App(){
                       e('div',{className:'fsrs-rating-row'},
                         e('button',{className:'fsrs-rating-btn again',
                           onClick:function(){
-                            // Record rating 1 (Again), advance
-                            var rating=1;
+                            var rating=1; // Missed it — no latency penalty applied
                             var cardKey=sess.setId+'::'+qi;
                             var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
                             var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
-                            var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                            // rating=1: r_eff=null, no interval correction
+                            var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,interval_fsrs:ns.interval,r_eff:null,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
                             setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
                             fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
-                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,doneItems:(s.doneItems||0)+1});});
+                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,lrSec:null,lrTimerStarted:false,ldTimerStarted:false,lrTimer:timerReset(),ldTimer:timerReset(),doneItems:(s.doneItems||0)+1});});
                           }
                         },'✗ Missed it'),
                         e('button',{className:'fsrs-rating-btn good',
                           onClick:function(){
                             var rating=userChoice===q.correct?3:1;
+                            var ldSec=timerReadSec(sess.ldTimer||makeTimer());
+                            var lrSec=sess.lrSec||null;
                             var cardKey=sess.setId+'::'+qi;
                             var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
                             var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
-                            var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                            // Compute R_eff and apply latency interval correction for rating=3
+                            var rFsrs=existing&&existing.stability?FSRS.forgettingCurve(Math.max(1,Math.round((new Date(today)-new Date((existing.last_reviewed||today).slice(0,10)))/(1000*86400))),existing.stability):0.9;
+                            var rEff=FSRS.computeReff(rFsrs,rating,lrSec,ldSec);
+                            var correctedInterval=rEff!==null?FSRS.applyLatencyInterval(ns.interval,rFsrs,rEff,examDate,today):null;
+                            var finalDueDate=correctedInterval!==null?FSRS.addDays?today:ns.due_date:ns.due_date;
+                            // Compute final due date with latency correction
+                            if(rEff!==null&&correctedInterval!==null){
+                              var d2=new Date(today+'T00:00:00Z');d2.setUTCDate(d2.getUTCDate()+correctedInterval);
+                              finalDueDate=d2.toISOString().slice(0,10);
+                            }
+                            var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:finalDueDate,interval_fsrs:ns.interval,r_eff:rEff,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
                             setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
                             fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
-                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,doneItems:(s.doneItems||0)+1});});
+                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,lrSec:null,lrTimerStarted:false,ldTimerStarted:false,lrTimer:timerReset(),ldTimer:timerReset(),doneItems:(s.doneItems||0)+1});});
                           }
                         },'✓ Got it')
                       )
@@ -3711,6 +3846,13 @@ function App(){
                 }
                 var card=allCards[ci];
                 var pts=(card.points||'').split('|').filter(function(p){return p.trim();});
+                // Start L_d timer when card renders (no L_r in card mode — content shown directly)
+                if(!(sess.ldTimerStarted)){
+                  setFsrsSession(function(s){return Object.assign({},s,{
+                    ldTimer:timerStart(s.ldTimer||makeTimer()),
+                    ldTimerStarted:true,
+                  });});
+                }
                 return e('div',null,
                   progressEl,
                   e('div',{className:'streak-head',style:{marginBottom:10}},
@@ -3729,27 +3871,36 @@ function App(){
                   e('div',{className:'fsrs-rating-row'},
                     e('button',{className:'fsrs-rating-btn again',
                       onClick:function(){
-                        // Card not recalled — rate 1
-                        var rating=1;
+                        var rating=1; // Need more review — no latency penalty
                         var cardKey=sess.setId+'::'+ci;
                         var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
                         var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
-                        var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                        var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,interval_fsrs:ns.interval,r_eff:null,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
                         setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
                         fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
-                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,doneItems:(s.doneItems||0)+1});});
+                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,ldTimerStarted:false,ldTimer:timerReset(),doneItems:(s.doneItems||0)+1});});
                       }
                     },'✗ Need more review'),
                     e('button',{className:'fsrs-rating-btn good',
                       onClick:function(){
-                        var rating=3;
+                        var rating=3; // Know it — apply L_d latency correction
+                        var ldSec=timerReadSec(sess.ldTimer||makeTimer());
                         var cardKey=sess.setId+'::'+ci;
                         var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
                         var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
-                        var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                        // L_r is null for card mode (no question/recall phase)
+                        var rFsrs=existing&&existing.stability?FSRS.forgettingCurve(Math.max(1,Math.round((new Date(today)-new Date((existing.last_reviewed||today).slice(0,10)))/(1000*86400))),existing.stability):0.9;
+                        var rEff=FSRS.computeReff(rFsrs,rating,null,ldSec);
+                        var correctedInterval=rEff!==null?FSRS.applyLatencyInterval(ns.interval,rFsrs,rEff,examDate,today):null;
+                        var finalDueDate=ns.due_date;
+                        if(rEff!==null&&correctedInterval!==null){
+                          var d2=new Date(today+'T00:00:00Z');d2.setUTCDate(d2.getUTCDate()+correctedInterval);
+                          finalDueDate=d2.toISOString().slice(0,10);
+                        }
+                        var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:finalDueDate,interval_fsrs:ns.interval,r_eff:rEff,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
                         setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
                         fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
-                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,doneItems:(s.doneItems||0)+1});});
+                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,ldTimerStarted:false,ldTimer:timerReset(),doneItems:(s.doneItems||0)+1});});
                       }
                     },'✓ Know it')
                   ),
@@ -3850,6 +4001,11 @@ function App(){
                           qIdx:0,cIdx:0,
                           answered:false,userChoice:null,
                           totalItems:totalItems,doneItems:0,
+                          // Latency timers — focus-aware
+                          lrTimer:makeTimer(),  // recall latency (quiz only)
+                          ldTimer:makeTimer(),  // decision latency
+                          lrSec:null,           // captured L_r seconds
+                          lrTimerStarted:false, // whether L_r timer started this Q
                         });
                       }
                     },'🧠 Start revision'),
@@ -3863,6 +4019,8 @@ function App(){
                           qIdx:0,cIdx:0,
                           answered:false,userChoice:null,
                           totalItems:dueCards.length,doneItems:0,
+                          lrTimer:makeTimer(),ldTimer:timerStart(makeTimer()),
+                          lrSec:null,lrTimerStarted:false,
                         });
                       }
                     },'📖 Review cards'),
@@ -4006,38 +4164,54 @@ function App(){
           wsTab==='confidence'&&isElite()&&(function(){
             var today=FSRS.todayIST();
 
-            // Confidence color: VIBGYOR — violet(low) → red(high)
-            function confColor(pct){
-              // Map 0-100 to hue 270 (violet) → 0 (red), VIBGYOR dynamics
-              // Toned down: lower saturation + higher lightness = softer on eyes
-              var hue = Math.round(270 - (pct/100)*270);
-              var sat = 28 + Math.round((pct/100)*14); // 28-42% — very muted, easy on dark bg
-              var lit = 58 + Math.round((pct/100)*8);  // 58-66% — bright enough to read, not harsh
-              return 'hsl('+hue+','+sat+'%,'+lit+'%)';
-            }
-
-            function computeSetConfidence(set){
+            // Memory Strength: FSRS model prediction (unchanged)
+            function computeMemoryStrength(set){
               var allCards=set.cards||[];
               if(!allCards.length)return null;
-              var totalP=0;
+              var total=0;
               allCards.forEach(function(card,idx){
-                var cardKey=set.id+'::'+idx;
-                var review=fsrsReviews.find(function(r){return r.card_key===cardKey;});
-                if(!review||!review.stability||!review.last_reviewed){
-                  // Never reviewed — assign baseline confidence of 20%
-                  totalP+=0.20;
-                  return;
-                }
-                // Days since last review
-                var elapsed=Math.max(0,Math.round((new Date(today)-new Date(review.last_reviewed.slice(0,10)))/(1000*86400)));
-                // P(recall) from FSRS forgetting curve
-                var p=FSRS.forgettingCurve(elapsed,review.stability);
-                // Penalise lapses — each lapse slightly reduces confidence floor
-                var lapsePenalty=Math.min((review.lapses||0)*0.04,0.25);
-                p=Math.max(p-lapsePenalty,0.05);
-                totalP+=p;
+                var rev=fsrsReviews.find(function(r){return r.card_key===set.id+'::'+idx;});
+                if(!rev||!rev.stability||!rev.last_reviewed){total+=0.20;return;}
+                var elapsed=Math.max(0,Math.round((new Date(today)-new Date(rev.last_reviewed.slice(0,10)))/(1000*86400)));
+                var p=FSRS.forgettingCurve(elapsed,rev.stability);
+                var lp=Math.min((rev.lapses||0)*0.04,0.25);
+                total+=Math.max(p-lp,0.05);
               });
-              return Math.round((totalP/allCards.length)*100);
+              return Math.round((total/allCards.length)*100);
+            }
+
+            // True Confidence: latency-adjusted R_eff (from stored r_eff column)
+            function computeTrueConfidence(set){
+              var allCards=set.cards||[];
+              if(!allCards.length)return null;
+              var reffCards=[];
+              allCards.forEach(function(card,idx){
+                var rev=fsrsReviews.find(function(r){return r.card_key===set.id+'::'+idx;});
+                if(rev&&rev.r_eff!==null&&rev.r_eff!==undefined){
+                  reffCards.push(rev.r_eff);
+                } else if(rev&&rev.stability&&rev.last_reviewed){
+                  // No r_eff yet — use Memory Strength as fallback
+                  var elapsed=Math.max(0,Math.round((new Date(today)-new Date(rev.last_reviewed.slice(0,10)))/(1000*86400)));
+                  reffCards.push(FSRS.forgettingCurve(elapsed,rev.stability));
+                } else {
+                  reffCards.push(0.20); // unreviewed baseline
+                }
+              });
+              if(!reffCards.length)return null;
+              return Math.round((reffCards.reduce(function(a,b){return a+b;},0)/reffCards.length)*100);
+            }
+
+            // Leo rule-based comment
+            function leoComment(ms, tc, reffCount, totalCards){
+              if(reffCount < Math.ceil(totalCards*0.3)){
+                return 'Complete a timed revision session to unlock True Confidence for this set.';
+              }
+              var gap=(ms-tc)/100;
+              if(gap>0.20) return 'Your predicted recall looks strong, but response times suggest the memory is not yet automatic. Review intervals have been shortened to reinforce it.';
+              if(gap<-0.10) return 'You are recalling faster than the model expected. Intervals are extending — good momentum on this set.';
+              if(ms>75&&tc>75) return 'Memory and behaviour are aligned. Solid mastery on this set.';
+              if(ms<40&&tc<40) return 'Both scores are low. Start a revision session — this set needs active work.';
+              return 'Scores are broadly aligned. Keep up the regular revision sessions.';
             }
 
             if(savedSets.length===0){
@@ -4048,59 +4222,91 @@ function App(){
               );
             }
 
-            var setScores=savedSets.map(function(s){
-              return {set:s, pct:computeSetConfidence(s)};
-            }).sort(function(a,b){return (a.pct||0)-(b.pct||0)}); // weakest first
+            // Compute both metrics for each set
+            var setData=savedSets.map(function(s){
+              var ms=computeMemoryStrength(s);
+              var tc=computeTrueConfidence(s);
+              var allCards=s.cards||[];
+              var reffCount=allCards.filter(function(c,idx){
+                var rev=fsrsReviews.find(function(r){return r.card_key===s.id+'::'+idx;});
+                return rev&&rev.r_eff!==null&&rev.r_eff!==undefined;
+              }).length;
+              return {set:s,ms:ms,tc:tc,reffCount:reffCount};
+            }).sort(function(a,b){return (a.ms||0)-(b.ms||0)});
 
-            var reviewed=setScores.filter(function(x){return x.pct!==null&&x.pct>20;});
-            var avgConf=reviewed.length?Math.round(reviewed.reduce(function(acc,x){return acc+x.pct;},0)/reviewed.length):0;
+            var tracked=setData.filter(function(x){return x.ms!==null&&x.ms>20;});
+            var avgMs=tracked.length?Math.round(tracked.reduce(function(a,x){return a+x.ms;},0)/tracked.length):0;
+            var avgTc=tracked.length?Math.round(tracked.reduce(function(a,x){return a+(x.tc||x.ms);},0)/tracked.length):0;
 
             return e('div',null,
               e('div',{className:'conf-intro'},
-                e('strong',null,'How confidence is calculated'),e('br'),
-                'Each card set score is derived from the FSRS memory model — specifically your probability of recall for each card right now, averaged across the full set. Cards reviewed recently and answered correctly push the score up. Cards missed, skipped, or not yet reviewed pull it down. Pure mathematics, no guesswork.',
-                reviewed.length>0&&e('div',{style:{marginTop:10,paddingTop:10,borderTop:'1px solid var(--border)',display:'flex',gap:16}},
-                  e('div',null,e('div',{style:{fontSize:'1.1rem',fontWeight:600,color:'var(--accent)'}},avgConf+'%'),e('div',{style:{fontSize:'0.68rem',color:'var(--muted)',marginTop:2}},'Overall avg')),
-                  e('div',null,e('div',{style:{fontSize:'1.1rem',fontWeight:600,color:'var(--text)'}},reviewed.length+'/'+savedSets.length),e('div',{style:{fontSize:'0.68rem',color:'var(--muted)',marginTop:2}},'Sets tracked'))
+                e('strong',null,'Two views of your confidence'),e('br'),
+                e('strong',{style:{color:'rgba(139,120,180,0.9)'}},'Memory Strength'),
+                ' — what the FSRS model predicts your recall probability is right now, based on your review history and elapsed time.',e('br'),
+                e('strong',{style:{color:'rgba(94,163,154,0.9)'}},'True Confidence'),
+                ' — the same metric adjusted for how quickly you actually recalled during revision (latency-corrected). Slow recall despite a correct answer lowers this score, revealing the gap between perceived and actual memory strength.',
+                tracked.length>0&&e('div',{style:{marginTop:10,paddingTop:10,borderTop:'1px solid var(--border)',display:'flex',gap:16,flexWrap:'wrap'}},
+                  e('div',null,e('div',{style:{fontSize:'1rem',fontWeight:600,color:'rgba(139,120,180,0.9)'}},avgMs+'%'),e('div',{style:{fontSize:'0.65rem',color:'var(--muted)',marginTop:1}},'Avg Memory Strength')),
+                  e('div',null,e('div',{style:{fontSize:'1rem',fontWeight:600,color:'rgba(94,163,154,0.9)'}},avgTc+'%'),e('div',{style:{fontSize:'0.65rem',color:'var(--muted)',marginTop:1}},'Avg True Confidence')),
+                  e('div',null,e('div',{style:{fontSize:'1rem',fontWeight:600,color:avgMs-avgTc>10?'var(--red)':avgMs-avgTc<-5?'#4ade80':'var(--muted)'}},
+                    (avgMs-avgTc>0?'+':'')+(avgMs-avgTc)+'%'),e('div',{style:{fontSize:'0.65rem',color:'var(--muted)',marginTop:1}},'Calibration gap'))
                 )
               ),
+              e('div',{className:'conf-legend'},
+                e('div',{className:'conf-legend-item'},e('div',{className:'conf-legend-dot',style:{background:'rgba(139,120,180,0.55)'}}),e('span',null,'Memory Strength')),
+                e('div',{className:'conf-legend-item'},e('div',{className:'conf-legend-dot',style:{background:'rgba(94,163,154,0.55)'}}),e('span',null,'True Confidence'))
+              ),
               e('div',{className:'streak-head',style:{marginBottom:14}},'Confidence on each card set'),
-              setScores.map(function(item){
+              setData.map(function(item){
                 var s=item.set;
-                var pct=item.pct;
+                var ms=item.ms;
+                var tc=item.tc;
                 var allCards=s.cards||[];
-                var reviewedCards=allCards.filter(function(card,idx){
-                  var cardKey=s.id+'::'+idx;
-                  return fsrsReviews.some(function(r){return r.card_key===cardKey&&r.reps>0;});
+                var reviewedCards=allCards.filter(function(c,idx){
+                  return fsrsReviews.some(function(r){return r.card_key===s.id+'::'+idx&&r.reps>0;});
                 }).length;
                 var dueCount=getFsrsDueCards(s.id,allCards).length;
 
-                if(pct===null){
+                if(ms===null){
                   return e('div',{key:s.id,className:'conf-set-row'},
                     e('div',{className:'conf-set-name'},
                       e('span',null,s.name),
                       e('span',{className:'conf-pct',style:{color:'var(--muted)'}},'No data')
                     ),
-                    e('div',{className:'conf-bar-bg'},e('div',{className:'conf-bar-fill',style:{width:'0%',background:'var(--muted2)'}})),
+                    e('div',{className:'conf-bar-bg'},e('div',{className:'conf-bar-fill conf-mem-bar',style:{width:'0%'}})),
                     e('div',{className:'conf-sub'},'Attempt the quiz from this set to start tracking')
                   );
                 }
 
-                var col=confColor(pct);
-                var label=pct>=85?'Strong':pct>=70?'Good':pct>=50?'Building':pct>=30?'Weak':'Very weak';
+                var gap=ms-(tc||ms);
+                var gapColor=gap>10?'rgba(239,68,68,0.7)':gap<-5?'rgba(74,222,128,0.7)':'var(--muted)';
+                var gapText=(gap>0?'+':'')+Math.round(gap)+'%';
+                var msLabel=ms>=85?'Strong':ms>=70?'Good':ms>=50?'Building':ms>=30?'Weak':'Very weak';
+                var leo=leoComment(ms,tc||ms,item.reffCount,allCards.length);
 
                 return e('div',{key:s.id,className:'conf-set-row'},
                   e('div',{className:'conf-set-name'},
                     e('span',null,s.name),
-                    e('span',{className:'conf-pct',style:{color:col}},pct+'%  — '+label)
+                    e('span',{style:{display:'flex',gap:8,alignItems:'center'}},
+                      e('span',{style:{fontSize:'0.72rem',color:'rgba(139,120,180,0.9)',fontWeight:600}},ms+'%'),
+                      e('span',{style:{fontSize:'0.65rem',color:'var(--muted)'}},'·'),
+                      e('span',{style:{fontSize:'0.72rem',color:'rgba(94,163,154,0.9)',fontWeight:600}},(tc||ms)+'%'),
+                      gap!==0&&e('span',{className:'conf-gap-val',style:{color:gapColor,fontSize:'0.65rem'}},gapText)
+                    )
                   ),
-                  e('div',{className:'conf-bar-bg'},
-                    e('div',{className:'conf-bar-fill',style:{width:pct+'%',background:col}})
+                  e('div',{className:'conf-metric-row'},
+                    e('span',{className:'conf-metric-label'},'Memory'),
+                    e('div',{className:'conf-bar-wrap'},e('div',{className:'conf-bar-inner conf-mem-bar',style:{width:ms+'%'}}))
                   ),
-                  e('div',{className:'conf-sub'},
+                  e('div',{className:'conf-metric-row'},
+                    e('span',{className:'conf-metric-label'},'True Conf.'),
+                    e('div',{className:'conf-bar-wrap'},e('div',{className:'conf-bar-inner conf-true-bar',style:{width:(tc||ms)+'%'}}))
+                  ),
+                  e('div',{className:'conf-sub',style:{marginTop:4}},
                     reviewedCards+' of '+allCards.length+' cards reviewed',
-                    dueCount>0?' · '+dueCount+' due for revision today':' · All up to date ✓'
-                  )
+                    dueCount>0?' · '+dueCount+' due':' · Up to date ✓'
+                  ),
+                  e('div',{className:'conf-leo'},'Leo: '+leo)
                 );
               })
             );
