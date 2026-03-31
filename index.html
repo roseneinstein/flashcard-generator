@@ -228,20 +228,53 @@ html.light nav{background:rgba(244,241,235,0.92)}
 /* ── Confidence tab ── */
 .conf-intro{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:18px;font-size:0.75rem;color:var(--muted);line-height:1.7;}
 .conf-intro strong{color:var(--text);}
-/* Two-metric confidence bars */
-.conf-metric-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
-.conf-metric-label{font-size:0.65rem;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;width:100px;flex-shrink:0;}
-.conf-bar-wrap{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
-.conf-bar-inner{height:100%;border-radius:3px;transition:width .6s ease;}
-.conf-mem-bar{background:rgba(139,120,180,0.55);} /* soft violet — memory strength */
-.conf-true-bar{background:rgba(94,163,154,0.55);}  /* soft teal — true confidence */
-.conf-gap-row{display:flex;align-items:center;gap:6px;margin-top:4px;}
-.conf-gap-label{font-size:0.63rem;color:var(--muted);letter-spacing:0.03em;}
-.conf-gap-val{font-size:0.7rem;font-weight:600;}
-.conf-leo{font-size:0.7rem;color:var(--muted);line-height:1.6;margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:var(--r-sm);border-left:2px solid rgba(139,120,180,0.4);}
-.conf-legend{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
-.conf-legend-item{display:flex;align-items:center;gap:5px;font-size:0.65rem;color:var(--muted);}
-.conf-legend-dot{width:10px;height:6px;border-radius:2px;}
+/* Confidence tab — aesthetic hover cards matching .fc style */
+.conf-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:20px 22px;margin-bottom:10px;position:relative;overflow:hidden;cursor:default;
+  transition:transform .45s cubic-bezier(.22,1,.36,1),box-shadow .45s cubic-bezier(.22,1,.36,1),background .2s,border-color .2s;
+}
+.conf-card::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at var(--cx,50%) var(--cy,50%),rgba(232,213,176,0.07) 0%,transparent 60%);
+  opacity:0;transition:opacity .3s;pointer-events:none;}
+.conf-card:hover{transform:translateY(-3px) scale(1.01);background:var(--surface2);
+  border-color:rgba(232,213,176,0.15);box-shadow:0 12px 36px rgba(0,0,0,0.35);}
+.conf-card:hover::before{opacity:1}
+.conf-card-title{font-family:'Instrument Serif',serif;font-size:1rem;color:var(--text);
+  margin-bottom:8px;letter-spacing:-0.01em;}
+.conf-card-body{font-size:0.78rem;color:var(--muted);line-height:1.75;font-weight:300;}
+.conf-card-body strong{color:var(--text);font-weight:500;}
+.conf-card-body em{font-style:italic;color:var(--muted);}
+/* Metric display inside cards */
+.conf-metric-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;}
+.conf-metric-label{font-size:0.67rem;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;width:106px;flex-shrink:0;}
+.conf-bar-wrap{flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;}
+.conf-bar-inner{height:100%;border-radius:3px;transition:width .65s ease;}
+/* Memory Strength — warm slate blue: calm, trustworthy */
+.conf-mem-bar{background:rgba(100,130,200,0.5);}
+.conf-mem-color{color:rgba(130,155,220,0.9);}
+/* True Confidence — warm sage green: real, grounded */
+.conf-true-bar{background:rgba(80,168,132,0.5);}
+.conf-true-color{color:rgba(90,185,148,0.9);}
+/* Confidence Gap — contextual */
+.conf-gap-pos{color:rgba(220,100,90,0.85);} /* overconfident — muted red */
+.conf-gap-neg{color:rgba(90,185,148,0.85);} /* underconfident — sage */
+.conf-gap-zero{color:var(--muted);}
+.conf-stats-row{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.conf-stat-item{display:flex;flex-direction:column;gap:2px;}
+.conf-stat-val{font-size:1rem;font-weight:600;}
+.conf-stat-lbl{font-size:0.62rem;color:var(--muted);letter-spacing:0.03em;}
+.conf-set-name-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.conf-set-title{font-size:0.85rem;font-weight:500;color:var(--text);}
+.conf-set-nums{display:flex;gap:10px;align-items:center;}
+.conf-set-num{font-size:0.72rem;font-weight:600;}
+.conf-leo-box{margin-top:10px;padding:8px 12px;background:rgba(255,255,255,0.03);
+  border-radius:var(--r-sm);border-left:2px solid rgba(130,155,220,0.35);
+  font-size:0.71rem;color:var(--muted);line-height:1.65;}
+.conf-leo-label{color:rgba(130,155,220,0.8);font-weight:500;margin-right:4px;}
+.conf-legend-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px;}
+.conf-legend-item{display:flex;align-items:center;gap:6px;font-size:0.66rem;color:var(--muted);}
+.conf-legend-dot{width:24px;height:5px;border-radius:2px;}
 .conf-set-row{margin-bottom:14px;}
 .conf-set-name{font-size:0.82rem;color:var(--text);font-weight:500;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
 .conf-pct{font-size:0.78rem;font-weight:600;}
@@ -2799,8 +2832,12 @@ function App(){
     return allCards.map(function(card,idx){
       var cardKey=setId+'::'+idx;
       var review=fsrsReviews.find(function(r){return r.card_key===cardKey;});
+      // A card is due if: never reviewed, OR due_date<=today AND not already reviewed today
+      // This ensures skipped cards stay in the due count for the rest of the day
+      var reviewedToday=review&&review.last_reviewed&&review.last_reviewed.slice(0,10)===today;
+      var due=!review||(review.due_date<=today&&!reviewedToday);
       return {card:card, cardKey:cardKey, idx:idx, review:review,
-        due: !review||review.due_date<=today, // new cards are always due
+        due:due,
         daysUntilDue: review?Math.max(0,Math.round((new Date(review.due_date)-new Date(today))/(1000*86400))):0
       };
     }).filter(function(c){return c.due;});
@@ -2815,7 +2852,8 @@ function App(){
       (s.cards||[]).forEach(function(card,idx){
         var cardKey=s.id+'::'+idx;
         var review=fsrsReviews.find(function(r){return r.card_key===cardKey;});
-        if(!review||review.due_date<=today)due++;
+        var reviewedToday=review&&review.last_reviewed&&review.last_reviewed.slice(0,10)===today;
+        if(!review||(review.due_date<=today&&!reviewedToday))due++;
       });
     });
     return due;
@@ -4238,29 +4276,63 @@ function App(){
             var avgMs=tracked.length?Math.round(tracked.reduce(function(a,x){return a+x.ms;},0)/tracked.length):0;
             var avgTc=tracked.length?Math.round(tracked.reduce(function(a,x){return a+(x.tc||x.ms);},0)/tracked.length):0;
 
+            // Hover glow helper — tracks mouse for radial gradient spotlight
+            function onConfCardMove(ev,el){
+              var b=el.getBoundingClientRect();
+              el.style.setProperty('--cx',((ev.clientX-b.left)/b.width*100)+'%');
+              el.style.setProperty('--cy',((ev.clientY-b.top)/b.height*100)+'%');
+            }
+
+            var avgGap=avgMs-avgTc;
+            var avgGapCls=avgGap>10?'conf-gap-pos':avgGap<-5?'conf-gap-neg':'conf-gap-zero';
+
             return e('div',null,
-              e('div',{className:'conf-intro'},
-                e('strong',null,'Two views of your confidence'),e('br'),
-                e('strong',{style:{color:'rgba(139,120,180,0.9)'}},'Memory Strength'),
-                ' — what the FSRS model predicts your recall probability is right now, based on your review history and elapsed time.',e('br'),
-                e('strong',{style:{color:'rgba(94,163,154,0.9)'}},'True Confidence'),
-                ' — the same metric adjusted for how quickly you actually recalled during revision (latency-corrected). Slow recall despite a correct answer lowers this score, revealing the gap between perceived and actual memory strength.',
-                tracked.length>0&&e('div',{style:{marginTop:10,paddingTop:10,borderTop:'1px solid var(--border)',display:'flex',gap:16,flexWrap:'wrap'}},
-                  e('div',null,e('div',{style:{fontSize:'1rem',fontWeight:600,color:'rgba(139,120,180,0.9)'}},avgMs+'%'),e('div',{style:{fontSize:'0.65rem',color:'var(--muted)',marginTop:1}},'Avg Memory Strength')),
-                  e('div',null,e('div',{style:{fontSize:'1rem',fontWeight:600,color:'rgba(94,163,154,0.9)'}},avgTc+'%'),e('div',{style:{fontSize:'0.65rem',color:'var(--muted)',marginTop:1}},'Avg True Confidence')),
-                  e('div',null,e('div',{style:{fontSize:'1rem',fontWeight:600,color:avgMs-avgTc>10?'var(--red)':avgMs-avgTc<-5?'#4ade80':'var(--muted)'}},
-                    (avgMs-avgTc>0?'+':'')+(avgMs-avgTc)+'%'),e('div',{style:{fontSize:'0.65rem',color:'var(--muted)',marginTop:1}},'Calibration gap'))
+
+              // ── Box 1: What the two metrics mean ──
+              e('div',{className:'conf-card',onMouseMove:function(ev){onConfCardMove(ev,ev.currentTarget);}},
+                e('div',{className:'conf-card-title'},'Two Views of Your Confidence'),
+                e('div',{className:'conf-card-body'},
+                  e('strong',{className:'conf-mem-color'},'Memory Strength'),
+                  ' — what the FSRS model predicts your recall probability is right now, based on your revision history. Cards skipped during revision are included in this calculation.',e('br'),e('br'),
+                  e('strong',{className:'conf-true-color'},'True Confidence'),
+                  ' — Memory Strength adjusted for how quickly you actually recalled during revision, and whether you switched tabs or lost focus. Slow recall despite a correct answer lowers this score, revealing the gap between perceived and actual memory strength.',e('br'),e('br'),
+                  e('em',null,'Memory Strength predicts if you will remember it (theory). True Confidence measures how fast and confidently you recall it (reality check).')
                 )
               ),
-              e('div',{className:'conf-legend'},
-                e('div',{className:'conf-legend-item'},e('div',{className:'conf-legend-dot',style:{background:'rgba(139,120,180,0.55)'}}),e('span',null,'Memory Strength')),
-                e('div',{className:'conf-legend-item'},e('div',{className:'conf-legend-dot',style:{background:'rgba(94,163,154,0.55)'}}),e('span',null,'True Confidence'))
+
+              // ── Box 2: Overall averages ──
+              tracked.length>0&&e('div',{className:'conf-card',onMouseMove:function(ev){onConfCardMove(ev,ev.currentTarget);}},
+                e('div',{className:'conf-card-title'},'Overall Scores'),
+                e('div',{className:'conf-legend-row'},
+                  e('div',{className:'conf-legend-item'},e('div',{className:'conf-legend-dot conf-mem-bar'}),e('span',null,'Memory Strength')),
+                  e('div',{className:'conf-legend-item'},e('div',{className:'conf-legend-dot conf-true-bar'}),e('span',null,'True Confidence'))
+                ),
+                e('div',{className:'conf-stats-row'},
+                  e('div',{className:'conf-stat-item'},
+                    e('div',{className:'conf-stat-val conf-mem-color'},avgMs+'%'),
+                    e('div',{className:'conf-stat-lbl'},'Avg Memory Strength')
+                  ),
+                  e('div',{className:'conf-stat-item'},
+                    e('div',{className:'conf-stat-val conf-true-color'},avgTc+'%'),
+                    e('div',{className:'conf-stat-lbl'},'Avg True Confidence')
+                  ),
+                  e('div',{className:'conf-stat-item'},
+                    e('div',{className:'conf-stat-val '+avgGapCls},(avgGap>0?'+':'')+avgGap+'%'),
+                    e('div',{className:'conf-stat-lbl'},'Confidence Gap')
+                  ),
+                  e('div',{className:'conf-stat-item'},
+                    e('div',{className:'conf-stat-val',style:{color:'var(--text)'}},tracked.length+'/'+savedSets.length),
+                    e('div',{className:'conf-stat-lbl'},'Sets tracked')
+                  )
+                )
               ),
-              e('div',{className:'streak-head',style:{marginBottom:14}},'Confidence on each card set'),
+
+              // ── Box 3+: One box per set ──
+              e('div',{className:'streak-head',style:{marginBottom:10,marginTop:4}},'Confidence on each card set'),
               setData.map(function(item){
                 var s=item.set;
                 var ms=item.ms;
-                var tc=item.tc;
+                var tc=item.tc||item.ms;
                 var allCards=s.cards||[];
                 var reviewedCards=allCards.filter(function(c,idx){
                   return fsrsReviews.some(function(r){return r.card_key===s.id+'::'+idx&&r.reps>0;});
@@ -4268,45 +4340,48 @@ function App(){
                 var dueCount=getFsrsDueCards(s.id,allCards).length;
 
                 if(ms===null){
-                  return e('div',{key:s.id,className:'conf-set-row'},
-                    e('div',{className:'conf-set-name'},
-                      e('span',null,s.name),
-                      e('span',{className:'conf-pct',style:{color:'var(--muted)'}},'No data')
+                  return e('div',{key:s.id,className:'conf-card',
+                    onMouseMove:function(ev){onConfCardMove(ev,ev.currentTarget);}},
+                    e('div',{className:'conf-set-name-row'},
+                      e('span',{className:'conf-set-title'},s.name),
+                      e('span',{style:{fontSize:'0.7rem',color:'var(--muted)'}},'No data yet')
                     ),
-                    e('div',{className:'conf-bar-bg'},e('div',{className:'conf-bar-fill conf-mem-bar',style:{width:'0%'}})),
-                    e('div',{className:'conf-sub'},'Attempt the quiz from this set to start tracking')
+                    e('div',{className:'conf-card-body'},'Attempt the quiz from this set to start tracking your confidence.')
                   );
                 }
 
-                var gap=ms-(tc||ms);
-                var gapColor=gap>10?'rgba(239,68,68,0.7)':gap<-5?'rgba(74,222,128,0.7)':'var(--muted)';
-                var gapText=(gap>0?'+':'')+Math.round(gap)+'%';
-                var msLabel=ms>=85?'Strong':ms>=70?'Good':ms>=50?'Building':ms>=30?'Weak':'Very weak';
-                var leo=leoComment(ms,tc||ms,item.reffCount,allCards.length);
+                var gap=Math.round(ms-tc);
+                var gapCls=gap>10?'conf-gap-pos':gap<-5?'conf-gap-neg':'conf-gap-zero';
+                var gapTxt=(gap>0?'+':'')+gap+'%';
+                var leo=leoComment(ms,tc,item.reffCount,allCards.length);
 
-                return e('div',{key:s.id,className:'conf-set-row'},
-                  e('div',{className:'conf-set-name'},
-                    e('span',null,s.name),
-                    e('span',{style:{display:'flex',gap:8,alignItems:'center'}},
-                      e('span',{style:{fontSize:'0.72rem',color:'rgba(139,120,180,0.9)',fontWeight:600}},ms+'%'),
-                      e('span',{style:{fontSize:'0.65rem',color:'var(--muted)'}},'·'),
-                      e('span',{style:{fontSize:'0.72rem',color:'rgba(94,163,154,0.9)',fontWeight:600}},(tc||ms)+'%'),
-                      gap!==0&&e('span',{className:'conf-gap-val',style:{color:gapColor,fontSize:'0.65rem'}},gapText)
+                return e('div',{key:s.id,className:'conf-card',
+                  onMouseMove:function(ev){onConfCardMove(ev,ev.currentTarget);}},
+                  e('div',{className:'conf-set-name-row'},
+                    e('span',{className:'conf-set-title'},s.name),
+                    e('div',{className:'conf-set-nums'},
+                      e('span',{className:'conf-set-num conf-mem-color'},ms+'%'),
+                      e('span',{style:{fontSize:'0.6rem',color:'var(--muted)'}},'·'),
+                      e('span',{className:'conf-set-num conf-true-color'},tc+'%'),
+                      gap!==0&&e('span',{className:'conf-set-num '+gapCls,style:{fontSize:'0.65rem'}},gapTxt)
                     )
                   ),
                   e('div',{className:'conf-metric-row'},
-                    e('span',{className:'conf-metric-label'},'Memory'),
+                    e('span',{className:'conf-metric-label'},'Memory Strength'),
                     e('div',{className:'conf-bar-wrap'},e('div',{className:'conf-bar-inner conf-mem-bar',style:{width:ms+'%'}}))
                   ),
                   e('div',{className:'conf-metric-row'},
-                    e('span',{className:'conf-metric-label'},'True Conf.'),
-                    e('div',{className:'conf-bar-wrap'},e('div',{className:'conf-bar-inner conf-true-bar',style:{width:(tc||ms)+'%'}}))
+                    e('span',{className:'conf-metric-label'},'True Confidence'),
+                    e('div',{className:'conf-bar-wrap'},e('div',{className:'conf-bar-inner conf-true-bar',style:{width:tc+'%'}}))
                   ),
-                  e('div',{className:'conf-sub',style:{marginTop:4}},
+                  e('div',{style:{fontSize:'0.68rem',color:'var(--muted)',marginTop:6}},
                     reviewedCards+' of '+allCards.length+' cards reviewed',
-                    dueCount>0?' · '+dueCount+' due':' · Up to date ✓'
+                    dueCount>0?' · '+dueCount+' due for revision today':' · All up to date ✓'
                   ),
-                  e('div',{className:'conf-leo'},'Leo: '+leo)
+                  e('div',{className:'conf-leo-box'},
+                    e('span',{className:'conf-leo-label'},'Leo AI Insight:'),
+                    leo
+                  )
                 );
               })
             );
