@@ -859,61 +859,6 @@ footer{border-top:1px solid var(--border);padding:52px 40px 36px;display:flex;fl
 .ws-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:none;padding:4px 8px;border-radius:6px;transition:color .2s}
 @media(max-width:520px){.ws-head{padding:12px 14px}}
 .ws-close:hover{color:var(--text)}
-/* ── Resources Modal ── */
-.res-tool-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  margin-bottom:10px;overflow:hidden;
-  transition:border-color .2s,box-shadow .2s;
-  position:relative;
-}
-.res-tool-card:hover{border-color:rgba(232,213,176,0.2);box-shadow:0 4px 20px rgba(0,0,0,0.25);}
-.res-tool-header{
-  display:flex;align-items:center;gap:14px;padding:16px 18px;cursor:pointer;
-  background:none;border:none;width:100%;text-align:left;
-  transition:background .15s;
-}
-.res-tool-header:hover{background:var(--surface2);}
-.res-tool-ico{font-size:1.1rem;opacity:0.6;flex-shrink:0;width:26px;text-align:center;}
-.res-tool-info{flex:1;}
-.res-tool-title{font-family:'Instrument Serif',serif;font-size:0.98rem;color:var(--text);letter-spacing:-0.01em;margin-bottom:2px;}
-.res-tool-desc{font-size:0.74rem;color:var(--muted);font-weight:300;line-height:1.5;}
-.res-tool-chevron{font-size:0.65rem;color:var(--muted);transition:transform .25s;margin-left:auto;flex-shrink:0;}
-.res-tool-chevron.open{transform:rotate(180deg);}
-.res-tool-body{padding:0 18px 18px;border-top:1px solid var(--border);animation:ftd .22s ease;}
-@keyframes ftd{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
-.res-upload-area{
-  border:1.5px dashed var(--border);border-radius:var(--r-sm);padding:24px;
-  text-align:center;cursor:pointer;margin:14px 0 10px;
-  transition:border-color .2s,background .2s;
-  font-size:0.78rem;color:var(--muted);line-height:1.7;
-}
-.res-upload-area:hover{border-color:var(--accent);background:rgba(232,213,176,0.03);}
-.res-upload-area.has-file{border-color:rgba(74,222,128,0.4);background:rgba(74,222,128,0.04);color:var(--text);}
-.res-btn{padding:8px 20px;border-radius:50px;font-size:0.75rem;font-family:'Geist',sans-serif;cursor:pointer;transition:all .15s;font-weight:500;border:1px solid;}
-.res-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);}
-.res-btn.primary:hover{opacity:0.88;}
-.res-btn.primary:disabled{opacity:0.4;cursor:not-allowed;}
-.res-btn.secondary{background:transparent;border-color:var(--border);color:var(--muted);}
-.res-btn.secondary:hover{border-color:var(--accent);color:var(--accent);}
-.res-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
-.res-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);
-  color:var(--text);font-size:0.78rem;padding:6px 10px;font-family:'Geist',sans-serif;
-  width:80px;text-align:center;}
-.res-input:focus{outline:none;border-color:var(--accent);}
-.res-label{font-size:0.72rem;color:var(--muted);letter-spacing:0.02em;}
-.res-status{font-size:0.74rem;color:var(--muted);margin-top:6px;min-height:18px;line-height:1.5;}
-.res-status.ok{color:#4ade80;}
-.res-status.err{color:var(--red);}
-.res-privacy{font-size:0.65rem;color:var(--muted2);display:flex;align-items:center;gap:4px;margin-top:12px;opacity:0.7;}
-.res-file-list{margin:8px 0;display:flex;flex-direction:column;gap:4px;}
-.res-file-item{display:flex;align-items:center;justify-content:space-between;padding:5px 10px;
-  background:var(--surface2);border-radius:6px;font-size:0.74rem;color:var(--text);}
-.res-file-item span{color:var(--muted);font-size:0.68rem;margin-left:6px;}
-.res-file-rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0 4px;}
-.res-file-rm:hover{color:var(--red);}
-.res-range-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
-.res-select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);
-  color:var(--text);font-size:0.75rem;padding:5px 8px;font-family:'Geist',sans-serif;}
 .ws-body{overflow-y:auto;padding:20px 22px;flex:1}
 .ws-empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:0.82rem;line-height:1.8}
 .ws-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
@@ -1515,425 +1460,6 @@ function useReveal(){
   });
 }
 
-// ── Resources Modal Component — all tools, client-side only ─────────────────
-// pdf-lib loaded lazily only when a PDF tool is first used
-var _pdfLib=null;
-function loadPdfLib(cb){
-  if(_pdfLib){cb(_pdfLib);return;}
-  var s=document.createElement('script');
-  s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
-  s.onload=function(){_pdfLib=window.PDFLib;cb(_pdfLib);};
-  s.onerror=function(){cb(null);};
-  document.head.appendChild(s);
-}
-
-// Utility: download a blob
-function dlBlob(blob,filename){
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');a.href=url;a.download=filename;a.click();
-  setTimeout(function(){URL.revokeObjectURL(url);},2000);
-}
-
-// Utility: read file as ArrayBuffer
-function readBuf(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});}
-
-// Utility: format bytes
-function fmtBytes(b){if(b<1024)return b+'B';if(b<1048576)return (b/1024).toFixed(0)+'KB';return (b/1048576).toFixed(1)+'MB';}
-
-function ResModal(props){
-  var resTool=props.resTool,setResTool=props.setResTool;
-  var statusS=useState({}),setStatus=statusS[1];var status=statusS[0];
-  var filesS=useState({}),setFiles=filesS[1];var files=filesS[0];
-
-  function setToolStatus(tool,msg,type){setStatus(function(s){var n=Object.assign({},s);n[tool]={msg:msg,type:type||''};return n;});}
-  function getFile(tool){return files[tool]||null;}
-  function getFiles(tool){return files[tool]||[];}
-  function setFile(tool,f){setFiles(function(s){var n=Object.assign({},s);n[tool]=f;return n;});}
-
-  // ── Tool: Merge PDF ──────────────────────────────────────────────────────
-  function ToolMerge(){
-    var ref=useRef();
-    var list=getFiles('merge');
-    function addFiles(newFiles){
-      setFile('merge',list.concat(Array.from(newFiles).filter(function(f){return f.type==='application/pdf';})));
-    }
-    function remove(i){setFile('merge',list.filter(function(_,idx){return idx!==i;}));}
-    async function merge(){
-      if(list.length<2){setToolStatus('merge','Upload at least 2 PDFs','err');return;}
-      setToolStatus('merge','Merging…');
-      loadPdfLib(async function(PDFLib){
-        if(!PDFLib){setToolStatus('merge','Failed to load PDF engine','err');return;}
-        try{
-          var merged=await PDFLib.PDFDocument.create();
-          for(var i=0;i<list.length;i++){
-            var buf=await readBuf(list[i]);
-            var doc=await PDFLib.PDFDocument.load(buf);
-            var pages=await merged.copyPages(doc,doc.getPageIndices());
-            pages.forEach(function(p){merged.addPage(p);});
-          }
-          var bytes=await merged.save();
-          dlBlob(new Blob([bytes],{type:'application/pdf'}),'merged.pdf');
-          setToolStatus('merge','Done — merged.pdf downloaded','ok');
-        }catch(err){setToolStatus('merge','Error: '+err.message,'err');}
-      });
-    }
-    return e('div',null,
-      e('div',{className:'res-upload-area'+(list.length?'':' '),
-        onClick:function(){ref.current.click();},
-        onDragOver:function(ev){ev.preventDefault();},
-        onDrop:function(ev){ev.preventDefault();addFiles(ev.dataTransfer.files);}},
-        list.length?e('div',null,list.length+' file'+(list.length!==1?'s':'')+' selected'):
-          e('div',null,e('div',{style:{fontSize:'1.2rem',marginBottom:6}},'📄'),
-            'Drop PDFs here or click to browse',e('br'),e('span',{style:{fontSize:'0.68rem'}},'Select multiple files'))
-      ),
-      e('input',{ref:ref,type:'file',accept:'.pdf',multiple:true,style:{display:'none'},onChange:function(ev){addFiles(ev.target.files);ev.target.value='';}}),
-      list.length>0&&e('div',{className:'res-file-list'},
-        list.map(function(f,i){return e('div',{key:i,className:'res-file-item'},
-          e('span',null,f.name),e('span',null,fmtBytes(f.size)),
-          e('button',{className:'res-file-rm',onClick:function(){remove(i);}},'✕'));})
-      ),
-      e('div',{className:'res-row'},
-        e('button',{className:'res-btn primary',onClick:merge,disabled:list.length<2},'Merge PDFs'),
-        list.length>0&&e('button',{className:'res-btn secondary',onClick:function(){setFile('merge',[]);setToolStatus('merge','','');}},'Clear')
-      ),
-      e('div',{className:'res-status '+(status.merge?status.merge.type:'')},(status.merge&&status.merge.msg)||'')
-    );
-  }
-
-  // ── Tool: Split PDF ──────────────────────────────────────────────────────
-  function ToolSplit(){
-    var ref=useRef();
-    var file=getFile('split');
-    var rangeS=useState(''),setRange=rangeS[1];var range=rangeS[0];
-    var pagesS=useState(0),setPages=pagesS[1];var pages=pagesS[0];
-    async function onFile(f){
-      if(!f||f.type!=='application/pdf')return;
-      setFile('split',f);setToolStatus('split','Reading…');
-      loadPdfLib(async function(PDFLib){
-        if(!PDFLib){setToolStatus('split','Failed to load PDF engine','err');return;}
-        try{
-          var buf=await readBuf(f);
-          var doc=await PDFLib.PDFDocument.load(buf);
-          setPages(doc.getPageCount());
-          setToolStatus('split','PDF loaded — '+doc.getPageCount()+' pages. Enter page range e.g. 1-5 or 1,3,5-8');
-        }catch(err){setToolStatus('split','Cannot read PDF: '+err.message,'err');}
-      });
-    }
-    function parseRange(str,total){
-      var out=[];
-      str.split(',').forEach(function(part){
-        part=part.trim();
-        if(part.indexOf('-')>0){var p=part.split('-');var a=parseInt(p[0])-1,b=parseInt(p[1])-1;if(!isNaN(a)&&!isNaN(b)&&a>=0&&b<total)for(var i=a;i<=b;i++)out.push(i);}
-        else{var n=parseInt(part)-1;if(!isNaN(n)&&n>=0&&n<total)out.push(n);}
-      });
-      return out.filter(function(v,i,arr){return arr.indexOf(v)===i;}); // unique
-    }
-    async function split(){
-      if(!file){setToolStatus('split','Upload a PDF first','err');return;}
-      if(!range.trim()){setToolStatus('split','Enter a page range','err');return;}
-      setToolStatus('split','Extracting pages…');
-      loadPdfLib(async function(PDFLib){
-        if(!PDFLib){setToolStatus('split','Failed to load PDF engine','err');return;}
-        try{
-          var buf=await readBuf(file);
-          var src=await PDFLib.PDFDocument.load(buf);
-          var indices=parseRange(range,src.getPageCount());
-          if(!indices.length){setToolStatus('split','No valid pages in range','err');return;}
-          var out=await PDFLib.PDFDocument.create();
-          var copied=await out.copyPages(src,indices);
-          copied.forEach(function(p){out.addPage(p);});
-          var bytes=await out.save();
-          var fname='split_p'+indices.map(function(i){return i+1;}).join('-')+'.pdf';
-          dlBlob(new Blob([bytes],{type:'application/pdf'}),fname);
-          setToolStatus('split','Done — '+indices.length+' page'+(indices.length!==1?'s':'')+' extracted','ok');
-        }catch(err){setToolStatus('split','Error: '+err.message,'err');}
-      });
-    }
-    return e('div',null,
-      e('div',{className:'res-upload-area'+(file?' has-file':''),onClick:function(){ref.current.click();}},
-        file?e('div',null,e('div',{style:{fontSize:'0.9rem',fontWeight:500,marginBottom:3}},file.name),fmtBytes(file.size)+' · '+pages+' pages — click to replace'):
-          e('div',null,e('div',{style:{fontSize:'1.2rem',marginBottom:6}},'📄'),'Drop PDF here or click to browse')
-      ),
-      e('input',{ref:ref,type:'file',accept:'.pdf',style:{display:'none'},onChange:function(ev){onFile(ev.target.files[0]);ev.target.value='';}}),
-      file&&pages>0&&e('div',{className:'res-row',style:{marginTop:10}},
-        e('span',{className:'res-label'},'Pages (e.g. 1-5 or 1,3,7-10):'),
-        e('input',{className:'res-input',style:{width:160},value:range,placeholder:'1-'+pages,
-          onChange:function(ev){setRange(ev.target.value);}})
-      ),
-      e('div',{className:'res-row'},
-        e('button',{className:'res-btn primary',onClick:split,disabled:!file||!range.trim()},'Extract pages')
-      ),
-      e('div',{className:'res-status '+(status.split?status.split.type:'')},(status.split&&status.split.msg)||'')
-    );
-  }
-
-  // ── Tool: Compress PDF ───────────────────────────────────────────────────
-  function ToolCompress(){
-    var ref=useRef();
-    var file=getFile('compress');
-    var qualS=useState(60),setQual=qualS[1];var qual=qualS[0];
-    async function onFile(f){if(f&&f.type==='application/pdf')setFile('compress',f);}
-    async function compress(){
-      if(!file){setToolStatus('compress','Upload a PDF first','err');return;}
-      setToolStatus('compress','Compressing — re-encoding images…');
-      loadPdfLib(async function(PDFLib){
-        if(!PDFLib){setToolStatus('compress','Failed to load PDF engine','err');return;}
-        try{
-          var buf=await readBuf(file);
-          var doc=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
-          // Re-save with object compression — best effort for image-heavy PDFs
-          var bytes=await doc.save({useObjectStreams:true,addDefaultPage:false,objectsPerTick:50});
-          var saving=Math.max(0,Math.round((1-bytes.length/file.size)*100));
-          var fname=file.name.replace('.pdf','')+'_compressed.pdf';
-          dlBlob(new Blob([bytes],{type:'application/pdf'}),fname);
-          setToolStatus('compress','Done — '+fmtBytes(bytes.length)+' (saved '+saving+'%)','ok');
-        }catch(err){setToolStatus('compress','Error: '+err.message,'err');}
-      });
-    }
-    return e('div',null,
-      e('div',{className:'res-upload-area'+(file?' has-file':''),onClick:function(){ref.current.click();}},
-        file?e('div',null,e('div',{style:{fontSize:'0.9rem',fontWeight:500,marginBottom:3}},file.name),
-          fmtBytes(file.size)+' — click to replace'):
-          e('div',null,e('div',{style:{fontSize:'1.2rem',marginBottom:6}},'📄'),'Drop PDF here or click to browse')
-      ),
-      e('input',{ref:ref,type:'file',accept:'.pdf',style:{display:'none'},onChange:function(ev){onFile(ev.target.files[0]);ev.target.value='';}}),
-      e('div',{style:{fontSize:'0.71rem',color:'var(--muted)',marginTop:8,lineHeight:1.6}},'Best results on image-heavy PDFs (scanned notes, photos). Text-only PDFs may see minimal size reduction.'),
-      e('div',{className:'res-row'},
-        e('button',{className:'res-btn primary',onClick:compress,disabled:!file},'Compress PDF')
-      ),
-      e('div',{className:'res-status '+(status.compress?status.compress.type:'')},(status.compress&&status.compress.msg)||'')
-    );
-  }
-
-  // ── Tool: PDF to Images ──────────────────────────────────────────────────
-  function ToolPdfImg(){
-    var ref=useRef();
-    var file=getFile('pdfimg');
-    var fmtS=useState('jpeg'),setFmt=fmtS[1];var fmt=fmtS[0];
-    var scaleS=useState(2),setScale=scaleS[1];var scale=scaleS[0];
-    async function onFile(f){if(f&&f.type==='application/pdf')setFile('pdfimg',f);}
-    async function convert(){
-      if(!file){setToolStatus('pdfimg','Upload a PDF first','err');return;}
-      setToolStatus('pdfimg','Loading PDF pages…');
-      try{
-        if(!window.pdfjsLib){
-          await new Promise(function(res,rej){
-            var s=document.createElement('script');
-            s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-            s.onload=function(){window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res();};
-            s.onerror=rej;document.head.appendChild(s);
-          });
-        }
-        var buf=await readBuf(file);
-        var pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
-        setToolStatus('pdfimg','Converting '+pdf.numPages+' page'+(pdf.numPages!==1?'s':'')+'…');
-        for(var i=1;i<=pdf.numPages;i++){
-          var page=await pdf.getPage(i);
-          var vp=page.getViewport({scale:parseFloat(scale)});
-          var canvas=document.createElement('canvas');
-          canvas.width=vp.width;canvas.height=vp.height;
-          await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-          var mimeType='image/'+(fmt==='jpg'?'jpeg':fmt);
-          await new Promise(function(res){canvas.toBlob(function(blob){
-            dlBlob(blob,'page_'+i+'.'+fmt);
-            setTimeout(res,300);
-          },mimeType,0.92);});
-        }
-        setToolStatus('pdfimg','Done — '+pdf.numPages+' image'+(pdf.numPages!==1?'s':'')+' downloaded','ok');
-      }catch(err){setToolStatus('pdfimg','Error: '+err.message,'err');}
-    }
-    return e('div',null,
-      e('div',{className:'res-upload-area'+(file?' has-file':''),onClick:function(){ref.current.click();}},
-        file?e('div',null,e('div',{style:{fontSize:'0.9rem',fontWeight:500,marginBottom:3}},file.name),
-          fmtBytes(file.size)+' — click to replace'):
-          e('div',null,e('div',{style:{fontSize:'1.2rem',marginBottom:6}},'📄'),'Drop PDF here or click to browse')
-      ),
-      e('input',{ref:ref,type:'file',accept:'.pdf',style:{display:'none'},onChange:function(ev){onFile(ev.target.files[0]);ev.target.value='';}}),
-      e('div',{className:'res-row',style:{marginTop:10}},
-        e('span',{className:'res-label'},'Format:'),
-        e('select',{className:'res-select',value:fmt,onChange:function(ev){setFmt(ev.target.value);}},
-          e('option',{value:'jpeg'},'JPEG'),e('option',{value:'png'},'PNG')),
-        e('span',{className:'res-label',style:{marginLeft:10}},'Resolution:'),
-        e('select',{className:'res-select',value:scale,onChange:function(ev){setScale(ev.target.value);}},
-          e('option',{value:1},'Standard (96dpi)'),e('option',{value:2},'High (192dpi)'),e('option',{value:3},'Very high (288dpi)'))
-      ),
-      e('div',{className:'res-row'},
-        e('button',{className:'res-btn primary',onClick:convert,disabled:!file},'Convert to images')
-      ),
-      e('div',{className:'res-status '+(status.pdfimg?status.pdfimg.type:'')},(status.pdfimg&&status.pdfimg.msg)||'')
-    );
-  }
-
-  // ── Tool: Image to PDF ───────────────────────────────────────────────────
-  function ToolImgPdf(){
-    var ref=useRef();
-    var list=getFiles('imgpdf');
-    function addFiles(newFiles){
-      var accepted=['image/jpeg','image/png','image/webp'];
-      setFile('imgpdf',list.concat(Array.from(newFiles).filter(function(f){return accepted.includes(f.type);})));
-    }
-    function remove(i){setFile('imgpdf',list.filter(function(_,idx){return idx!==i;}));}
-    async function convert(){
-      if(!list.length){setToolStatus('imgpdf','Upload at least one image','err');return;}
-      setToolStatus('imgpdf','Building PDF…');
-      loadPdfLib(async function(PDFLib){
-        if(!PDFLib){setToolStatus('imgpdf','Failed to load PDF engine','err');return;}
-        try{
-          var doc=await PDFLib.PDFDocument.create();
-          for(var i=0;i<list.length;i++){
-            var f=list[i];
-            var buf=await readBuf(f);
-            var img=f.type==='image/png'?await doc.embedPng(buf):await doc.embedJpg(buf);
-            var dims=img.scaleToFit(595,842); // A4
-            var page=doc.addPage([dims.width,dims.height]);
-            page.drawImage(img,{x:0,y:0,width:dims.width,height:dims.height});
-          }
-          var bytes=await doc.save();
-          dlBlob(new Blob([bytes],{type:'application/pdf'}),'images.pdf');
-          setToolStatus('imgpdf','Done — images.pdf downloaded','ok');
-        }catch(err){setToolStatus('imgpdf','Error: '+err.message,'err');}
-      });
-    }
-    return e('div',null,
-      e('div',{className:'res-upload-area',
-        onClick:function(){ref.current.click();},
-        onDragOver:function(ev){ev.preventDefault();},
-        onDrop:function(ev){ev.preventDefault();addFiles(ev.dataTransfer.files);}},
-        list.length?e('div',null,list.length+' image'+(list.length!==1?'s':'')+' selected — click to add more'):
-          e('div',null,e('div',{style:{fontSize:'1.2rem',marginBottom:6}},'🖼'),
-            'Drop images here or click to browse',e('br'),e('span',{style:{fontSize:'0.68rem'}},'JPEG, PNG, WebP — multiple files OK'))
-      ),
-      e('input',{ref:ref,type:'file',accept:'image/jpeg,image/png,image/webp',multiple:true,style:{display:'none'},onChange:function(ev){addFiles(ev.target.files);ev.target.value='';}}),
-      list.length>0&&e('div',{className:'res-file-list'},
-        list.map(function(f,i){return e('div',{key:i,className:'res-file-item'},
-          e('span',null,f.name),e('span',null,fmtBytes(f.size)),
-          e('button',{className:'res-file-rm',onClick:function(){remove(i);}},'✕'));})
-      ),
-      e('div',{className:'res-row'},
-        e('button',{className:'res-btn primary',onClick:convert,disabled:!list.length},'Create PDF'),
-        list.length>0&&e('button',{className:'res-btn secondary',onClick:function(){setFile('imgpdf',[]);setToolStatus('imgpdf','','');}},'Clear')
-      ),
-      e('div',{className:'res-status '+(status.imgpdf?status.imgpdf.type:'')},(status.imgpdf&&status.imgpdf.msg)||'')
-    );
-  }
-
-  // ── Tool: Image Resizer ──────────────────────────────────────────────────
-  function ToolImgResize(){
-    var ref=useRef();
-    var file=getFile('imgres');
-    var wS=useState(''),setW=wS[1];var w=wS[0];
-    var hS=useState(''),setH=hS[1];var hv=hS[0];
-    var qualS=useState(90),setQual=qualS[1];var qual=qualS[0];
-    var fmtS=useState('jpeg'),setFmt=fmtS[1];var fmt=fmtS[0];
-    var keepS=useState(true),setKeep=keepS[1];var keep=keepS[0];
-    var origS=useState(null),setOrig=origS[1];var orig=origS[0];
-    function onFile(f){
-      if(!f)return;
-      var accepted=['image/jpeg','image/png','image/webp'];
-      if(!accepted.includes(f.type)){setToolStatus('imgres','Please upload JPEG, PNG or WebP','err');return;}
-      setFile('imgres',f);
-      var img=new Image();
-      img.onload=function(){setOrig({w:img.naturalWidth,h:img.naturalHeight});setW(img.naturalWidth+'');setH(img.naturalHeight+'');URL.revokeObjectURL(img.src);};
-      img.src=URL.createObjectURL(f);
-    }
-    function onWChange(val){
-      setW(val);
-      if(keep&&orig&&val){var ratio=orig.h/orig.w;setH(Math.round(parseFloat(val)*ratio)+'');}
-    }
-    function onHChange(val){
-      setH(val);
-      if(keep&&orig&&val){var ratio=orig.w/orig.h;setW(Math.round(parseFloat(val)*ratio)+'');}
-    }
-    function resize(){
-      if(!file){setToolStatus('imgres','Upload an image first','err');return;}
-      var tw=parseInt(w),th=parseInt(hv);
-      if(!tw||!th||tw<1||th<1){setToolStatus('imgres','Enter valid width and height','err');return;}
-      setToolStatus('imgres','Resizing…');
-      var img=new Image();
-      img.onload=function(){
-        var canvas=document.createElement('canvas');
-        canvas.width=tw;canvas.height=th;
-        canvas.getContext('2d').drawImage(img,0,0,tw,th);
-        var mimeType='image/'+(fmt==='jpg'?'jpeg':fmt);
-        canvas.toBlob(function(blob){
-          var ext=fmt==='jpeg'?'jpg':fmt;
-          var fname=file.name.replace(/\.[^.]+$/,'')+'_'+tw+'x'+th+'.'+ext;
-          dlBlob(blob,fname);
-          setToolStatus('imgres','Done — '+fmtBytes(blob.size)+' downloaded','ok');
-          URL.revokeObjectURL(img.src);
-        },mimeType,qual/100);
-      };
-      img.onerror=function(){setToolStatus('imgres','Could not read image','err');};
-      img.src=URL.createObjectURL(file);
-    }
-    return e('div',null,
-      e('div',{className:'res-upload-area'+(file?' has-file':''),onClick:function(){ref.current.click();}},
-        file?e('div',null,
-          e('div',{style:{fontSize:'0.9rem',fontWeight:500,marginBottom:3}},file.name),
-          orig?'Original: '+orig.w+' × '+orig.h+' px · '+fmtBytes(file.size):fmtBytes(file.size))+' — click to replace':
-          e('div',null,e('div',{style:{fontSize:'1.2rem',marginBottom:6}},'🖼'),'Drop image here or click to browse',e('br'),e('span',{style:{fontSize:'0.68rem'}},'JPEG, PNG, WebP'))
-      ),
-      e('input',{ref:ref,type:'file',accept:'image/jpeg,image/png,image/webp',style:{display:'none'},onChange:function(ev){onFile(ev.target.files[0]);ev.target.value='';}}),
-      orig&&e('div',null,
-        e('div',{className:'res-row',style:{marginTop:10,flexWrap:'wrap',gap:12}},
-          e('div',{style:{display:'flex',alignItems:'center',gap:6}},
-            e('span',{className:'res-label'},'W:'),
-            e('input',{className:'res-input',value:w,onChange:function(ev){onWChange(ev.target.value);},placeholder:'px'}),
-            e('span',{className:'res-label'},'H:'),
-            e('input',{className:'res-input',value:hv,onChange:function(ev){onHChange(ev.target.value);},placeholder:'px'})
-          ),
-          e('label',{style:{display:'flex',alignItems:'center',gap:5,fontSize:'0.74rem',color:'var(--muted)',cursor:'pointer'}},
-            e('input',{type:'checkbox',checked:keep,onChange:function(ev){setKeep(ev.target.checked);}}),
-            'Lock ratio')
-        ),
-        e('div',{className:'res-row',style:{marginTop:8,gap:14}},
-          e('span',{className:'res-label'},'Format:'),
-          e('select',{className:'res-select',value:fmt,onChange:function(ev){setFmt(ev.target.value);}},
-            e('option',{value:'jpeg'},'JPEG'),e('option',{value:'png'},'PNG'),e('option',{value:'webp'},'WebP')),
-          fmt!=='png'&&e('span',{className:'res-label',style:{marginLeft:6}},'Quality: '+qual+'%'),
-          fmt!=='png'&&e('input',{type:'range',min:10,max:100,value:qual,style:{width:90},onChange:function(ev){setQual(parseInt(ev.target.value));}})
-        )
-      ),
-      e('div',{className:'res-row'},
-        e('button',{className:'res-btn primary',onClick:resize,disabled:!file||!w||!hv},'Resize & Download')
-      ),
-      e('div',{className:'res-status '+(status.imgres?status.imgres.type:'')},(status.imgres&&status.imgres.msg)||'')
-    );
-  }
-
-  // ── Tool definitions ─────────────────────────────────────────────────────
-  var TOOLS=[
-    {id:'merge',icon:'📑',title:'Merge PDFs',desc:'Combine multiple PDF files into one document in any order.',body:e(ToolMerge)},
-    {id:'split',icon:'✂️',title:'Split PDF',desc:'Extract specific pages or page ranges from any PDF.',body:e(ToolSplit)},
-    {id:'compress',icon:'📦',title:'Compress PDF',desc:'Reduce PDF file size — ideal for large scanned documents.',body:e(ToolCompress)},
-    {id:'pdfimg',icon:'🖼',title:'PDF to Images',desc:'Convert each page of a PDF to a high-resolution JPEG or PNG.',body:e(ToolPdfImg)},
-    {id:'imgpdf',icon:'📷',title:'Images to PDF',desc:'Combine one or more images (JPEG, PNG, WebP) into a single PDF.',body:e(ToolImgPdf)},
-    {id:'imgres',icon:'⬛',title:'Image Resizer',desc:'Resize any image to exact dimensions with quality and format control.',body:e(ToolImgResize)},
-  ];
-
-  return e('div',null,
-    TOOLS.map(function(tool){
-      var isOpen=resTool===tool.id;
-      return e('div',{key:tool.id,className:'res-tool-card'},
-        e('button',{className:'res-tool-header',onClick:function(){setResTool(isOpen?null:tool.id);}},
-          e('span',{className:'res-tool-ico'},tool.icon),
-          e('div',{className:'res-tool-info'},
-            e('div',{className:'res-tool-title'},tool.title),
-            e('div',{className:'res-tool-desc'},tool.desc)
-          ),
-          e('span',{className:'res-tool-chevron'+(isOpen?' open':'')},'▼')
-        ),
-        isOpen&&e('div',{className:'res-tool-body'},tool.body)
-      );
-    }),
-    e('div',{className:'res-privacy'},
-      e('span',null,'🔒'),
-      e('span',null,'All processing happens entirely on your device — your files are never uploaded to any server.')
-    )
-  );
-}
-
-
 function HFeat(props){
   var r=useRef();
   return e('div',{className:'fc',ref:r,onMouseMove:function(ev){var b=r.current.getBoundingClientRect();r.current.style.setProperty('--mx',((ev.clientX-b.left)/b.width*100)+'%');r.current.style.setProperty('--my',((ev.clientY-b.top)/b.height*100)+'%');}},
@@ -2374,7 +1900,6 @@ function App(){
   // ── Pro state ──
   var showWsS=useState(false),setShowWs=showWsS[1];var showWs=showWsS[0];
   var showResS=useState(false),setShowRes=showResS[1];var showRes=showResS[0];
-  var resToolS=useState(null),setResTool=resToolS[1];var resTool=resToolS[0]; // active expanded tool
   var wsTabS=useState('sets'),setWsTab=wsTabS[1];var wsTab=wsTabS[0];
   var dailyCardS=useState(null),setDailyCard=dailyCardS[1];var dailyCard=dailyCardS[0];
   var regenCountS=useState(function(){try{var s=JSON.parse(localStorage.getItem('cs_regen')||'{}');var t=new Date().toDateString();return s.d===t?s.c||0:0;}catch(e){return 0;}}),setRegenCount=regenCountS[1];var regenCount=regenCountS[0];
@@ -3579,7 +3104,7 @@ function App(){
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab(isElite()?'streak':'history');loadProData();setShowWs(true);}},
                   isElite()?'📊 Progress & Stats':'📊 Quiz History'
                 ),
-                e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setResTool(null);setShowRes(true);}},'🗂 Resources'),
+                e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setShowRes(true);}},'🗂 Resources'),
                 e('button',{className:'user-drop-item',onClick:handleInstall},'📲 Install App'),
                 (user.tier==='pro'||user.tier==='elite')&&user.sub_status!=='cancel_pending'&&user.sub_status!=='cancelled'&&e('button',{className:'user-drop-item',style:{color:'var(--muted)',fontSize:'0.7rem'},onClick:cancelSubscription},'✕ Cancel subscription'),
                 e('button',{className:'user-drop-item danger',onClick:logout},t('Sign out'))
@@ -4118,25 +3643,28 @@ function App(){
     ),
 
 
-    /* WORKSPACE MODAL */
 
-    /* ── RESOURCES MODAL ── */
-    showRes&&e('div',{className:'ws-ov',onClick:function(ev){if(ev.target===ev.currentTarget)setShowRes(false);}},
-      e('div',{className:'ws-box'},
+    /* RESOURCES MODAL */
+    showRes&&e('div',{className:'ws-ov',style:{zIndex:610},onClick:function(ev){if(ev.target===ev.currentTarget)setShowRes(false);}},
+      e('div',{className:'ws-box',style:{maxWidth:860,maxHeight:'92vh'}},
         e('div',{className:'ws-head'},
-          e('div',{style:{display:'flex',flexDirection:'column',gap:2}},
+          e('div',{style:{display:'flex',flexDirection:'column',gap:3}},
             e('div',{className:'ws-title'},'Resources'),
-            e('div',{style:{fontSize:'0.68rem',color:'var(--muted)',display:'flex',alignItems:'center',gap:4}},
-              '\u{1F512} ',e('span',null,'All processing happens on your device — your files never leave your browser'))
+            e('div',{style:{fontSize:'0.67rem',color:'var(--muted)',display:'flex',alignItems:'center',gap:4}},
+              '\uD83D\uDD12 All processing happens on your device — your files never leave your browser')
           ),
-          e('button',{className:'ws-close',onClick:function(){setShowRes(false);}},'\u2715')
+          e('button',{className:'ws-close',onClick:function(){setShowRes(false);}},'×')
         ),
-        e('div',{className:'ws-body'},
-          e(ResModal,{resTool:resTool,setResTool:setResTool})
-        )
+        e('iframe',{
+          src:'/resources.html',
+          style:{border:'none',width:'100%',flex:1,minHeight:0,background:'var(--bg)'},
+          title:'Resources',
+          allow:'downloads',
+        })
       )
     ),
 
+    /* WORKSPACE MODAL */
     /* Revision focus dim overlay — appears behind ws-box when session active */
     showWs&&fsrsSession&&wsTab==='revise'&&e('div',{
       className:'revise-focus-overlay',
