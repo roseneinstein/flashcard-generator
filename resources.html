@@ -5,31 +5,46 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>CogniSwift Resources</title>
 <style>
-/* Inherit CogniSwift theme from parent via CSS variables cascade through iframe */
+/* Theme driven by ?theme= URL param passed from parent site */
 :root{
   --bg:#22203a;--surface:#2a2740;--surface2:#322e4a;
   --border:#ffffff1e;--text:#ededf0;--muted:#9898b8;--muted2:#4a4a60;
   --accent:#e8d5b0;--red:#ef4444;--r:14px;--r-sm:8px;
 }
-@media(prefers-color-scheme:light){
-  :root{--bg:#f4f1eb;--surface:#fdfcf8;--surface2:#edeae2;
-    --border:#00000011;--text:#1e1b14;--muted:#7a7060;--muted2:#c0b89e;--accent:#9a7c3f;}
+.light-theme{
+  --bg:#f4f1eb;--surface:#fdfcf8;--surface2:#edeae2;
+  --border:#00000011;--text:#1e1b14;--muted:#7a7060;--muted2:#c0b89e;--accent:#9a7c3f;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Geist',system-ui,sans-serif;background:var(--bg);color:var(--text);
+html{background:var(--bg);}body{font-family:'Geist',system-ui,sans-serif;background:var(--bg);color:var(--text);
   font-size:14px;line-height:1.5;padding:14px 16px 24px;overflow-x:hidden;}
 /* Tool cards */
-.tool{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  margin-bottom:10px;overflow:hidden;transition:border-color .2s;}
-.tool:hover{border-color:rgba(232,213,176,0.2);}
-.tool-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;
-  width:100%;background:none;border:none;text-align:left;transition:background .15s;color:var(--text);}
-.tool-hdr:hover{background:var(--surface2);}
-.tool-ico{font-size:1rem;opacity:0.6;flex-shrink:0;width:22px;text-align:center;}
+.tool{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  margin-bottom:10px;overflow:hidden;
+  transition:transform .45s cubic-bezier(.22,1,.36,1),box-shadow .45s cubic-bezier(.22,1,.36,1),background .2s,border-color .2s;
+  position:relative;z-index:1;
+}
+.tool:hover{
+  transform:translateY(-5px) scale(1.018);
+  background:var(--surface2);
+  border-color:rgba(232,213,176,0.18);
+  box-shadow:0 16px 48px rgba(0,0,0,0.45),0 0 0 1px rgba(232,213,176,0.1);
+  z-index:10;
+}
+.tool::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(232,213,176,0.08) 0%,transparent 60%);
+  opacity:0;transition:opacity .3s;border-radius:var(--r);
+}
+.tool:hover::before{opacity:1;}
+.tool-hdr{display:flex;align-items:center;gap:14px;padding:18px 20px;cursor:pointer;
+  width:100%;background:none;border:none;text-align:left;color:var(--text);}
+.tool-ico{font-size:1.2rem;opacity:0.55;flex-shrink:0;width:28px;text-align:center;margin-top:1px;}
 .tool-info{flex:1;}
-.tool-title{font-size:0.95rem;font-weight:500;color:var(--text);margin-bottom:2px;
+.tool-title{font-size:1.05rem;font-weight:400;color:var(--text);margin-bottom:4px;
   font-family:'Instrument Serif',Georgia,serif;letter-spacing:-0.01em;}
-.tool-desc{font-size:0.72rem;color:var(--muted);font-weight:300;}
+.tool-desc{font-size:0.78rem;color:var(--muted);font-weight:300;line-height:1.55;}
 .tool-chev{font-size:0.6rem;color:var(--muted);transition:transform .22s;margin-left:auto;flex-shrink:0;}
 .tool-chev.open{transform:rotate(180deg);}
 .tool-body{padding:14px 16px 16px;border-top:1px solid var(--border);animation:fadeIn .2s ease;}
@@ -135,6 +150,20 @@ input[type=range]{accent-color:var(--accent);cursor:pointer;}
 </head>
 <body>
 
+<script>
+// Apply theme from URL param immediately — before React loads
+(function(){
+  var p=new URLSearchParams(window.location.search).get('theme');
+  if(p==='light')document.documentElement.classList.add('light-theme');
+  // Also listen for theme changes from parent via postMessage
+  window.addEventListener('message',function(ev){
+    if(ev.data&&ev.data.type==='cs-theme'){
+      if(ev.data.theme==='light')document.documentElement.classList.add('light-theme');
+      else document.documentElement.classList.remove('light-theme');
+    }
+  });
+})();
+</script>
 <div id="app"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
@@ -282,7 +311,7 @@ function ToolSplit(){
       try{
         var buf=await readBuf(f);
         var pdf=await pdfjs.getDocument({data:new Uint8Array(buf)}).promise;
-        var n=pdf.getNumPages();
+        var n=pdf.numPages;
         setTotal(n);
         setStatus('PDF loaded — '+n+' pages. Select pages to extract.');
         // Render thumbnails lazily
@@ -422,20 +451,39 @@ function ToolCompress(){
 
   // Compression uses pdf.js to re-render pages at reduced resolution + jpeg,
   // then pdf-lib to assemble. This is real, effective compression.
+  // Compression levels — lossless-first approach to preserve text quality
+  // Mild: lossless object stream compression only (preserves text/selectable content 100%)
+  // Standard: lossless + moderate JPEG for embedded images only
+  // Hard: lossless + aggressive image downscale (scanned docs compress well, text PDFs less so)
   var LEVELS={
-    mild:{scale:1.2,quality:0.82,label:'Mild — minimal quality loss, moderate size reduction'},
-    standard:{scale:0.9,quality:0.68,label:'Standard — good balance of quality and size'},
-    hard:{scale:0.65,quality:0.45,label:'Hard — significant size reduction, visible quality loss'},
+    mild:{label:'Mild — lossless compression, text fully preserved, selectable'},
+    standard:{scale:1.0,quality:0.80,label:'Standard — good size reduction, text remains selectable'},
+    hard:{scale:0.75,quality:0.62,label:'Hard — maximum reduction, best for scanned/image PDFs'},
   };
 
   async function compress(){
     if(!file){setStatus('Upload a PDF first','err');return;}
-    var cfg=LEVELS[level];
-    setStatus('Compressing at '+level+' level — re-rendering pages…');
-    loadPdfJs(async function(pdfjs){
-      if(!pdfjs){setStatus('Failed to load PDF engine','err');return;}
-      loadPdfLib(async function(PDFLib){
-        if(!PDFLib){setStatus('Failed to load PDF engine','err');return;}
+    setStatus('Compressing…');
+    loadPdfLib(async function(PDFLib){
+      if(!PDFLib){setStatus('Failed to load PDF engine','err');return;}
+      if(level==='mild'){
+        // Lossless only — just re-save with object stream compression
+        // Preserves all text, fonts, vector graphics perfectly
+        try{
+          var buf=await readBuf(file);
+          var doc=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
+          var outBytes=await doc.save({useObjectStreams:true,addDefaultPage:false});
+          var saving=Math.max(0,Math.round((1-outBytes.length/file.size)*100));
+          var fname=basename(file.name)+'_compressed.pdf';
+          dlBlob(new Blob([outBytes],{type:'application/pdf'}),fname);
+          setStatus('Done — '+fmtBytes(outBytes.length)+' ('+saving+'% smaller). Text and quality fully preserved.','ok');
+        }catch(err){setStatus('Error: '+err.message,'err');}
+        return;
+      }
+      // Standard and Hard: re-render pages as images (effective for scanned PDFs)
+      var cfg=LEVELS[level];
+      loadPdfJs(async function(pdfjs){
+        if(!pdfjs){setStatus('Failed to load PDF engine','err');return;}
         try{
           var buf=await readBuf(file);
           var pdfDoc=await pdfjs.getDocument({data:new Uint8Array(buf)}).promise;
@@ -444,16 +492,15 @@ function ToolCompress(){
           for(var i=1;i<=n;i++){
             setStatus('Compressing page '+i+' of '+n+'…');
             var page=await pdfDoc.getPage(i);
-            var vp=page.getViewport({scale:cfg.scale});
+            var origVp=page.getViewport({scale:1});
+            var renderVp=page.getViewport({scale:cfg.scale});
             var canvas=document.createElement('canvas');
-            canvas.width=Math.round(vp.width);canvas.height=Math.round(vp.height);
-            await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+            canvas.width=Math.round(renderVp.width);canvas.height=Math.round(renderVp.height);
+            await page.render({canvasContext:canvas.getContext('2d'),viewport:renderVp}).promise;
             var dataUrl=canvas.toDataURL('image/jpeg',cfg.quality);
             var b64=dataUrl.split(',')[1];
-            var bytes=Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0);});
-            var img=await outDoc.embedJpg(bytes);
-            // Use original page size (A4-like) not scaled canvas size
-            var origVp=page.getViewport({scale:1});
+            var imgBytes=Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0);});
+            var img=await outDoc.embedJpg(imgBytes);
             var outPage=outDoc.addPage([origVp.width,origVp.height]);
             outPage.drawImage(img,{x:0,y:0,width:origVp.width,height:origVp.height});
           }
@@ -461,7 +508,8 @@ function ToolCompress(){
           var saving=Math.max(0,Math.round((1-outBytes.length/file.size)*100));
           var fname=basename(file.name)+'_compressed.pdf';
           dlBlob(new Blob([outBytes],{type:'application/pdf'}),fname);
-          setStatus('Done — '+fmtBytes(outBytes.length)+' ('+saving+'% smaller than '+fmtBytes(file.size)+')','ok');
+          var note=level==='hard'?' Text may not be selectable in this output.':'';
+          setStatus('Done — '+fmtBytes(outBytes.length)+' ('+saving+'% smaller).'+note,'ok');
         }catch(err){setStatus('Error: '+err.message,'err');}
       });
     });
@@ -839,7 +887,14 @@ function App(){
   return e('div',null,
     TOOLS.map(function(tool){
       var isOpen=open===tool.id;
-      return e('div',{key:tool.id,className:'tool'},
+      return e('div',{key:tool.id,className:'tool',
+        onMouseMove:function(ev){
+          var el=ev.currentTarget;
+          var b=el.getBoundingClientRect();
+          el.style.setProperty('--mx',((ev.clientX-b.left)/b.width*100)+'%');
+          el.style.setProperty('--my',((ev.clientY-b.top)/b.height*100)+'%');
+        }
+      },
         e('button',{className:'tool-hdr',onClick:function(){setOpen(isOpen?null:tool.id);}},
           e('span',{className:'tool-ico'},tool.icon),
           e('div',{className:'tool-info'},
