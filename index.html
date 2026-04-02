@@ -2014,6 +2014,9 @@ function App(){
       var next=!d;
       if(next){document.documentElement.classList.remove('light');}
       else{document.documentElement.classList.add('light');}
+      // Notify resources iframe of theme change
+      var frames=document.querySelectorAll('iframe[title="Resources"]');
+      frames.forEach(function(f){try{f.contentWindow.postMessage({type:'cs-theme',theme:next?'dark':'light'},'*');}catch(_){}});
       return next;
     });
   }
@@ -3646,7 +3649,7 @@ function App(){
 
     /* RESOURCES MODAL */
     showRes&&e('div',{className:'ws-ov',style:{zIndex:610},onClick:function(ev){if(ev.target===ev.currentTarget)setShowRes(false);}},
-      e('div',{className:'ws-box',style:{maxWidth:860,maxHeight:'92vh'}},
+      e('div',{className:'ws-box',style:{maxWidth:920,width:'100%',height:'90vh',display:'flex',flexDirection:'column'}},
         e('div',{className:'ws-head'},
           e('div',{style:{display:'flex',flexDirection:'column',gap:3}},
             e('div',{className:'ws-title'},'Resources'),
@@ -3656,8 +3659,8 @@ function App(){
           e('button',{className:'ws-close',onClick:function(){setShowRes(false);}},'×')
         ),
         e('iframe',{
-          src:'/resources.html',
-          style:{border:'none',width:'100%',flex:1,minHeight:0,background:'var(--bg)'},
+          src:'/resources.html?theme='+(dark?'dark':'light'),
+          style:{border:'none',width:'100%',flex:1,minHeight:0},
           title:'Resources',
           allow:'downloads',
         })
