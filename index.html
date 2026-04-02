@@ -1804,11 +1804,32 @@ function AuthModal({onClose}){
 
 
 function MistakeList(props){
-  var mistakes=props.mistakes||[];
+  var rawMistakes=props.mistakes||[];
   var openS=useState({}),setOpen=openS[1];var open=openS[0];
   function toggle(id){setOpen(function(o){var n=Object.assign({},o);n[id]=!n[id];return n;});}
+
+  // Deduplicate by question text — keep most recent, merge repeat counts
+  var seen={};
+  var deduped=[];
+  rawMistakes.forEach(function(m){
+    var key=(m.set_name||m.setName||'')+'::'+m.question;
+    if(!seen[key]){seen[key]=deduped.length;deduped.push(Object.assign({},m));}
+    else{
+      var existing=deduped[seen[key]];
+      existing.repeat_count=(existing.repeat_count||1)+(m.repeat_count||1);
+      // Keep most recent date
+      var existDate=new Date(existing.last_date||existing.created_at||0);
+      var newDate=new Date(m.last_date||m.created_at||0);
+      if(newDate>existDate)existing.last_date=m.last_date||m.created_at;
+    }
+  });
+  // Show last 50 distinct mistakes
+  var mistakes=deduped.slice(0,50);
+
   return e(React.Fragment,null,
-    e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
+    e('div',{style:{fontSize:'0.72rem',fontStyle:'italic',color:'var(--muted)',marginBottom:10,lineHeight:1.6}},
+      'Showing last 50 distinct mistakes — repeated mistakes are grouped, not duplicated.'),
+    e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:8}},
       e('button',{
         onClick:function(){if(window.confirm('Clear all mistakes? This cannot be undone.'))props.onClear();},
         style:{fontSize:'0.7rem',color:'var(--muted)',background:'none',border:'1px solid var(--border)',borderRadius:'6px',padding:'5px 10px',cursor:'none',fontFamily:'Geist,sans-serif'}
@@ -1820,7 +1841,11 @@ function MistakeList(props){
         e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
           e('div',{style:{flex:1}},
             e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:3,lineHeight:1.5}},m.question),
-            e('div',{className:'mist-set'},'from: '+(m.set_name||m.setName)+' · '+fmtDate(m,{day:'numeric',month:'short'}))
+            e('div',{className:'mist-set'},
+              'from: '+(m.set_name||m.setName)+' · '+fmtDate(m,{day:'numeric',month:'short'}),
+              m.repeat_count>1&&e('span',{style:{marginLeft:6,color:'var(--red)',fontSize:'0.62rem',fontWeight:500}},
+                '× '+m.repeat_count+' times')
+            )
           ),
           e('button',{
             onClick:function(){toggle(m.id);},
@@ -2878,6 +2903,23 @@ function App(){
   // ── Pro: record mistake — only for saved sets ──
   function recordMistake(question,options,correct,explanation){
     if(!activeSetName)return;
+    // Don't record if exact same question for same set already exists
+    var alreadyExists=mistakes.some(function(m){
+      return (m.set_name||m.setName)===activeSetName&&m.question===question;
+    });
+    if(alreadyExists){
+      // Update the date on the existing mistake to show it was repeated, but don't duplicate
+      setMistakes(function(prev){return prev.map(function(m){
+        if((m.set_name||m.setName)===activeSetName&&m.question===question){
+          return Object.assign({},m,{
+            repeat_count:(m.repeat_count||1)+1,
+            last_date:new Date().toISOString(),
+          });
+        }
+        return m;
+      });});
+      return; // don't write new row to Supabase for a repeat
+    }
     var id=Date.now().toString(36);
     var entry={id,question,options:options||[],correct,explanation:explanation||'',set_name:activeSetName,setName:activeSetName,created_at:new Date().toISOString(),date:new Date().toISOString()};
     setMistakes(function(prev){return [entry].concat(prev).slice(0,200);});
@@ -3749,30 +3791,64 @@ function App(){
           ),
 
           /* ── HISTORY TAB ── */
-          wsTab==='history'&&(
-            quizHist.length===0
-              ? e('div',{className:'ws-empty'},
-                  e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📊'),
-                  t('No quiz history yet.'),e('br'),
-                  e('span',{style:{color:'var(--muted)'}},'Complete a quiz and your scores will appear here.')
-                )
-              : e('div',null,
-                  quizHist.map(function(q){
-                    var pct=Math.round(q.score/q.total*100);
-                    var col=pct>=80?'var(--green)':pct>=50?'var(--accent)':'var(--red)';
-                    return e('div',{key:q.id,className:'qh-item'},
-                      e('div',{className:'qh-left'},
-                        e('div',{style:{fontWeight:500,fontSize:'0.82rem'}},q.set_name||q.setName),
-                        e('div',{className:'qh-date'},fmtDate(q,{day:'numeric',month:'short',year:'numeric'}))
-                      ),
-                      e('div',{style:{textAlign:'right',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}},
-                        e('div',{style:{fontSize:'1rem',fontWeight:600,color:col}},pct+'%'),
-                        e('div',{style:{fontSize:'0.68rem',color:'var(--muted)'}},q.score+' / '+q.total+' correct')
-                      )
-                    );
-                  })
-                )
-          ),
+          wsTab==='history'&&(function(){
+            if(quizHist.length===0) return e('div',{className:'ws-empty'},
+              e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📊'),
+              t('No quiz history yet.'),e('br'),
+              e('span',{style:{color:'var(--muted)'}},'Save a set first, then attempt its quiz — your results will appear here.')
+            );
+            // Group attempts by set name, most recent first
+            var groups={};
+            quizHist.forEach(function(q){
+              var name=q.set_name||q.setName||'Unknown';
+              if(!groups[name])groups[name]=[];
+              groups[name].push(q);
+            });
+            var groupList=Object.keys(groups).map(function(name){
+              var attempts=groups[name];
+              var latest=attempts[0];
+              var bestPct=Math.max.apply(null,attempts.map(function(a){return Math.round(a.score/a.total*100);}));
+              return {name:name,attempts:attempts,latest:latest,bestPct:bestPct};
+            }).sort(function(a,b){
+              var ta=new Date(a.latest.completed_at||a.latest.date||0).getTime();
+              var tb=new Date(b.latest.completed_at||b.latest.date||0).getTime();
+              return tb-ta;
+            });
+            return e('div',null,
+              e('div',{style:{fontSize:'0.72rem',fontStyle:'italic',color:'var(--muted)',marginBottom:12,lineHeight:1.6}},
+                'Save your card set first, then attempt its quiz — results are grouped by set and tracked across all attempts.'),
+              groupList.map(function(g){
+                var latestPct=Math.round(g.latest.score/g.latest.total*100);
+                var latestCol=latestPct>=80?'#4ade80':latestPct>=50?'var(--accent)':'var(--red)';
+                return e('div',{key:g.name,className:'qh-item',style:{flexDirection:'column',alignItems:'stretch',gap:0}},
+                  // Header row
+                  e('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:g.attempts.length>1?8:0}},
+                    e('div',null,
+                      e('div',{style:{fontWeight:500,fontSize:'0.82rem',color:'var(--text)'}},g.name),
+                      e('div',{className:'qh-date'},g.attempts.length+' attempt'+(g.attempts.length!==1?'s':''))
+                    ),
+                    e('div',{style:{textAlign:'right'}},
+                      e('div',{style:{fontSize:'1rem',fontWeight:600,color:latestCol}},latestPct+'%'),
+                      e('div',{style:{fontSize:'0.65rem',color:'var(--muted)'}},
+                        g.latest.score+'/'+g.latest.total+' · latest')
+                    )
+                  ),
+                  // All attempts (most recent first) — shown as compact rows
+                  g.attempts.length>1&&e('div',{style:{borderTop:'1px solid var(--border)',paddingTop:8,display:'flex',flexDirection:'column',gap:4}},
+                    g.attempts.map(function(a,ai){
+                      var apct=Math.round(a.score/a.total*100);
+                      var acol=apct>=80?'#4ade80':apct>=50?'var(--accent)':'var(--red)';
+                      return e('div',{key:a.id||ai,style:{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:'0.74rem'}},
+                        e('span',{style:{color:'var(--muted)'}},fmtDate(a,{day:'numeric',month:'short',year:'numeric'})),
+                        e('span',{style:{color:acol,fontWeight:600}},apct+'%'),
+                        e('span',{style:{color:'var(--muted)',fontSize:'0.68rem'}},a.score+'/'+a.total)
+                      );
+                    })
+                  )
+                );
+              })
+            );
+          })(),
 
 
           /* ── REVISE TODAY TAB (Elite only) ── */
