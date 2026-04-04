@@ -144,6 +144,7 @@ select,.sel{background:var(--surface2);border:1px solid var(--border);border-rad
 .ann-color-swatch.sel{border-color:var(--text);}
 .ann-canvas-wrap{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);margin:8px 0;touch-action:none;}
 .ann-canvas-wrap canvas{display:block;max-width:100%;cursor:crosshair;}
+@keyframes spin{to{transform:rotate(360deg);}}
 .ann-size-row{display:flex;align-items:center;gap:8px;margin:4px 0;}
 .ann-pg-nav{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:0.74rem;color:var(--muted);}
 /* Page tools tabs */
@@ -931,6 +932,8 @@ function ToolAnnotate(){
   var selectedObjIdS=useState(null),setSelectedObjId=selectedObjIdS[1];var selectedObjId=selectedObjIdS[0];
   var editingObjIdS=useState(null),setEditingObjId=editingObjIdS[1];var editingObjId=editingObjIdS[0];
   var editTextS=useState(''),setEditText=editTextS[1];var editText=editTextS[0];
+  var loadingPageS=useState(false),setLoadingPage=loadingPageS[1];var loadingPage=loadingPageS[0];
+  var renderPendingRef=useRef(null); // {pdf, idx} waiting for canvas mount
   var objsS=useState({}),setObjs=objsS[1];var objs=objsS[0]; // mirror of objLayersRef for render
 
   function getObjs(idx){return (objs[idx!=null?idx:pageIdx])||[];}
@@ -954,31 +957,47 @@ function ToolAnnotate(){
     var stack=undoStackRef.current[pageIdx];
     if(!stack||!stack.length){setStatus('Nothing to undo','err');return;}
     var snap=stack.pop();
+    // Update strokeLayersRef FIRST so redrawObjects uses the restored stroke
+    strokeLayersRef.current[pageIdx]=snap.stroke||null;
     setPageObjs(pageIdx,snap.objs||[]);
-    var ov=overlayRef.current;
-    if(ov&&snap.stroke){ov.getContext('2d').putImageData(snap.stroke,0,0);}
-    else if(ov){ov.getContext('2d').clearRect(0,0,ov.width,ov.height);}
     setSelectedObjId(null);
+    setEditingObjId(null);
+    // redrawObjects reads strokeLayersRef.current[idx] internally — now correct
     redrawObjects(pageIdx,snap.objs||[]);
   }
 
   async function onFile(f){
     if(!f)return;
-    setFile(f);setStatus('Loading…');
+    setFile(f);setStatus('Loading PDF…');setLoadingPage(true);
     loadPdfJs(async function(pdfjs){
-      if(!pdfjs){setStatus('Failed to load PDF engine','err');return;}
+      if(!pdfjs){setStatus('Failed to load PDF engine','err');setLoadingPage(false);return;}
       try{
         var buf=await readBuf(f);
         var pdf=await pdfjs.getDocument({data:new Uint8Array(buf)}).promise;
         pdfDocRef.current=pdf;
-        setTotal(pdf.numPages);setPageIdx(0);setStatus('');
-        await renderPage(pdf,0);
-      }catch(err){setStatus('Cannot read PDF: '+err.message,'err');}
+        setTotal(pdf.numPages);
+        setPageIdx(0);
+        setStatus('');
+        // Canvas may not be mounted yet (waiting on setTotal re-render)
+        // Store pending render and try immediately — canvasReady callback will also try
+        renderPendingRef.current={pdf:pdf,idx:0};
+        if(canvasRef.current){
+          await renderPage(pdf,0);
+          renderPendingRef.current=null;
+        }
+        // If canvas not ready yet, canvasReady ref callback will fire renderPage
+        setLoadingPage(false);
+      }catch(err){setStatus('Cannot read PDF: '+err.message,'err');setLoadingPage(false);}
     });
   }
 
   async function renderPage(pdf,idx){
-    if(!pdf||!canvasRef.current)return;
+    if(!pdf)return;
+    if(!canvasRef.current){
+      // Canvas not ready — store pending and wait
+      renderPendingRef.current={pdf:pdf,idx:idx};
+      return;
+    }
     var page=await pdf.getPage(idx+1);
     var vp=page.getViewport({scale:1.4});
     var cv=canvasRef.current;
@@ -1412,9 +1431,29 @@ function ToolAnnotate(){
         e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem'},disabled:pageIdx>=total-1,onClick:function(){goPage(pageIdx+1);}
         },'Next →')
       ),
-      // Canvas
-      e('div',{className:'ann-canvas-wrap',style:{cursor:tool==='eraser'?'cell':tool==='select'?'default':tool==='text'?'text':tool==='highlight'?'text':'crosshair',position:'relative'}},
-        e('canvas',{ref:canvasRef,style:{display:'block',maxWidth:'100%'}}),
+      // Canvas — always mounted once file loaded so canvasRef is always available
+      e('div',{className:'ann-canvas-wrap',style:{cursor:tool==='eraser'?'cell':tool==='select'?'default':tool==='text'?'text':tool==='highlight'?'text':'crosshair',position:'relative',minHeight:loadingPage?120:undefined}},
+        loadingPage&&e('div',{style:{
+          position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
+          background:'var(--surface2)',borderRadius:'var(--r-sm)',zIndex:5,
+          fontSize:'0.78rem',color:'var(--muted)',flexDirection:'column',gap:8,minHeight:120
+        }},
+          e('div',{style:{
+            width:36,height:36,border:'3px solid var(--border)',
+            borderTopColor:'var(--accent)',borderRadius:'50%',
+            animation:'spin 0.8s linear infinite'
+          }}),
+          'Rendering PDF…'
+        ),
+        e('canvas',{ref:function(el){
+          canvasRef.current=el;
+          // Fire pending render if canvas just mounted and there's work waiting
+          if(el&&renderPendingRef.current){
+            var pending=renderPendingRef.current;
+            renderPendingRef.current=null;
+            renderPage(pending.pdf,pending.idx);
+          }
+        },style:{display:'block',maxWidth:'100%'}}),
         e('canvas',{ref:overlayRef,
           style:{position:'absolute',top:0,left:0,width:'100%',height:'100%'},
           onMouseDown:onPointerDown,
