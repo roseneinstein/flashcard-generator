@@ -940,6 +940,7 @@ function ToolAnnotate(){
   var draggingRef=useRef(false);
   var dragOffRef=useRef({x:0,y:0});
   var resizingRef=useRef(false);
+  var moveModeRef=useRef(false); // true when user clicked Move button in control panel
 
   // ── helpers ─────────────────────────────────────────────────────────────
   function setPageObjs(idx,list){
@@ -962,7 +963,7 @@ function ToolAnnotate(){
   }
   function resizeHandleHit(pt,o){
     var b=objBounds(o);
-    return pt.x>=b.x2-4&&pt.x<=b.x2+16&&pt.y>=b.y2-4&&pt.y<=b.y2+16;
+    return pt.x>=b.x2-6&&pt.x<=b.x2+20&&pt.y>=b.y2-6&&pt.y<=b.y2+20;
   }
 
   function pushUndo(idx){
@@ -1021,10 +1022,13 @@ function ToolAnnotate(){
       // selection outline + resize handle
       if(obj.id===selectedObjRef.current){
         var b=objBounds(obj);
-        ctx.strokeStyle='rgba(232,213,176,0.85)';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+        ctx.strokeStyle='rgba(232,213,176,0.9)';ctx.lineWidth=2;ctx.setLineDash([5,3]);
         ctx.strokeRect(b.x1-4,b.y1-4,b.x2-b.x1+8,b.y2-b.y1+8);ctx.setLineDash([]);
-        // resize handle bottom-right
-        ctx.fillStyle='#e8d5b0';ctx.fillRect(b.x2+2,b.y2+2,12,12);
+        // resize handle — bigger (18×18) for easy grabbing
+        ctx.fillStyle='#e8d5b0';ctx.fillRect(b.x2-2,b.y2-2,18,18);
+        ctx.strokeStyle='rgba(30,27,20,0.5)';ctx.lineWidth=1;ctx.strokeRect(b.x2-2,b.y2-2,18,18);
+        ctx.fillStyle='rgba(30,27,20,0.7)';ctx.font='bold 11px sans-serif';
+        ctx.textAlign='center';ctx.fillText('⇲',b.x2+7,b.y2+13);ctx.textAlign='left';
       }
       ctx.restore();
     });
@@ -1081,50 +1085,58 @@ function ToolAnnotate(){
     return {x:(cx-b.left)*sx,y:(cy-b.top)*sy};
   }
 
+  // Track mousedown position to detect drag vs click
+  var mouseDownPtRef=useRef(null);
+
   function onMouseDown(ev){
     if(!pdfDocRef.current||editingObjId)return;
     ev.preventDefault();
     var pt=getPos(ev);
     var list=getObjs(pageIdx);
+    mouseDownPtRef.current=pt;
 
-    // ── Select/move/resize ──
-    if(tool==='select'){
+    // ── Select tool OR move mode from control panel ──
+    if(tool==='select'||moveModeRef.current){
       var hit=hitTest(pt,list);
       if(hit){
-        if(resizeHandleHit(pt,hit)){resizingRef.current=true;}
+        if(!moveModeRef.current&&resizeHandleHit(pt,hit)){resizingRef.current=true;}
         else{resizingRef.current=false;dragOffRef.current={x:pt.x-hit.x,y:pt.y-hit.y};}
         draggingRef.current=true;
         selectedObjRef.current=hit.id;setSelectedObjId(hit.id);
         redraw(pageIdx,list);
-      } else {selectedObjRef.current=null;setSelectedObjId(null);redraw(pageIdx,list);}
+      } else if(!moveModeRef.current){
+        selectedObjRef.current=null;setSelectedObjId(null);redraw(pageIdx,list);
+      }
       return;
     }
 
-    // ── Text: click places a text box at that position ──
+    // ── Text: clicking an existing text box selects it ──
     if(tool==='text'){
       var hitT=hitTest(pt,list);
-      if(hitT&&hitT.type==='text'){
-        // single click on existing text — select it
+      if(hitT){
+        // clicking any existing obj in text mode — select and allow drag
+        if(resizeHandleHit(pt,hitT)){resizingRef.current=true;}
+        else{resizingRef.current=false;dragOffRef.current={x:pt.x-hitT.x,y:pt.y-hitT.y};}
+        draggingRef.current=true;
         selectedObjRef.current=hitT.id;setSelectedObjId(hitT.id);
         redraw(pageIdx,list);return;
       }
-      // place new text box
-      pushUndo(pageIdx);
-      var fs=size*3+14;
-      var id='t'+Date.now();
-      var ov=overlayRef.current;
-      var tx=ov?Math.min(pt.x,ov.width-160):pt.x;
-      var ty=ov?Math.min(pt.y+fs,ov.height-20):pt.y+fs;
-      var obj={type:'text',id:id,x:tx,y:ty,w:160,h:fs,text:'Your text here',color:color,fill:'none',fontSize:fs,rotate:0};
-      var nl=list.concat([obj]);
-      setPageObjs(pageIdx,nl);
-      selectedObjRef.current=id;setSelectedObjId(id);
-      redraw(pageIdx,nl);
+      // empty area — will create text box on mouseup (not mousedown, to avoid drag-creates)
       return;
     }
 
-    // ── Image: click on existing — handled in select mode ──
-    if(tool==='image')return;
+    // ── Image: clicking existing image in image mode selects it ──
+    if(tool==='image'){
+      var hitI=hitTest(pt,list);
+      if(hitI){
+        if(resizeHandleHit(pt,hitI)){resizingRef.current=true;}
+        else{resizingRef.current=false;dragOffRef.current={x:pt.x-hitI.x,y:pt.y-hitI.y};}
+        draggingRef.current=true;
+        selectedObjRef.current=hitI.id;setSelectedObjId(hitI.id);
+        redraw(pageIdx,list);
+      }
+      return;
+    }
 
     // ── Eraser ──
     if(tool==='eraser'){
@@ -1153,8 +1165,8 @@ function ToolAnnotate(){
   function onMouseMove(ev){
     var pt=getPos(ev);
 
-    // drag/resize selected object
-    if(draggingRef.current&&selectedObjRef.current&&tool==='select'){
+    // drag/resize selected object — works in select, text, and image tools
+    if(draggingRef.current&&selectedObjRef.current&&(tool==='select'||tool==='text'||tool==='image'||moveModeRef.current)){
       ev.preventDefault();
       var list=getObjs(pageIdx);
       var nl=list.map(function(o){
@@ -1213,9 +1225,33 @@ function ToolAnnotate(){
     lastPtRef.current=pt;
   }
 
-  function onMouseUp(){
+  function onMouseUp(ev){
     if(drawingRef.current){saveStroke();arrowStartRef.current=null;arrowBaseSnapRef.current=null;}
+    var wasDragging=draggingRef.current;
     drawingRef.current=false;draggingRef.current=false;resizingRef.current=false;
+
+    // Place new text box on mouseup only if no drag happened (true click on empty area)
+    if(tool==='text'&&!wasDragging&&!editingObjId&&mouseDownPtRef.current){
+      var pt=mouseDownPtRef.current;
+      var list=getObjs(pageIdx);
+      var hitT=hitTest(pt,list);
+      if(!hitT){
+        pushUndo(pageIdx);
+        var fs=size*3+14;
+        var id='t'+Date.now();
+        var ov=overlayRef.current;
+        var tx=ov?Math.min(pt.x,ov.width-160):pt.x;
+        var ty=ov?Math.min(pt.y+fs,ov.height-20):pt.y+fs;
+        var obj={type:'text',id:id,x:tx,y:ty,w:180,h:fs,text:'',color:color,fill:'none',fontSize:fs,rotate:0,isNew:true};
+        var nl=list.concat([obj]);
+        setPageObjs(pageIdx,nl);
+        selectedObjRef.current=id;setSelectedObjId(id);
+        // Auto-open edit mode immediately for new text boxes
+        setEditingObjId(id);setEditText('');
+        redraw(pageIdx,nl);
+      }
+    }
+    mouseDownPtRef.current=null;
   }
 
   function onDblClick(ev){
@@ -1232,11 +1268,11 @@ function ToolAnnotate(){
   // ── object operations ────────────────────────────────────────────────────
   function commitText(){
     if(!editingObjId)return;
-    var t=editText;
+    var t=editText.trim()||'Text';
     var list=getObjs(pageIdx).map(function(o){
       if(o.id!==editingObjId)return o;
-      var mw=Math.max(60,t.length*o.fontSize*0.55);
-      return Object.assign({},o,{text:t||'Text',w:mw});
+      var mw=Math.max(80,t.length*o.fontSize*0.55);
+      return Object.assign({},o,{text:t,w:mw,isNew:false});
     });
     setPageObjs(pageIdx,list);
     redraw(pageIdx,list);
@@ -1403,27 +1439,85 @@ function ToolAnnotate(){
         )
       ),
 
-      // ── Selected object controls ──
-      selObj&&e('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',
-        margin:'6px 0',padding:'8px 10px',background:'var(--surface2)',borderRadius:'var(--r-sm)'}},
-        e('span',{className:'label'},'Selected:'),
-        selObj.type==='text'&&e('span',{style:{fontSize:'0.7rem',color:'var(--muted)'}},'Fill:'),
-        selObj.type==='text'&&TEXT_FILLS.map(function(f,fi){
-          return e('div',{key:fi,style:{width:18,height:18,borderRadius:4,cursor:'pointer',
-            border:'2px solid '+(selObj.fill===f?'var(--accent)':'transparent'),
-            background:f==='none'?'repeating-linear-gradient(45deg,var(--muted2) 0,var(--muted2) 2px,transparent 0,transparent 50%) 0/8px 8px':f},
-            onClick:function(){setTextFill(f);}});
-        }),
-        e('button',{className:'ann-tool-btn',onClick:function(){rotateSelected(-15);}},'↺ -15°'),
-        e('button',{className:'ann-tool-btn',onClick:function(){rotateSelected(15);}},'↻ +15°'),
-        selObj.type==='text'&&e('button',{className:'ann-tool-btn',style:{color:'var(--muted)'},
-          onClick:function(){
-            selectedObjRef.current=selObj.id;setSelectedObjId(selObj.id);
-            setEditingObjId(selObj.id);setEditText(selObj.text);
-          }},'✎ Edit text'),
-        e('span',{style:{fontSize:'0.67rem',color:'var(--muted)',marginLeft:4}},
-          'Drag to move · Corner ▪ to resize'),
-        e('button',{className:'ann-tool-btn',style:{color:'var(--red)',marginLeft:'auto'},onClick:deleteSelected},'✕ Delete')
+      // ── Selected object control panel ──────────────────────────────────────
+      selObj&&e('div',{style:{
+        border:'1px solid var(--border)',borderRadius:'var(--r-sm)',
+        margin:'6px 0',padding:'10px 12px',background:'var(--surface)',
+        display:'flex',flexDirection:'column',gap:8
+      }},
+        // Row 1: title + delete
+        e('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between'}},
+          e('span',{style:{fontSize:'0.7rem',fontWeight:500,color:'var(--text)'}},
+            (selObj.type==='text'?'✦ Text box':'🖼 Image')+' selected'),
+          e('button',{className:'ann-tool-btn',style:{color:'var(--red)'},onClick:deleteSelected},'✕ Delete')
+        ),
+
+        // Row 2: Move button + rotate
+        e('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+          e('button',{
+            className:'ann-tool-btn'+(moveModeRef.current?' sel':''),
+            style:{padding:'5px 14px',fontWeight:500},
+            onClick:function(){
+              moveModeRef.current=!moveModeRef.current;
+              // force re-render by toggling selected
+              setSelectedObjId(function(prev){return prev;});
+            }
+          },'✥ Move'),
+          e('span',{style:{fontSize:'0.7rem',color:'var(--muted)'}},'Rotate:'),
+          e('button',{className:'ann-tool-btn',onClick:function(){rotateSelected(-15);}},'↺ -15°'),
+          e('button',{className:'ann-tool-btn',onClick:function(){rotateSelected(15);}},'↻ +15°')
+        ),
+
+        // Row 3: Size slider (width) — for both text and image
+        e('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
+          e('span',{style:{fontSize:'0.7rem',color:'var(--muted)',flexShrink:0}},
+            selObj.type==='text'?'Box width: '+Math.round(selObj.w)+'px':'Image size: '+Math.round(selObj.w)+'px'),
+          e('input',{type:'range',min:40,max:overlayRef.current?overlayRef.current.width*0.9:600,
+            value:Math.round(selObj.w),style:{flex:1,minWidth:80,maxWidth:200},
+            onChange:function(ev){
+              var nw=parseInt(ev.target.value);
+              var list=getObjs(pageIdx).map(function(o){
+                if(o.id!==selObj.id)return o;
+                var nh=Math.round(nw*(o.h/Math.max(1,o.w)));
+                var nfs=o.type==='text'?Math.max(8,Math.round(nw/8)):o.fontSize;
+                return Object.assign({},o,{w:nw,h:nh,fontSize:nfs});
+              });
+              setPageObjs(pageIdx,list);redraw(pageIdx,list);
+            }
+          })
+        ),
+
+        // Row 4 (text only): font color + fill + edit text
+        selObj.type==='text'&&e('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
+          e('span',{style:{fontSize:'0.7rem',color:'var(--muted)',flexShrink:0}},'Color:'),
+          ANN_COLORS.map(function(c){
+            return e('div',{key:c,className:'ann-color-swatch'+(selObj.color===c?' sel':''),
+              style:{width:16,height:16,background:c},
+              onClick:function(){
+                var list=getObjs(pageIdx).map(function(o){return o.id===selObj.id?Object.assign({},o,{color:c}):o;});
+                setPageObjs(pageIdx,list);redraw(pageIdx,list);
+              }
+            });
+          }),
+          e('span',{style:{fontSize:'0.7rem',color:'var(--muted)',marginLeft:6,flexShrink:0}},'Fill:'),
+          TEXT_FILLS.map(function(f,fi){
+            return e('div',{key:fi,style:{width:16,height:16,borderRadius:3,cursor:'pointer',flexShrink:0,
+              border:'2px solid '+(selObj.fill===f?'var(--accent)':'transparent'),
+              background:f==='none'?'repeating-linear-gradient(45deg,var(--muted2) 0,var(--muted2) 2px,transparent 0,transparent 50%) 0/8px 8px':f},
+              onClick:function(){setTextFill(f);}});
+          })
+        ),
+
+        // Row 5 (text only): Edit text button
+        selObj.type==='text'&&e('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+          e('button',{className:'btn pri',style:{padding:'6px 16px',fontSize:'0.73rem'},
+            onClick:function(){
+              selectedObjRef.current=selObj.id;setSelectedObjId(selObj.id);
+              setEditingObjId(selObj.id);setEditText(selObj.text==='Your text here'?'':selObj.text);
+            }
+          },'✎ Edit text'),
+          e('span',{style:{fontSize:'0.67rem',color:'var(--muted)'}},'or double-click the text box')
+        )
       ),
 
       // ── Page nav ──
@@ -1469,50 +1563,56 @@ function ToolAnnotate(){
           onTouchStart:onMouseDown,onTouchMove:onMouseMove,onTouchEnd:onMouseUp,
           onDblClick:onDblClick,
         }),
-        // Inline text editor
+        // Edit text modal — shown above canvas, not on PDF area
         editingObjId&&(function(){
           var obj=(objs[pageIdx]||[]).find(function(o){return o.id===editingObjId;});
-          if(!obj||!overlayRef.current)return null;
-          var cv=overlayRef.current;
-          var b=cv.getBoundingClientRect();
-          var sx=b.width/cv.width;
+          if(!obj)return null;
           return e('div',{style:{
-            position:'absolute',
-            left:(obj.x*sx-4)+'px',top:((obj.y-obj.h)*sx-4)+'px',
-            minWidth:Math.max(80,(obj.w+8)*sx)+'px',zIndex:20,
+            position:'absolute',top:0,left:0,right:0,
+            background:'var(--surface)',border:'1px solid var(--accent)',
+            borderRadius:'var(--r-sm)',padding:'12px 14px',zIndex:30,
+            boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
           }},
-            e('textarea',{autoFocus:true,value:editText,rows:2,
-              style:{width:'100%',minWidth:80,padding:'4px 6px',
-                fontSize:(obj.fontSize*sx)+'px',fontFamily:'Geist,sans-serif',fontWeight:'bold',
-                color:obj.color,background:obj.fill&&obj.fill!=='none'?obj.fill:'rgba(255,255,255,0.92)',
-                border:'2px solid var(--accent)',borderRadius:4,resize:'both',outline:'none',
-                lineHeight:1.4,boxShadow:'0 2px 12px rgba(0,0,0,0.3)',},
+            e('div',{style:{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6}},
+              'Editing text box — click outside or press Esc to close'),
+            e('textarea',{autoFocus:true,value:editText,rows:3,
+              placeholder:'Write your text here…',
+              style:{width:'100%',padding:'8px 10px',
+                fontSize:(Math.min(obj.fontSize,20))+'px',fontFamily:'Geist,sans-serif',fontWeight:'bold',
+                color:obj.color,background:obj.fill&&obj.fill!=='none'?obj.fill:'var(--surface2)',
+                border:'1px solid var(--border)',borderRadius:6,resize:'vertical',outline:'none',
+                lineHeight:1.5,display:'block',marginBottom:8},
               onChange:function(ev){setEditText(ev.target.value);},
-              onBlur:commitText,
               onKeyDown:function(ev){
                 if(ev.key==='Escape'){setEditingObjId(null);setEditText('');}
                 if(ev.key==='Enter'&&ev.shiftKey){ev.preventDefault();commitText();}
               }
             }),
-            e('div',{style:{display:'flex',gap:4,marginTop:3,alignItems:'center'}},
-              e('span',{style:{fontSize:'0.63rem',color:'var(--muted)'}},'Font size:'),
-              e('input',{type:'range',min:8,max:72,value:obj.fontSize,style:{width:80},
+            e('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+              e('span',{style:{fontSize:'0.68rem',color:'var(--muted)'}},'Font size: '+obj.fontSize),
+              e('input',{type:'range',min:8,max:72,value:obj.fontSize,style:{width:90},
                 onChange:function(ev){
                   var fs=parseInt(ev.target.value);
                   var list=getObjs(pageIdx).map(function(o){return o.id===editingObjId?Object.assign({},o,{fontSize:fs,h:fs}):o;});
                   setPageObjs(pageIdx,list);redraw(pageIdx,list);
                 }
               }),
-              e('span',{style:{fontSize:'0.63rem',color:'var(--muted)',marginLeft:4}},'Shift+Enter · Esc')
+              e('button',{className:'btn pri',style:{padding:'5px 14px',fontSize:'0.72rem',marginLeft:'auto'},
+                onClick:commitText},'✓ Done'),
+              e('button',{className:'btn sec',style:{padding:'5px 14px',fontSize:'0.72rem'},
+                onClick:function(){setEditingObjId(null);setEditText('');}},'✕ Cancel')
             )
           );
         })()
       ),
       e('div',{className:'note',style:{marginTop:6}},
-        tool==='text'?'Click anywhere to place a text box. Then use Select tool to move/resize/rotate. Double-click to edit text.'
-        :tool==='image'?'Click Image button to upload. Image appears at top-centre — switch to Select to move, resize or rotate.'
-        :tool==='highlight'?'Drag across to highlight. Choose color above.'
-        :'Select: click to select, drag to move, corner ▪ to resize, double-click text to edit.'
+        tool==='pen'?'✏️  Pen — click and drag to draw freehand. Choose color and thickness above.'
+        :tool==='highlight'?'🖍  Highlight — click and drag across any area to highlight it. Choose color above.'
+        :tool==='arrow'?'➡️  Arrow — click to set start point, drag to end point, release to draw arrow.'
+        :tool==='eraser'?'◻  Eraser — click and drag to erase pen, highlight and arrow strokes.'
+        :tool==='text'?'T  Text — click anywhere on the page to place a text box. Editor opens automatically. Click any text box once to see its controls.'
+        :tool==='image'?'🖼  Image — click the Image button above to upload. Image placed at top-centre. Click it once to see controls (move, resize, rotate).'
+        :'↖  Select — click any text box or image to see its controls. Drag to move, drag the corner ▪ handle to resize.'
       )
     ),
     e('div',{className:'row'},
