@@ -929,6 +929,8 @@ function ToolAnnotate(){
   var resizingRef=useRef(false);
 
   var selectedObjIdS=useState(null),setSelectedObjId=selectedObjIdS[1];var selectedObjId=selectedObjIdS[0];
+  var editingObjIdS=useState(null),setEditingObjId=editingObjIdS[1];var editingObjId=editingObjIdS[0];
+  var editTextS=useState(''),setEditText=editTextS[1];var editText=editTextS[0];
   var objsS=useState({}),setObjs=objsS[1];var objs=objsS[0]; // mirror of objLayersRef for render
 
   function getObjs(idx){return (objs[idx!=null?idx:pageIdx])||[];}
@@ -1081,29 +1083,30 @@ function ToolAnnotate(){
       return;
     }
     if(tool==='text'){
+      // Check if clicking on existing text obj — if so, open it for editing
+      var hitExisting=hitTestObjs(pt,list);
+      if(hitExisting&&hitExisting.type==='text'){
+        selectedObjRef.current=hitExisting.id;setSelectedObjId(hitExisting.id);
+        setEditingObjId(hitExisting.id);setEditText(hitExisting.text);
+        redrawObjects(pageIdx,list);
+        return;
+      }
+      // Place new text object
       pushUndo(pageIdx);
       var fontSize=(size*3+12);
       var id='t'+Date.now();
-      var obj={type:'text',id:id,x:pt.x,y:pt.y,w:120,h:fontSize,text:'Text',color:color,fill:'none',fontSize:fontSize,rotate:0};
+      var obj={type:'text',id:id,x:pt.x,y:pt.y,w:160,h:fontSize,text:'',color:color,fill:'none',fontSize:fontSize,rotate:0};
       var newList=list.concat([obj]);
       setPageObjs(pageIdx,newList);
       selectedObjRef.current=id;setSelectedObjId(id);
+      setEditingObjId(id);setEditText('');
       redrawObjects(pageIdx,newList);
-      // Prompt for text edit
-      setTimeout(function(){
-        var txt=window.prompt('Enter text:','Text');
-        if(txt===null)return;
-        var finalList=(objLayersRef.current[pageIdx]||[]).map(function(o){
-          if(o.id!==id)return o;
-          var measured=txt.length*fontSize*0.55;
-          return Object.assign({},o,{text:txt,w:Math.max(40,measured)});
-        });
-        setPageObjs(pageIdx,finalList);
-        redrawObjects(pageIdx,finalList);
-      },50);
       return;
     }
-    if(tool==='image'){imgInputRef.current&&imgInputRef.current.click();return;}
+    if(tool==='image'){
+      // Canvas click does nothing — the toolbar button itself opens the picker
+      return;
+    }
     if(tool==='eraser'){
       pushUndo(pageIdx);
       drawingRef.current=true;lastPtRef.current=pt;
@@ -1114,6 +1117,13 @@ function ToolAnnotate(){
       arrowStartRef.current=pt;
       arrowBaseSnapRef.current=overlayRef.current?overlayRef.current.getContext('2d').getImageData(0,0,overlayRef.current.width,overlayRef.current.height):null;
       drawingRef.current=true;return;
+    }
+    // highlight — record start, draw band on move
+    if(tool==='highlight'){
+      pushUndo(pageIdx);
+      drawingRef.current=true;lastPtRef.current=pt;
+      arrowBaseSnapRef.current=overlayRef.current?overlayRef.current.getContext('2d').getImageData(0,0,overlayRef.current.width,overlayRef.current.height):null;
+      return;
     }
     // pen
     pushUndo(pageIdx);
@@ -1149,6 +1159,19 @@ function ToolAnnotate(){
       ctx.beginPath();ctx.moveTo(lastPtRef.current.x,lastPtRef.current.y);ctx.lineTo(pt.x,pt.y);ctx.stroke();
       ctx.globalCompositeOperation='source-over';
       lastPtRef.current=pt;return;
+    }
+    if(tool==='highlight'){
+      // Restore base then draw highlight band from start to current position
+      if(arrowBaseSnapRef.current)ctx.putImageData(arrowBaseSnapRef.current,0,0);
+      else ctx.clearRect(0,0,ov.width,ov.height);
+      var hlH=size*6+10; // band height based on size
+      var x1=Math.min(lastPtRef.current.x,pt.x);
+      var x2=Math.max(lastPtRef.current.x,pt.x);
+      ctx.globalAlpha=0.38;
+      ctx.fillStyle=color;
+      ctx.fillRect(x1,lastPtRef.current.y-hlH*0.75,x2-x1,hlH);
+      ctx.globalAlpha=1;
+      return;
     }
     // pen
     ctx.strokeStyle=color;ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';
@@ -1199,6 +1222,7 @@ function ToolAnnotate(){
         var list=(objLayersRef.current[pageIdx]||[]).concat([obj]);
         setPageObjs(pageIdx,list);
         selectedObjRef.current=id;setSelectedObjId(id);
+        setTool('select'); // auto-switch to select so user can immediately move/resize
         redrawObjects(pageIdx,list);
       };
       img.src=ev.target.result;
@@ -1226,21 +1250,25 @@ function ToolAnnotate(){
 
   // Text object editing - double click
   function onDblClick(ev){
-    if(tool!=='select')return;
     var pt=getPos(ev);
     var list=objLayersRef.current[pageIdx]||[];
     var hit=hitTestObjs(pt,list);
     if(!hit||hit.type!=='text')return;
-    var txt=window.prompt('Edit text:',hit.text);
-    if(txt===null)return;
-    pushUndo(pageIdx);
-    var newList=list.map(function(o){
-      if(o.id!==hit.id)return o;
-      var measured=txt.length*o.fontSize*0.55;
-      return Object.assign({},o,{text:txt,w:Math.max(40,measured)});
+    selectedObjRef.current=hit.id;setSelectedObjId(hit.id);
+    setEditingObjId(hit.id);setEditText(hit.text);
+    redrawObjects(pageIdx,list);
+  }
+  function commitTextEdit(){
+    if(!editingObjId)return;
+    var txt=editText;
+    var list=(objLayersRef.current[pageIdx]||[]).map(function(o){
+      if(o.id!==editingObjId)return o;
+      var measured=Math.max(40,txt.length*o.fontSize*0.55);
+      return Object.assign({},o,{text:txt||'Text',w:measured});
     });
-    setPageObjs(pageIdx,newList);
-    redrawObjects(pageIdx,newList);
+    setPageObjs(pageIdx,list);
+    redrawObjects(pageIdx,list);
+    setEditingObjId(null);setEditText('');
   }
 
   // Text fill color
@@ -1312,8 +1340,9 @@ function ToolAnnotate(){
   }
 
   var toolBtns=[
-    {id:'select',label:'↖ Select / Move'},
+    {id:'select',label:'↖ Select'},
     {id:'pen',label:'✏️ Pen'},
+    {id:'highlight',label:'🖍 Highlight'},
     {id:'arrow',label:'➡️ Arrow'},
     {id:'text',label:'T Text'},
     {id:'image',label:'🖼 Image'},
@@ -1335,7 +1364,13 @@ function ToolAnnotate(){
       e('div',{className:'ann-toolbar'},
         toolBtns.map(function(tb){
           return e('button',{key:tb.id,className:'ann-tool-btn'+(tool===tb.id?' sel':''),
-            onClick:function(){setTool(tb.id);}},tb.label);
+            onClick:function(){
+              setTool(tb.id);
+              if(tb.id==='image'){
+                // Open file picker immediately when image button clicked
+                setTimeout(function(){imgInputRef.current&&imgInputRef.current.click();},50);
+              }
+            }},tb.label);
         }),
         e('button',{className:'ann-tool-btn',onClick:doUndo,title:'Undo last action'},'↩ Undo'),
         e('button',{className:'ann-tool-btn',style:{color:'var(--red)'},onClick:clearPage},'🗑 Clear page')
@@ -1350,7 +1385,7 @@ function ToolAnnotate(){
           })
         ),
         tool!=='eraser'&&e('div',{className:'ann-size-row'},
-          e('span',{className:'label'},'Size: '+size),
+          e('span',{className:'label'},tool==='highlight'?'Band height: '+size:tool==='text'?'Font size: '+size:'Size: '+size),
           e('input',{type:'range',min:1,max:12,value:size,style:{width:100},
             onChange:function(ev){setSize(parseInt(ev.target.value));}})
         )
@@ -1378,20 +1413,79 @@ function ToolAnnotate(){
         },'Next →')
       ),
       // Canvas
-      e('div',{className:'ann-canvas-wrap',style:{cursor:tool==='eraser'?'cell':tool==='select'?'default':tool==='text'?'text':'crosshair'}},
+      e('div',{className:'ann-canvas-wrap',style:{cursor:tool==='eraser'?'cell':tool==='select'?'default':tool==='text'?'text':tool==='highlight'?'text':'crosshair',position:'relative'}},
         e('canvas',{ref:canvasRef,style:{display:'block',maxWidth:'100%'}}),
         e('canvas',{ref:overlayRef,
           style:{position:'absolute',top:0,left:0,width:'100%',height:'100%'},
           onMouseDown:onPointerDown,
-          onMouseMove:function(ev){if(isMoveTool&&selectedObjId)onSelectMove(ev);else onPointerMove(ev);},
+          onMouseMove:function(ev){
+            if((tool==='select'||tool==='text')&&selectedObjId&&!editingObjId)onSelectMove(ev);
+            else if(!editingObjId)onPointerMove(ev);
+          },
           onMouseUp:onPointerUp,
           onDblClick:onDblClick,
           onTouchStart:onPointerDown,
-          onTouchMove:function(ev){if(isMoveTool&&selectedObjId)onSelectMove(ev);else onPointerMove(ev);},
+          onTouchMove:function(ev){
+            if((tool==='select'||tool==='text')&&selectedObjId&&!editingObjId)onSelectMove(ev);
+            else if(!editingObjId)onPointerMove(ev);
+          },
           onTouchEnd:onPointerUp,
-        })
+        }),
+        // Inline text editor — positioned over the text object being edited
+        editingObjId&&(function(){
+          var editObj=(objLayersRef.current[pageIdx]||[]).find(function(o){return o.id===editingObjId;});
+          if(!editObj||!overlayRef.current)return null;
+          var cv=overlayRef.current;
+          var b=cv.getBoundingClientRect();
+          var scaleX=b.width/cv.width;
+          var relX=editObj.x*scaleX;
+          var relY=(editObj.y-editObj.h)*scaleX;
+          return e('div',{style:{
+            position:'absolute',
+            left:relX+'px',top:relY+'px',
+            minWidth:Math.max(80,editObj.w*scaleX)+'px',
+            zIndex:20,
+          }},
+            e('textarea',{
+              autoFocus:true,
+              value:editText,
+              rows:2,
+              style:{
+                width:'100%',minWidth:80,padding:'4px 6px',
+                fontSize:(editObj.fontSize*scaleX)+'px',
+                fontFamily:'Geist,sans-serif',fontWeight:'bold',
+                color:editObj.color,
+                background:editObj.fill&&editObj.fill!=='none'?editObj.fill:'rgba(255,255,255,0.9)',
+                border:'1.5px solid var(--accent)',borderRadius:4,
+                resize:'both',outline:'none',lineHeight:1.4,
+                boxShadow:'0 2px 12px rgba(0,0,0,0.3)',
+              },
+              onChange:function(ev){setEditText(ev.target.value);},
+              onBlur:commitTextEdit,
+              onKeyDown:function(ev){
+                if(ev.key==='Escape'){setEditingObjId(null);setEditText('');}
+                if(ev.key==='Enter'&&ev.shiftKey){ev.preventDefault();commitTextEdit();}
+              }
+            }),
+            e('div',{style:{display:'flex',gap:4,marginTop:3,alignItems:'center',flexWrap:'wrap'}},
+              e('span',{style:{fontSize:'0.65rem',color:'var(--muted)'}},'Size:'),
+              e('input',{type:'range',min:8,max:72,value:editObj.fontSize,style:{width:80},
+                onChange:function(ev){
+                  var fs=parseInt(ev.target.value);
+                  var list=(objLayersRef.current[pageIdx]||[]).map(function(o){return o.id===editingObjId?Object.assign({},o,{fontSize:fs,h:fs}):o;});
+                  setPageObjs(pageIdx,list);redrawObjects(pageIdx,list);
+                }
+              }),
+              e('span',{style:{fontSize:'0.65rem',color:'var(--muted)',marginLeft:4}},'Shift+Enter to confirm · Esc to cancel')
+            )
+          );
+        })()
       ),
-      e('div',{className:'note',style:{marginTop:6}},'Tip: Use Select tool to move, resize or delete text and images. Double-click a text box to edit it.')
+      e('div',{className:'note',style:{marginTop:6}},
+        tool==='text'?'Click anywhere on the page to place a text box. Click an existing text to edit it. Shift+Enter to confirm, Esc to cancel.'
+        :tool==='highlight'?'Click and drag across text to highlight it. Choose a color above.'
+        :tool==='image'?'Click the Image button to upload — then use Select tool to move, resize or rotate.'
+        :'Select tool: click to select, drag to move, corner handle to resize, double-click text to edit.')
     ),
     e('div',{className:'row'},
       e('button',{className:'btn pri',disabled:!file||!total,onClick:exportPdf},'Export annotated PDF')
@@ -1414,6 +1508,7 @@ function ToolPageTools(){
   var numStartS=useState(1),setNumStart=numStartS[1];var numStart=numStartS[0];
   var wmTextS=useState(''),setWmText=wmTextS[1];var wmText=wmTextS[0];
   var wmOpacS=useState(30),setWmOpac=wmOpacS[1];var wmOpac=wmOpacS[0];
+  var wmSizeS=useState(44),setWmSize=wmSizeS[1];var wmSize=wmSizeS[0];
 
   // Rotate
   var rotAngleS=useState(90),setRotAngle=rotAngleS[1];var rotAngle=rotAngleS[0];
@@ -1493,13 +1588,13 @@ function ToolPageTools(){
         if(wmText.trim()){
           pages.forEach(function(pg){
             var sz=pg.getSize();
-            var wmSize=44;
-            var wmW=font.widthOfTextAtSize(wmText,wmSize);
-            var wmH=wmSize*0.7;
+            var wmSizePt=wmSize; // user-controlled
+            var wmW=font.widthOfTextAtSize(wmText,wmSizePt);
+            var wmH=wmSizePt*0.7;
             pg.drawText(wmText,{
               x:(sz.width-wmW*Math.cos(35*Math.PI/180)+wmH*Math.sin(35*Math.PI/180))/2,
               y:(sz.height-wmW*Math.sin(35*Math.PI/180)-wmH*Math.cos(35*Math.PI/180))/2,
-              size:wmSize,font:font,
+              size:wmSizePt,font:font,
               color:PDFLib.rgb(0.5,0.5,0.5),
               opacity:wmOpac/100,
               rotate:PDFLib.degrees(35),
@@ -1618,12 +1713,40 @@ function ToolPageTools(){
             e('label',null,'Watermark text (optional)'),
             e('input',{type:'text',placeholder:'e.g. CONFIDENTIAL',value:wmText,style:{width:'100%'},
               onChange:function(ev){setWmText(ev.target.value);}})
-          ),
-          wmText&&e('div',{className:'resize-field'},
-            e('label',null,'Opacity: '+wmOpac+'%'),
-            e('input',{type:'range',min:5,max:80,value:wmOpac,style:{width:'100%',marginTop:6},
-              onChange:function(ev){setWmOpac(parseInt(ev.target.value));}})
           )
+        ),
+        wmText&&e('div',null,
+          e('div',{className:'resize-grid',style:{marginBottom:8}},
+            e('div',{className:'resize-field'},
+              e('label',null,'Opacity: '+wmOpac+'%'),
+              e('input',{type:'range',min:5,max:80,value:wmOpac,style:{width:'100%',marginTop:6},
+                onChange:function(ev){setWmOpac(parseInt(ev.target.value));}})
+            ),
+            e('div',{className:'resize-field'},
+              e('label',null,'Size: '+wmSize+'pt'),
+              e('input',{type:'range',min:18,max:96,value:wmSize,style:{width:'100%',marginTop:6},
+                onChange:function(ev){setWmSize(parseInt(ev.target.value));}})
+            )
+          ),
+          // Live preview canvas
+          e('div',{className:'note',style:{marginBottom:6,paddingBottom:6}},'Preview:'),
+          e('canvas',{
+            width:300,height:212,
+            style:{width:'100%',maxWidth:300,height:'auto',border:'1px solid var(--border)',borderRadius:'var(--r-sm)',background:'#fff',display:'block',margin:'0 auto 8px'},
+            ref:function(cv){
+              if(!cv||!wmText)return;
+              var ctx=cv.getContext('2d');
+              ctx.clearRect(0,0,300,212);
+              ctx.fillStyle='#fff';ctx.fillRect(0,0,300,212);
+              ctx.save();
+              ctx.font='bold '+Math.round(wmSize*300/595)+'px Geist,sans-serif';
+              ctx.fillStyle='rgba(80,80,80,'+(wmOpac/100)+')';
+              ctx.translate(150,106);ctx.rotate(35*Math.PI/180);
+              var tw=ctx.measureText(wmText).width;
+              ctx.fillText(wmText,-tw/2,Math.round(wmSize*300/595)/3);
+              ctx.restore();
+            }
+          })
         ),
         e('div',{className:'row'},
           e('button',{className:'btn pri',disabled:!file,onClick:applyNumbers},'Apply to PDF')
