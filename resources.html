@@ -134,6 +134,32 @@ select,.sel{background:var(--surface2);border:1px solid var(--border);border-rad
   font-size:0.72rem;cursor:pointer;font-family:inherit;transition:all .15s;}
 .resize-mode-opt.sel{background:var(--surface2);color:var(--text);font-weight:500;}
 .lock-ratio{display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--muted);cursor:pointer;margin-top:4px;}
+/* Annotate tool */
+.ann-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0;margin-bottom:8px;border-bottom:1px solid var(--border);}
+.ann-tool-btn{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:none;
+  color:var(--muted);font-size:0.71rem;cursor:pointer;font-family:inherit;transition:all .14s;white-space:nowrap;}
+.ann-tool-btn:hover,.ann-tool-btn.sel{border-color:var(--accent);color:var(--accent);background:rgba(232,213,176,0.06);}
+.ann-colors{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:6px 0;}
+.ann-color-swatch{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .14s;flex-shrink:0;}
+.ann-color-swatch.sel{border-color:var(--text);}
+.ann-canvas-wrap{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);margin:8px 0;touch-action:none;}
+.ann-canvas-wrap canvas{display:block;max-width:100%;cursor:crosshair;}
+.ann-size-row{display:flex;align-items:center;gap:8px;margin:4px 0;}
+.ann-pg-nav{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:0.74rem;color:var(--muted);}
+/* Page tools tabs */
+.ptab-row{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin:10px 0;}
+.ptab{flex:1;padding:7px 10px;background:none;border:none;color:var(--muted);font-size:0.73rem;
+  cursor:pointer;font-family:inherit;transition:all .14s;text-align:center;}
+.ptab.sel{background:var(--surface2);color:var(--text);font-weight:500;}
+/* Reorder drag grid */
+.reorder-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0;}
+.reorder-thumb{position:relative;border-radius:6px;overflow:hidden;border:1.5px solid var(--border);
+  aspect-ratio:0.707;background:var(--surface2);cursor:grab;user-select:none;transition:border-color .15s,opacity .15s;}
+.reorder-thumb:active{cursor:grabbing;opacity:0.7;}
+.reorder-thumb.drag-over{border-color:var(--accent);background:rgba(232,213,176,0.06);}
+.reorder-thumb img{width:100%;height:100%;object-fit:contain;pointer-events:none;}
+.reorder-pg-num{position:absolute;bottom:3px;left:0;right:0;text-align:center;
+  font-size:0.6rem;color:var(--muted);pointer-events:none;}
 /* Privacy footer */
 .privacy{font-size:0.63rem;color:var(--muted2);display:flex;align-items:center;gap:5px;
   margin-top:16px;padding-top:12px;border-top:1px solid var(--border);opacity:0.75;}
@@ -870,6 +896,595 @@ function ToolImgResize(){
   );
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TOOL 7 — ANNOTATE PDF
+// ══════════════════════════════════════════════════════════════════════════════
+var ANN_COLORS=['#e8d5b0','#4ade80','#60a5fa','#f87171','#facc15','#c084fc','#34d399','#fb923c','#f472b6','#94a3b8'];
+
+function ToolAnnotate(){
+  var fileS=useState(null),setFile=fileS[1];var file=fileS[0];
+  var totalS=useState(0),setTotal=totalS[1];var total=totalS[0];
+  var pageIdxS=useState(0),setPageIdx=pageIdxS[1];var pageIdx=pageIdxS[0];
+  var toolS=useState('pen'),setTool=toolS[1];var tool=toolS[0];
+  var colorS=useState('#f87171'),setColor=colorS[1];var color=colorS[0];
+  var sizeS=useState(3),setSize=sizeS[1];var size=sizeS[0];
+  var statusS=useState(''),setSt=statusS[1];var status=statusS[0];
+  var stTypeS=useState(''),setStType=stTypeS[1];var stType=stTypeS[0];
+  function setStatus(msg,type){setSt(msg);setStType(type||'');}
+
+  var canvasRef=useRef();
+  var overlayRef=useRef(); // drawing canvas on top
+  var pdfDocRef=useRef(null);
+  var drawingRef=useRef(false);
+  var lastPtRef=useRef(null);
+  var annotLayersRef=useRef({}); // pageIdx -> ImageData of annotations
+  var textInputRef=useRef(null);
+  var imgInputRef=useRef(null);
+
+  async function onFile(f){
+    if(!f)return;
+    setFile(f);setStatus('Loading…');
+    loadPdfJs(async function(pdfjs){
+      if(!pdfjs){setStatus('Failed to load PDF engine','err');return;}
+      try{
+        var buf=await readBuf(f);
+        var pdf=await pdfjs.getDocument({data:new Uint8Array(buf)}).promise;
+        pdfDocRef.current=pdf;
+        setTotal(pdf.numPages);
+        setPageIdx(0);
+        setStatus('');
+        await renderPage(pdf,0);
+      }catch(err){setStatus('Cannot read PDF: '+err.message,'err');}
+    });
+  }
+
+  async function renderPage(pdf,idx){
+    if(!pdf||!canvasRef.current)return;
+    var page=await pdf.getPage(idx+1);
+    var vp=page.getViewport({scale:1.4});
+    var cv=canvasRef.current;
+    cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    // Restore annotations for this page
+    var ov=overlayRef.current;
+    ov.width=cv.width;ov.height=cv.height;
+    var saved=annotLayersRef.current[idx];
+    if(saved){ov.getContext('2d').putImageData(saved,0,0);}
+    else{ov.getContext('2d').clearRect(0,0,ov.width,ov.height);}
+  }
+
+  function saveCurrentLayer(){
+    var ov=overlayRef.current;
+    if(!ov)return;
+    annotLayersRef.current[pageIdx]=ov.getContext('2d').getImageData(0,0,ov.width,ov.height);
+  }
+
+  async function goPage(newIdx){
+    saveCurrentLayer();
+    setPageIdx(newIdx);
+    await renderPage(pdfDocRef.current,newIdx);
+  }
+
+  function getPos(ev){
+    var ov=overlayRef.current;
+    var b=ov.getBoundingClientRect();
+    var scaleX=ov.width/b.width,scaleY=ov.height/b.height;
+    var cx=ev.touches?ev.touches[0].clientX:ev.clientX;
+    var cy=ev.touches?ev.touches[0].clientY:ev.clientY;
+    return {x:(cx-b.left)*scaleX,y:(cy-b.top)*scaleY};
+  }
+
+  function onPointerDown(ev){
+    if(!pdfDocRef.current)return;
+    ev.preventDefault();
+    if(tool==='text'){
+      var pt=getPos(ev);
+      var txt=window.prompt('Enter annotation text:');
+      if(!txt)return;
+      var ctx=overlayRef.current.getContext('2d');
+      ctx.font='bold '+(size*5+10)+'px Geist,sans-serif';
+      ctx.fillStyle=color;
+      ctx.fillText(txt,pt.x,pt.y);
+      saveCurrentLayer();
+      return;
+    }
+    if(tool==='image'){
+      imgInputRef.current&&imgInputRef.current.click();
+      return;
+    }
+    drawingRef.current=true;
+    lastPtRef.current=getPos(ev);
+    var ctx=overlayRef.current.getContext('2d');
+    ctx.beginPath();
+    ctx.moveTo(lastPtRef.current.x,lastPtRef.current.y);
+  }
+
+  function onPointerMove(ev){
+    if(!drawingRef.current)return;
+    ev.preventDefault();
+    var pt=getPos(ev);
+    var ctx=overlayRef.current.getContext('2d');
+    ctx.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';
+    ctx.strokeStyle=color;
+    ctx.lineWidth=tool==='highlight'?size*5:size;
+    ctx.globalAlpha=tool==='highlight'?0.35:1;
+    ctx.lineCap='round';ctx.lineJoin='round';
+    if(tool==='arrow'||tool==='box'){
+      // For arrow/box redraw from last saved state each move
+      var saved=annotLayersRef.current['_tmp_'+pageIdx];
+      if(saved)ctx.putImageData(saved,0,0);
+      else ctx.clearRect(0,0,overlayRef.current.width,overlayRef.current.height);
+      ctx.globalAlpha=1;
+      ctx.strokeStyle=color;ctx.lineWidth=size+1;ctx.beginPath();
+      if(tool==='box'){
+        ctx.strokeRect(lastPtRef.current.x,lastPtRef.current.y,pt.x-lastPtRef.current.x,pt.y-lastPtRef.current.y);
+      }else{
+        // Arrow line + head
+        ctx.moveTo(lastPtRef.current.x,lastPtRef.current.y);ctx.lineTo(pt.x,pt.y);ctx.stroke();
+        var angle=Math.atan2(pt.y-lastPtRef.current.y,pt.x-lastPtRef.current.x);
+        var hs=14;
+        ctx.beginPath();
+        ctx.moveTo(pt.x,pt.y);
+        ctx.lineTo(pt.x-hs*Math.cos(angle-0.4),pt.y-hs*Math.sin(angle-0.4));
+        ctx.lineTo(pt.x-hs*Math.cos(angle+0.4),pt.y-hs*Math.sin(angle+0.4));
+        ctx.closePath();ctx.fillStyle=color;ctx.fill();
+      }
+    }else{
+      ctx.lineTo(pt.x,pt.y);ctx.stroke();
+    }
+    ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  }
+
+  function onPointerUp(ev){
+    if(!drawingRef.current)return;
+    drawingRef.current=false;
+    // Clear tmp state used for arrow/box redraw
+    delete annotLayersRef.current['_tmp_'+pageIdx];
+    saveCurrentLayer();
+  }
+
+  function onPointerDownBoxArrow(ev){
+    if(tool!=='arrow'&&tool!=='box')return onPointerDown(ev);
+    drawingRef.current=true;
+    lastPtRef.current=getPos(ev);
+    // Save current layer as tmp base for redraw during drag
+    var ov=overlayRef.current;
+    annotLayersRef.current['_tmp_'+pageIdx]=ov.getContext('2d').getImageData(0,0,ov.width,ov.height);
+  }
+
+  function clearAnnotations(){
+    var ov=overlayRef.current;
+    if(!ov)return;
+    ov.getContext('2d').clearRect(0,0,ov.width,ov.height);
+    delete annotLayersRef.current[pageIdx];
+  }
+
+  function insertImage(imgFile){
+    if(!imgFile)return;
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      var img=new Image();
+      img.onload=function(){
+        var ov=overlayRef.current;
+        var ctx=ov.getContext('2d');
+        var maxW=ov.width*0.4,maxH=ov.height*0.4;
+        var scale=Math.min(maxW/img.width,maxH/img.height,1);
+        ctx.drawImage(img,20,20,img.width*scale,img.height*scale);
+        saveCurrentLayer();
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(imgFile);
+  }
+
+  async function exportPdf(){
+    if(!file||!pdfDocRef.current){setStatus('Upload a PDF first','err');return;}
+    saveCurrentLayer();
+    setStatus('Exporting annotated PDF…');
+    loadPdfLib(async function(PDFLib){
+      if(!PDFLib){setStatus('Failed to load PDF engine','err');return;}
+      try{
+        var buf=await readBuf(file);
+        var doc=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
+        var pages=doc.getPages();
+        for(var i=0;i<pages.length;i++){
+          var layer=annotLayersRef.current[i];
+          if(!layer)continue;
+          // Render annotation layer to canvas, embed as image
+          var tmpCv=document.createElement('canvas');
+          tmpCv.width=layer.width;tmpCv.height=layer.height;
+          tmpCv.getContext('2d').putImageData(layer,0,0);
+          var dataUrl=tmpCv.toDataURL('image/png');
+          var b64=dataUrl.split(',')[1];
+          var imgBytes=Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0);});
+          var embeddedImg=await doc.embedPng(imgBytes);
+          var pg=pages[i];
+          var pgsz=pg.getSize();
+          pg.drawImage(embeddedImg,{x:0,y:0,width:pgsz.width,height:pgsz.height,opacity:1});
+        }
+        var outBytes=await doc.save();
+        dlBlob(new Blob([outBytes],{type:'application/pdf'}),basename(file.name)+'_annotated.pdf');
+        setStatus('Done — annotated PDF downloaded','ok');
+      }catch(err){setStatus('Error: '+err.message,'err');}
+    });
+  }
+
+  var toolBtns=[
+    {id:'pen',label:'✏️ Pen'},
+    {id:'highlight',label:'🖌 Highlight'},
+    {id:'box',label:'⬜ Box'},
+    {id:'arrow',label:'➡️ Arrow'},
+    {id:'text',label:'T Text'},
+    {id:'image',label:'🖼 Image'},
+    {id:'eraser',label:'◻ Eraser'},
+  ];
+
+  return e('div',null,
+    e(DropZone,{accept:'.pdf,application/pdf',icon:'✏️',
+      hasFile:!!file,fileLabel:file?(file.name+' · '+total+' pages'):'',
+      label:'Drop PDF here or click to browse',
+      onFiles:function(fs){onFile(fs[0]);}}),
+    e('input',{ref:imgInputRef,type:'file',accept:'image/*',style:{display:'none'},
+      onChange:function(ev){insertImage(ev.target.files[0]);ev.target.value='';}}),
+
+    file&&total>0&&e('div',null,
+      // Toolbar
+      e('div',{className:'ann-toolbar'},
+        toolBtns.map(function(tb){
+          return e('button',{key:tb.id,className:'ann-tool-btn'+(tool===tb.id?' sel':''),
+            onClick:function(){setTool(tb.id);}},tb.label);
+        })
+      ),
+      // Color swatches
+      tool!=='eraser'&&e('div',null,
+        e('div',{className:'label',style:{marginBottom:4}},'Color:'),
+        e('div',{className:'ann-colors'},
+          ANN_COLORS.map(function(c){
+            return e('div',{key:c,className:'ann-color-swatch'+(color===c?' sel':''),
+              style:{background:c},onClick:function(){setColor(c);}});
+          })
+        )
+      ),
+      // Brush size
+      e('div',{className:'ann-size-row'},
+        e('span',{className:'label'},'Size: '+size),
+        e('input',{type:'range',min:1,max:12,value:size,style:{width:100},
+          onChange:function(ev){setSize(parseInt(ev.target.value));}})
+      ),
+      // Page nav
+      e('div',{className:'ann-pg-nav'},
+        e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem'},
+          disabled:pageIdx===0,onClick:function(){goPage(pageIdx-1);}
+        },'← Prev'),
+        e('span',null,'Page '+(pageIdx+1)+' of '+total),
+        e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem'},
+          disabled:pageIdx>=total-1,onClick:function(){goPage(pageIdx+1);}
+        },'Next →'),
+        e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem',marginLeft:8},
+          onClick:clearAnnotations},'Clear page')
+      ),
+      // Canvas stack
+      e('div',{className:'ann-canvas-wrap',style:{cursor:tool==='eraser'?'cell':tool==='text'?'text':'crosshair'}},
+        e('canvas',{ref:canvasRef,style:{display:'block',maxWidth:'100%',userSelect:'none'}}),
+        e('canvas',{ref:overlayRef,
+          style:{position:'absolute',top:0,left:0,width:'100%',height:'100%',cursor:'inherit'},
+          onMouseDown:function(ev){tool==='arrow'||tool==='box'?onPointerDownBoxArrow(ev):onPointerDown(ev);},
+          onMouseMove:onPointerMove,
+          onMouseUp:onPointerUp,
+          onTouchStart:function(ev){tool==='arrow'||tool==='box'?onPointerDownBoxArrow(ev):onPointerDown(ev);},
+          onTouchMove:onPointerMove,
+          onTouchEnd:onPointerUp,
+        })
+      )
+    ),
+    e('div',{className:'row'},
+      e('button',{className:'btn pri',disabled:!file||!total,onClick:exportPdf},'Export annotated PDF')
+    ),
+    e('div',{className:'status '+stType},status)
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TOOL 8 — PAGE TOOLS (numbers/watermark + rotate + reorder)
+// ══════════════════════════════════════════════════════════════════════════════
+function ToolPageTools(){
+  var fileS=useState(null),setFile=fileS[1];var file=fileS[0];
+  var totalS=useState(0),setTotal=totalS[1];var total=totalS[0];
+  var activeTabS=useState('numbers'),setActiveTab=activeTabS[1];var activeTab=activeTabS[0];
+
+  // Page numbers / watermark
+  var numPosS=useState('bottom-center'),setNumPos=numPosS[1];var numPos=numPosS[0];
+  var numStartS=useState(1),setNumStart=numStartS[1];var numStart=numStartS[0];
+  var wmTextS=useState(''),setWmText=wmTextS[1];var wmText=wmTextS[0];
+  var wmOpacS=useState(30),setWmOpac=wmOpacS[1];var wmOpac=wmOpacS[0];
+
+  // Rotate
+  var rotAngleS=useState(90),setRotAngle=rotAngleS[1];var rotAngle=rotAngleS[0];
+  var rotTargetS=useState('all'),setRotTarget=rotTargetS[1];var rotTarget=rotTargetS[0];
+  var rotPagesS=useState(''),setRotPages=rotPagesS[1];var rotPages=rotPagesS[0];
+
+  // Reorder
+  var thumbsS=useState([]),setThumbs=thumbsS[1];var thumbs=thumbsS[0];
+  var orderS=useState([]),setOrder=orderS[1];var order=orderS[0];
+  var shownS=useState(9),setShown=shownS[1];var shown=shownS[0];
+  var dragIdxS=useState(null),setDragIdx=dragIdxS[1];var dragIdx=dragIdxS[0];
+
+  var statusS=useState(''),setSt=statusS[1];var status=statusS[0];
+  var stTypeS=useState(''),setStType=stTypeS[1];var stType=stTypeS[0];
+  function setStatus(msg,type){setSt(msg);setStType(type||'');}
+
+  async function onFile(f){
+    if(!f)return;
+    setFile(f);setThumbs([]);setStatus('Loading…');
+    loadPdfJs(async function(pdfjs){
+      if(!pdfjs){setStatus('Failed to load PDF viewer','err');return;}
+      try{
+        var buf=await readBuf(f);
+        var pdf=await pdfjs.getDocument({data:new Uint8Array(buf)}).promise;
+        var n=pdf.numPages;
+        setTotal(n);
+        setOrder(Array.from({length:n},function(_,i){return i;}));
+        var results=[];
+        for(var i=1;i<=n;i++){
+          var page=await pdf.getPage(i);
+          var vp=page.getViewport({scale:0.3});
+          var cv=document.createElement('canvas');
+          cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+          await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+          results.push(cv.toDataURL('image/jpeg',0.6));
+          if(i%9===0||i===n)setThumbs(results.slice());
+        }
+        setStatus('');
+      }catch(err){setStatus('Cannot read PDF: '+err.message,'err');}
+    });
+  }
+
+  function parsePages(str,tot){
+    var out=[];
+    str.split(',').forEach(function(part){
+      part=part.trim();
+      if(part.indexOf('-')>0){var p=part.split('-');var a=parseInt(p[0])-1,b=parseInt(p[1])-1;for(var i=a;i<=b&&i<tot;i++)if(i>=0)out.push(i);}
+      else{var n=parseInt(part)-1;if(!isNaN(n)&&n>=0&&n<tot)out.push(n);}
+    });
+    return out.filter(function(v,i,arr){return arr.indexOf(v)===i;});
+  }
+
+  async function applyNumbers(){
+    if(!file){setStatus('Upload a PDF first','err');return;}
+    setStatus('Adding page numbers…');
+    loadPdfLib(async function(PDFLib){
+      if(!PDFLib){setStatus('Failed to load PDF engine','err');return;}
+      try{
+        var buf=await readBuf(file);
+        var doc=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
+        var font=await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+        var pages=doc.getPages();
+        pages.forEach(function(pg,i){
+          var sz=pg.getSize();var txt=''+(i+parseInt(numStart||1));
+          var tw=font.widthOfTextAtSize(txt,11);
+          var positions={
+            'bottom-center':{x:(sz.width-tw)/2,y:18},
+            'bottom-right':{x:sz.width-tw-20,y:18},
+            'bottom-left':{x:20,y:18},
+            'top-center':{x:(sz.width-tw)/2,y:sz.height-24},
+            'top-right':{x:sz.width-tw-20,y:sz.height-24},
+            'top-left':{x:20,y:sz.height-24},
+          };
+          var pos=positions[numPos]||positions['bottom-center'];
+          pg.drawText(txt,{x:pos.x,y:pos.y,size:11,font:font,color:PDFLib.rgb(0.3,0.3,0.3)});
+        });
+        if(wmText.trim()){
+          pages.forEach(function(pg){
+            var sz=pg.getSize();
+            pg.drawText(wmText,{
+              x:sz.width*0.15,y:sz.height*0.35,
+              size:48,font:font,
+              color:PDFLib.rgb(0.5,0.5,0.5),
+              opacity:wmOpac/100,
+              rotate:PDFLib.degrees(35),
+            });
+          });
+        }
+        var bytes=await doc.save();
+        dlBlob(new Blob([bytes],{type:'application/pdf'}),basename(file.name)+'_numbered.pdf');
+        setStatus('Done — page numbers added','ok');
+      }catch(err){setStatus('Error: '+err.message,'err');}
+    });
+  }
+
+  async function applyRotate(){
+    if(!file){setStatus('Upload a PDF first','err');return;}
+    setStatus('Rotating pages…');
+    loadPdfLib(async function(PDFLib){
+      if(!PDFLib){setStatus('Failed to load PDF engine','err');return;}
+      try{
+        var buf=await readBuf(file);
+        var doc=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
+        var pages=doc.getPages();
+        var targets=rotTarget==='all'
+          ?pages.map(function(_,i){return i;})
+          :parsePages(rotPages,pages.length);
+        targets.forEach(function(i){
+          var pg=pages[i];
+          var cur=pg.getRotation().angle;
+          pg.setRotation(PDFLib.degrees((cur+parseInt(rotAngle))%360));
+        });
+        var bytes=await doc.save();
+        dlBlob(new Blob([bytes],{type:'application/pdf'}),basename(file.name)+'_rotated.pdf');
+        setStatus('Done — '+targets.length+' page'+(targets.length!==1?'s':'')+' rotated','ok');
+      }catch(err){setStatus('Error: '+err.message,'err');}
+    });
+  }
+
+  async function applyReorder(){
+    if(!file){setStatus('Upload a PDF first','err');return;}
+    setStatus('Reordering pages…');
+    loadPdfLib(async function(PDFLib){
+      if(!PDFLib){setStatus('Failed to load PDF engine','err');return;}
+      try{
+        var buf=await readBuf(file);
+        var src=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
+        var out=await PDFLib.PDFDocument.create();
+        var copied=await out.copyPages(src,order);
+        copied.forEach(function(p){out.addPage(p);});
+        var bytes=await out.save();
+        dlBlob(new Blob([bytes],{type:'application/pdf'}),basename(file.name)+'_reordered.pdf');
+        setStatus('Done — pages reordered','ok');
+      }catch(err){setStatus('Error: '+err.message,'err');}
+    });
+  }
+
+  function onDragStart(idx){setDragIdx(idx);}
+  function onDragOver(ev,idx){
+    ev.preventDefault();
+    if(dragIdx===null||dragIdx===idx)return;
+    setOrder(function(prev){
+      var a=prev.slice();
+      var item=a.splice(dragIdx,1)[0];
+      a.splice(idx,0,item);
+      return a;
+    });
+    setThumbs(function(prev){
+      var a=prev.slice();
+      var item=a.splice(dragIdx,1)[0];
+      a.splice(idx,0,item);
+      return a;
+    });
+    setDragIdx(idx);
+  }
+  function onDragEnd(){setDragIdx(null);}
+
+  var visibleOrder=order.slice(0,shown);
+
+  return e('div',null,
+    e(DropZone,{accept:'.pdf,application/pdf',icon:'📄',
+      hasFile:!!file,fileLabel:file?(file.name+' · '+total+' pages'):'',
+      label:'Drop PDF here or click to browse',
+      onFiles:function(fs){onFile(fs[0]);}}),
+
+    file&&total>0&&e('div',null,
+      e('div',{className:'ptab-row'},
+        e('button',{className:'ptab'+(activeTab==='numbers'?' sel':''),onClick:function(){setActiveTab('numbers');setStatus('');}
+        },'📝 Numbers & Watermark'),
+        e('button',{className:'ptab'+(activeTab==='rotate'?' sel':''),onClick:function(){setActiveTab('rotate');setStatus('');}
+        },'🔄 Rotate Pages'),
+        e('button',{className:'ptab'+(activeTab==='reorder'?' sel':''),onClick:function(){setActiveTab('reorder');setStatus('');}
+        },'⇅ Reorder Pages')
+      ),
+
+      // ── Tab: Numbers & Watermark ──
+      activeTab==='numbers'&&e('div',null,
+        e('div',{className:'resize-grid',style:{marginBottom:8}},
+          e('div',{className:'resize-field'},
+            e('label',null,'Number position'),
+            e('select',{value:numPos,onChange:function(ev){setNumPos(ev.target.value);}},
+              e('option',{value:'bottom-center'},'Bottom centre'),
+              e('option',{value:'bottom-right'},'Bottom right'),
+              e('option',{value:'bottom-left'},'Bottom left'),
+              e('option',{value:'top-center'},'Top centre'),
+              e('option',{value:'top-right'},'Top right'),
+              e('option',{value:'top-left'},'Top left')
+            )
+          ),
+          e('div',{className:'resize-field'},
+            e('label',null,'Start number'),
+            e('input',{type:'number',min:0,value:numStart,onChange:function(ev){setNumStart(ev.target.value);}})
+          )
+        ),
+        e('div',{className:'note',style:{marginBottom:8}},'Optionally add a watermark text on every page:'),
+        e('div',{className:'resize-grid'},
+          e('div',{className:'resize-field'},
+            e('label',null,'Watermark text (optional)'),
+            e('input',{type:'text',placeholder:'e.g. CONFIDENTIAL',value:wmText,style:{width:'100%'},
+              onChange:function(ev){setWmText(ev.target.value);}})
+          ),
+          wmText&&e('div',{className:'resize-field'},
+            e('label',null,'Opacity: '+wmOpac+'%'),
+            e('input',{type:'range',min:5,max:80,value:wmOpac,style:{width:'100%',marginTop:6},
+              onChange:function(ev){setWmOpac(parseInt(ev.target.value));}})
+          )
+        ),
+        e('div',{className:'row'},
+          e('button',{className:'btn pri',disabled:!file,onClick:applyNumbers},'Apply to PDF')
+        )
+      ),
+
+      // ── Tab: Rotate ──
+      activeTab==='rotate'&&e('div',null,
+        e('div',{className:'resize-grid',style:{marginBottom:8}},
+          e('div',{className:'resize-field'},
+            e('label',null,'Rotation'),
+            e('select',{value:rotAngle,onChange:function(ev){setRotAngle(ev.target.value);}},
+              e('option',{value:90},'90° clockwise'),
+              e('option',{value:270},'90° counter-clockwise'),
+              e('option',{value:180},'180°')
+            )
+          ),
+          e('div',{className:'resize-field'},
+            e('label',null,'Apply to'),
+            e('select',{value:rotTarget,onChange:function(ev){setRotTarget(ev.target.value);}},
+              e('option',{value:'all'},'All pages'),
+              e('option',{value:'custom'},'Custom pages')
+            )
+          )
+        ),
+        rotTarget==='custom'&&e('div',{style:{marginBottom:8}},
+          e('span',{className:'label'},'Pages (e.g. 1-3, 5, 7-10): '),
+          e('input',{className:'range-input',value:rotPages,placeholder:'1-'+total,
+            onChange:function(ev){setRotPages(ev.target.value);}})
+        ),
+        e('div',{className:'row'},
+          e('button',{className:'btn pri',disabled:!file,onClick:applyRotate},'Rotate & Download')
+        )
+      ),
+
+      // ── Tab: Reorder ──
+      activeTab==='reorder'&&e('div',null,
+        e('div',{className:'note',style:{marginBottom:8}},'Drag pages to reorder. Changes are reflected immediately.'),
+        e('div',{className:'reorder-grid'},
+          visibleOrder.map(function(origIdx,dispIdx){
+            return e('div',{key:origIdx,className:'reorder-thumb'+(dragIdx===dispIdx?' drag-over':''),
+              draggable:true,
+              onDragStart:function(){onDragStart(dispIdx);},
+              onDragOver:function(ev){onDragOver(ev,dispIdx);},
+              onDragEnd:onDragEnd,
+            },
+              thumbs[dispIdx]?e('img',{src:thumbs[dispIdx],alt:'p'+(origIdx+1)}):
+                e('div',{style:{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.65rem',color:'var(--muted2)'}},'p'+(origIdx+1)),
+              e('div',{className:'reorder-pg-num'},'p'+(origIdx+1))
+            );
+          })
+        ),
+        order.length>shown&&e('button',{className:'load-more-btn',
+          onClick:function(){setShown(function(s){return Math.min(s+9,order.length);});}
+        },'Load more ↓ ('+(order.length-shown)+' remaining)'),
+        e('div',{className:'row'},
+          e('button',{className:'btn pri',disabled:!file,onClick:applyReorder},'Save reordered PDF'),
+          e('button',{className:'btn sec',onClick:function(){
+            var orig=Array.from({length:total},function(_,i){return i;});
+            setOrder(orig);
+            loadPdfJs(async function(pdfjs){
+              if(!pdfjs||!file)return;
+              var buf=await readBuf(file);
+              var pdf=await pdfjs.getDocument({data:new Uint8Array(buf)}).promise;
+              var results=[];
+              for(var i=1;i<=total;i++){
+                var pg=await pdf.getPage(i);var vp=pg.getViewport({scale:0.3});
+                var cv=document.createElement('canvas');cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+                await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+                results.push(cv.toDataURL('image/jpeg',0.6));
+              }
+              setThumbs(results);
+            });
+          }},'Reset order')
+        )
+      )
+    ),
+    e('div',{className:'status '+stType},status)
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
@@ -880,6 +1495,8 @@ var TOOLS=[
   {id:'pdfimg',icon:'🖼',title:'PDF to Images',desc:'Convert each PDF page to JPEG or PNG — downloaded as a single ZIP.',Comp:ToolPdfImg},
   {id:'imgpdf',icon:'📷',title:'Images to PDF',desc:'Combine JPEG, PNG or WebP images into a single PDF document.',Comp:ToolImgPdf},
   {id:'imgres',icon:'⬛',title:'Image Resizer',desc:'Resize any image by pixels or inches@DPI, with quality and size control.',Comp:ToolImgResize},
+  {id:'annotate',icon:'✏️',title:'Annotate PDF',desc:'Draw, highlight, add text, arrows, boxes and images directly on PDF pages.',Comp:ToolAnnotate},
+  {id:'pagetools',icon:'📐',title:'Page Tools',desc:'Add page numbers or watermark, rotate pages, or drag-and-drop to reorder pages.',Comp:ToolPageTools},
 ];
 
 function App(){
