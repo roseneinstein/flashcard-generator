@@ -425,7 +425,7 @@ h1 em{font-style:italic;color:var(--accent)}
 .p-mo-note{font-size:0.62rem;color:var(--muted2);margin-top:2px;font-weight:300;min-height:14px}
 .p-strike{text-decoration:line-through;opacity:0.45;margin-left:4px;font-size:0.75em}
 .p-found{font-size:0.6rem;color:var(--muted2);margin-top:6px;font-style:italic;line-height:1.5;font-weight:300;font-family:'Geist',sans-serif}
-.app-wrap{max-width:660px;margin:0 auto;padding:0 20px 110px}
+.app-wrap{max-width:760px;margin:0 auto;padding:0 20px 110px}
 .ey{font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:9px}
 .st{font-family:'Instrument Serif',serif;font-size:clamp(1.7rem,4vw,2.6rem);text-align:center;margin-bottom:48px;letter-spacing:-0.02em;line-height:1.1}
 .st em{font-style:italic;color:var(--accent)}
@@ -1806,57 +1806,100 @@ function AuthModal({onClose}){
 function MistakeList(props){
   var rawMistakes=props.mistakes||[];
   var openS=useState({}),setOpen=openS[1];var open=openS[0];
+  var openGrpS=useState({}),setOpenGrp=openGrpS[1];var openGrp=openGrpS[0];
   function toggle(id){setOpen(function(o){var n=Object.assign({},o);n[id]=!n[id];return n;});}
+  function toggleGrp(name){setOpenGrp(function(o){var n=Object.assign({},o);n[name]=!n[name];return n;});}
 
-  // Deduplicate by question text — keep most recent, merge repeat counts
+  // Step 1: Deduplicate per question within each set — merge repeat counts
   var seen={};
   var deduped=[];
   rawMistakes.forEach(function(m){
     var key=(m.set_name||m.setName||'')+'::'+m.question;
     if(!seen[key]){seen[key]=deduped.length;deduped.push(Object.assign({},m));}
     else{
-      var existing=deduped[seen[key]];
-      existing.repeat_count=(existing.repeat_count||1)+(m.repeat_count||1);
-      // Keep most recent date
-      var existDate=new Date(existing.last_date||existing.created_at||0);
-      var newDate=new Date(m.last_date||m.created_at||0);
-      if(newDate>existDate)existing.last_date=m.last_date||m.created_at;
+      var ex=deduped[seen[key]];
+      ex.repeat_count=(ex.repeat_count||1)+(m.repeat_count||1);
+      var ed=new Date(ex.last_date||ex.created_at||0);
+      var nd=new Date(m.last_date||m.created_at||0);
+      if(nd>ed)ex.last_date=m.last_date||m.created_at;
     }
   });
-  // Show last 50 distinct mistakes
-  var mistakes=deduped.slice(0,50);
+
+  // Step 2: Group deduplicated mistakes by set name
+  var groupMap={};
+  deduped.forEach(function(m){
+    var name=m.set_name||m.setName||'Unknown';
+    if(!groupMap[name])groupMap[name]=[];
+    groupMap[name].push(m);
+  });
+
+  // Step 3: Sort groups by most recent mistake, cap total distinct at 50
+  var groups=Object.keys(groupMap).map(function(name){
+    var items=groupMap[name];
+    var latest=items.reduce(function(a,b){
+      return new Date(a.last_date||a.created_at||0)>new Date(b.last_date||b.created_at||0)?a:b;
+    });
+    return {name:name,items:items,latest:latest};
+  }).sort(function(a,b){
+    return new Date(b.latest.last_date||b.latest.created_at||0)-new Date(a.latest.last_date||a.latest.created_at||0);
+  });
+
+  var totalDistinct=deduped.length;
 
   return e(React.Fragment,null,
     e('div',{style:{fontSize:'0.72rem',fontStyle:'italic',color:'var(--muted)',marginBottom:10,lineHeight:1.6}},
-      'Showing last 50 distinct mistakes — repeated mistakes are grouped, not duplicated.'),
+      'Mistakes grouped by set — '+totalDistinct+' distinct mistake'+(totalDistinct!==1?'s':'')+' recorded. Repeated mistakes show a count.'),
     e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:8}},
       e('button',{
         onClick:function(){if(window.confirm('Clear all mistakes? This cannot be undone.'))props.onClear();},
         style:{fontSize:'0.7rem',color:'var(--muted)',background:'none',border:'1px solid var(--border)',borderRadius:'6px',padding:'5px 10px',cursor:'none',fontFamily:'Geist,sans-serif'}
       },'Clear all')
     ),
-    mistakes.map(function(m){
-      var isOpen=!!open[m.id];
-      return e('div',{key:m.id,className:'mist-item',style:{flexDirection:'column',alignItems:'stretch'}},
-        e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
-          e('div',{style:{flex:1}},
-            e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:3,lineHeight:1.5}},m.question),
-            e('div',{className:'mist-set'},
-              'from: '+(m.set_name||m.setName)+' · '+fmtDate(m,{day:'numeric',month:'short'}),
-              m.repeat_count>1&&e('span',{style:{marginLeft:6,color:'var(--red)',fontSize:'0.62rem',fontWeight:500}},
-                '× '+m.repeat_count+' times')
-            )
+    groups.map(function(g){
+      var isGrpOpen=openGrp[g.name]!==false; // open by default
+      return e('div',{key:g.name,style:{
+        background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--r-sm)',
+        marginBottom:10,overflow:'hidden'
+      }},
+        // Group header — set name
+        e('button',{
+          style:{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+            padding:'10px 14px',background:'none',border:'none',cursor:'none',
+            fontFamily:'Geist,sans-serif',color:'var(--text)',textAlign:'left'},
+          onClick:function(){toggleGrp(g.name);}
+        },
+          e('div',null,
+            e('div',{style:{fontSize:'0.82rem',fontWeight:500}},g.name),
+            e('div',{style:{fontSize:'0.66rem',color:'var(--muted)',marginTop:1}},
+              g.items.length+' mistake'+(g.items.length!==1?'s':'')+' · last: '+fmtDate(g.latest,{day:'numeric',month:'short'}))
           ),
-          e('button',{
-            onClick:function(){toggle(m.id);},
-            style:{
-              flexShrink:0,padding:'4px 10px',border:'1px solid var(--border)',borderRadius:'6px',
-              background:'none',color:isOpen?'var(--accent)':'var(--muted)',
-              fontFamily:'Geist,sans-serif',fontSize:'0.68rem',cursor:'none',
-              borderColor:isOpen?'var(--accent)':'var(--border)',transition:'all .15s',whiteSpace:'nowrap'
-            }
-          },isOpen?'Hide':'Solution')
+          e('span',{style:{fontSize:'0.6rem',color:'var(--muted)',transition:'transform .2s',
+            display:'inline-block',transform:isGrpOpen?'rotate(180deg)':'none'}},'▼')
         ),
+        // Group body — individual mistakes
+        isGrpOpen&&e('div',{style:{borderTop:'1px solid var(--border)'}},
+          g.items.map(function(m){
+            var isOpen=!!open[m.id];
+            return e('div',{key:m.id,className:'mist-item',style:{flexDirection:'column',alignItems:'stretch',borderRadius:0,borderLeft:'none',borderRight:'none',borderBottom:'none',marginBottom:0,borderTop:'1px solid var(--border)'}},
+              e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
+                e('div',{style:{flex:1}},
+                  e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:3,lineHeight:1.5}},m.question),
+                  e('div',{className:'mist-set'},
+                    fmtDate(m,{day:'numeric',month:'short'}),
+                    m.repeat_count>1&&e('span',{style:{marginLeft:6,color:'var(--red)',fontSize:'0.62rem',fontWeight:500}},
+                      '× '+m.repeat_count+' times')
+                  )
+                ),
+                e('button',{
+                  onClick:function(){toggle(m.id);},
+                  style:{
+                    flexShrink:0,padding:'4px 10px',border:'1px solid var(--border)',borderRadius:'6px',
+                    background:'none',color:isOpen?'var(--accent)':'var(--muted)',
+                    fontFamily:'Geist,sans-serif',fontSize:'0.68rem',cursor:'none',
+                    borderColor:isOpen?'var(--accent)':'var(--border)',transition:'all .15s',whiteSpace:'nowrap'
+                  }
+                },isOpen?'Hide':'Solution')
+              ),
         isOpen&&m.options&&e('div',{style:{marginTop:10,paddingTop:10,borderTop:'1px solid var(--border)'}},
           e('div',{style:{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.06em'}},'Options'),
           m.options.map(function(o,i){
@@ -1878,10 +1921,14 @@ function MistakeList(props){
             marginTop:8,padding:'8px 10px',background:'var(--surface)',borderRadius:'6px',
             fontSize:'0.75rem',color:'var(--muted)',lineHeight:1.6,borderLeft:'2px solid var(--accent)',paddingLeft:10
           }},e('strong',{style:{color:'var(--text)',marginRight:5}},'Why:'),m.explanation)
-        )
-      );
-    })
-  );
+        )   // end options panel
+      );    // end mist-item return
+    })      // end g.items.map
+  )         // end isGrpOpen&&e('div' group body
+  );        // end outer group e('div'
+}),         // end groups.map — comma for React.Fragment children
+    null    // React.Fragment needs at least 2 children or use array
+  );        // end React.Fragment
 }
 
 function App(){
