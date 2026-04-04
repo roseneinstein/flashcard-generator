@@ -913,14 +913,52 @@ function ToolAnnotate(){
   var stTypeS=useState(''),setStType=stTypeS[1];var stType=stTypeS[0];
   function setStatus(msg,type){setSt(msg);setStType(type||'');}
 
+  // Object-based annotation system
+  // Each page has a list of annotation objects + a stroke layer (ImageData)
+  var objLayersRef=useRef({});   // pageIdx -> [{type,x,y,w,h,text,src,color,fill,fontSize,rotate,id}]
+  var strokeLayersRef=useRef({}); // pageIdx -> ImageData (pen/arrow strokes)
+  var undoStackRef=useRef({});   // pageIdx -> [snapshot]
   var canvasRef=useRef();
-  var overlayRef=useRef(); // drawing canvas on top
+  var overlayRef=useRef();
   var pdfDocRef=useRef(null);
   var drawingRef=useRef(false);
   var lastPtRef=useRef(null);
-  var annotLayersRef=useRef({}); // pageIdx -> ImageData of annotations
-  var textInputRef=useRef(null);
+  var selectedObjRef=useRef(null); // selected object id
   var imgInputRef=useRef(null);
+  var dragOffRef=useRef({x:0,y:0});
+  var resizingRef=useRef(false);
+
+  var selectedObjIdS=useState(null),setSelectedObjId=selectedObjIdS[1];var selectedObjId=selectedObjIdS[0];
+  var objsS=useState({}),setObjs=objsS[1];var objs=objsS[0]; // mirror of objLayersRef for render
+
+  function getObjs(idx){return (objs[idx!=null?idx:pageIdx])||[];}
+  function setPageObjs(idx,list){
+    objLayersRef.current[idx]=list;
+    setObjs(function(prev){var n=Object.assign({},prev);n[idx]=list;return n;});
+  }
+
+  function pushUndo(idx){
+    if(!undoStackRef.current[idx])undoStackRef.current[idx]=[];
+    var ov=overlayRef.current;
+    var strokeSnap=ov?ov.getContext('2d').getImageData(0,0,ov.width,ov.height):null;
+    undoStackRef.current[idx].push({
+      objs:JSON.parse(JSON.stringify(objLayersRef.current[idx]||[])),
+      stroke:strokeSnap,
+    });
+    if(undoStackRef.current[idx].length>20)undoStackRef.current[idx].shift();
+  }
+
+  function doUndo(){
+    var stack=undoStackRef.current[pageIdx];
+    if(!stack||!stack.length){setStatus('Nothing to undo','err');return;}
+    var snap=stack.pop();
+    setPageObjs(pageIdx,snap.objs||[]);
+    var ov=overlayRef.current;
+    if(ov&&snap.stroke){ov.getContext('2d').putImageData(snap.stroke,0,0);}
+    else if(ov){ov.getContext('2d').clearRect(0,0,ov.width,ov.height);}
+    setSelectedObjId(null);
+    redrawObjects(pageIdx,snap.objs||[]);
+  }
 
   async function onFile(f){
     if(!f)return;
@@ -931,9 +969,7 @@ function ToolAnnotate(){
         var buf=await readBuf(f);
         var pdf=await pdfjs.getDocument({data:new Uint8Array(buf)}).promise;
         pdfDocRef.current=pdf;
-        setTotal(pdf.numPages);
-        setPageIdx(0);
-        setStatus('');
+        setTotal(pdf.numPages);setPageIdx(0);setStatus('');
         await renderPage(pdf,0);
       }catch(err){setStatus('Cannot read PDF: '+err.message,'err');}
     });
@@ -946,28 +982,63 @@ function ToolAnnotate(){
     var cv=canvasRef.current;
     cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
     await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
-    // Restore annotations for this page
     var ov=overlayRef.current;
     ov.width=cv.width;ov.height=cv.height;
-    var saved=annotLayersRef.current[idx];
-    if(saved){ov.getContext('2d').putImageData(saved,0,0);}
-    else{ov.getContext('2d').clearRect(0,0,ov.width,ov.height);}
+    var savedStroke=strokeLayersRef.current[idx];
+    var ctx=ov.getContext('2d');
+    ctx.clearRect(0,0,ov.width,ov.height);
+    if(savedStroke)ctx.putImageData(savedStroke,0,0);
+    redrawObjects(idx,objLayersRef.current[idx]||[]);
   }
 
-  function saveCurrentLayer(){
+  function saveStrokeLayer(){
     var ov=overlayRef.current;
     if(!ov)return;
-    annotLayersRef.current[pageIdx]=ov.getContext('2d').getImageData(0,0,ov.width,ov.height);
+    strokeLayersRef.current[pageIdx]=ov.getContext('2d').getImageData(0,0,ov.width,ov.height);
   }
 
-  async function goPage(newIdx){
-    saveCurrentLayer();
-    setPageIdx(newIdx);
-    await renderPage(pdfDocRef.current,newIdx);
-  }
-
-  function getPos(ev){
+  function redrawObjects(idx,list){
     var ov=overlayRef.current;
+    if(!ov)return;
+    var ctx=ov.getContext('2d');
+    // Restore stroke layer first then draw objects on top
+    var strokeSnap=strokeLayersRef.current[idx];
+    ctx.clearRect(0,0,ov.width,ov.height);
+    if(strokeSnap)ctx.putImageData(strokeSnap,0,0);
+    (list||[]).forEach(function(obj){
+      ctx.save();
+      if(obj.rotate){
+        ctx.translate(obj.x+obj.w/2,obj.y+obj.h/2);
+        ctx.rotate(obj.rotate*Math.PI/180);
+        ctx.translate(-(obj.x+obj.w/2),-(obj.y+obj.h/2));
+      }
+      if(obj.type==='text'){
+        if(obj.fill&&obj.fill!=='none'){
+          ctx.fillStyle=obj.fill;ctx.globalAlpha=0.75;
+          ctx.fillRect(obj.x-4,obj.y-obj.h+4,obj.w+8,obj.h+4);
+          ctx.globalAlpha=1;
+        }
+        ctx.font='bold '+obj.fontSize+'px Geist,sans-serif';
+        ctx.fillStyle=obj.color;
+        ctx.fillText(obj.text,obj.x,obj.y);
+      }else if(obj.type==='image'&&obj.imgEl){
+        ctx.drawImage(obj.imgEl,obj.x,obj.y,obj.w,obj.h);
+      }
+      // Selection handle
+      if(obj.id===selectedObjRef.current){
+        ctx.strokeStyle='rgba(232,213,176,0.9)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+        ctx.strokeRect(obj.x-6,obj.y-obj.h-2,obj.w+12,obj.h+10);
+        ctx.setLineDash([]);
+        // resize handle
+        ctx.fillStyle='var(--accent,#e8d5b0)';
+        ctx.fillRect(obj.x+obj.w+4,obj.y-6,8,8);
+      }
+      ctx.restore();
+    });
+  }
+
+  function getPos(ev,ov){
+    if(!ov)ov=overlayRef.current;
     var b=ov.getBoundingClientRect();
     var scaleX=ov.width/b.width,scaleY=ov.height/b.height;
     var cx=ev.touches?ev.touches[0].clientX:ev.clientX;
@@ -975,112 +1046,228 @@ function ToolAnnotate(){
     return {x:(cx-b.left)*scaleX,y:(cy-b.top)*scaleY};
   }
 
+  function hitTestObjs(pt,list){
+    for(var i=list.length-1;i>=0;i--){
+      var o=list[i];
+      var x1=o.x-6,y1=o.y-o.h-2,x2=o.x+o.w+6,y2=o.y+o.h+8;
+      if(pt.x>=x1&&pt.x<=x2&&pt.y>=y1&&pt.y<=y2)return o;
+    }
+    return null;
+  }
+  function hitTestResizeHandle(pt,obj){
+    if(!obj)return false;
+    var hx=obj.x+obj.w+4,hy=obj.y-6;
+    return pt.x>=hx&&pt.x<=hx+12&&pt.y>=hy&&pt.y<=hy+12;
+  }
+
+  // ── Pen / Arrow pointer events ───────────────────────────────────────────
+  var arrowStartRef=useRef(null);
+  var arrowBaseSnapRef=useRef(null);
+
   function onPointerDown(ev){
     if(!pdfDocRef.current)return;
     ev.preventDefault();
+    var pt=getPos(ev);
+    var list=objLayersRef.current[pageIdx]||[];
+
+    if(tool==='select'){
+      var hit=hitTestObjs(pt,list);
+      if(hit){
+        if(hitTestResizeHandle(pt,hit)){resizingRef.current=true;}
+        else{resizingRef.current=false;dragOffRef.current={x:pt.x-hit.x,y:pt.y-hit.y};}
+        selectedObjRef.current=hit.id;setSelectedObjId(hit.id);
+        redrawObjects(pageIdx,list);
+      }else{selectedObjRef.current=null;setSelectedObjId(null);redrawObjects(pageIdx,list);}
+      return;
+    }
     if(tool==='text'){
-      var pt=getPos(ev);
-      var txt=window.prompt('Enter annotation text:');
-      if(!txt)return;
-      var ctx=overlayRef.current.getContext('2d');
-      ctx.font='bold '+(size*5+10)+'px Geist,sans-serif';
-      ctx.fillStyle=color;
-      ctx.fillText(txt,pt.x,pt.y);
-      saveCurrentLayer();
+      pushUndo(pageIdx);
+      var fontSize=(size*3+12);
+      var id='t'+Date.now();
+      var obj={type:'text',id:id,x:pt.x,y:pt.y,w:120,h:fontSize,text:'Text',color:color,fill:'none',fontSize:fontSize,rotate:0};
+      var newList=list.concat([obj]);
+      setPageObjs(pageIdx,newList);
+      selectedObjRef.current=id;setSelectedObjId(id);
+      redrawObjects(pageIdx,newList);
+      // Prompt for text edit
+      setTimeout(function(){
+        var txt=window.prompt('Enter text:','Text');
+        if(txt===null)return;
+        var finalList=(objLayersRef.current[pageIdx]||[]).map(function(o){
+          if(o.id!==id)return o;
+          var measured=txt.length*fontSize*0.55;
+          return Object.assign({},o,{text:txt,w:Math.max(40,measured)});
+        });
+        setPageObjs(pageIdx,finalList);
+        redrawObjects(pageIdx,finalList);
+      },50);
       return;
     }
-    if(tool==='image'){
-      imgInputRef.current&&imgInputRef.current.click();
+    if(tool==='image'){imgInputRef.current&&imgInputRef.current.click();return;}
+    if(tool==='eraser'){
+      pushUndo(pageIdx);
+      drawingRef.current=true;lastPtRef.current=pt;
       return;
     }
-    drawingRef.current=true;
-    lastPtRef.current=getPos(ev);
+    if(tool==='arrow'){
+      pushUndo(pageIdx);
+      arrowStartRef.current=pt;
+      arrowBaseSnapRef.current=overlayRef.current?overlayRef.current.getContext('2d').getImageData(0,0,overlayRef.current.width,overlayRef.current.height):null;
+      drawingRef.current=true;return;
+    }
+    // pen
+    pushUndo(pageIdx);
+    drawingRef.current=true;lastPtRef.current=pt;
     var ctx=overlayRef.current.getContext('2d');
-    ctx.beginPath();
-    ctx.moveTo(lastPtRef.current.x,lastPtRef.current.y);
+    ctx.beginPath();ctx.moveTo(pt.x,pt.y);
   }
 
   function onPointerMove(ev){
     if(!drawingRef.current)return;
     ev.preventDefault();
     var pt=getPos(ev);
-    var ctx=overlayRef.current.getContext('2d');
-    ctx.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';
-    ctx.strokeStyle=color;
-    ctx.lineWidth=tool==='highlight'?size*5:size;
-    ctx.globalAlpha=tool==='highlight'?0.35:1;
-    ctx.lineCap='round';ctx.lineJoin='round';
-    if(tool==='arrow'||tool==='box'){
-      // For arrow/box redraw from last saved state each move
-      var saved=annotLayersRef.current['_tmp_'+pageIdx];
-      if(saved)ctx.putImageData(saved,0,0);
-      else ctx.clearRect(0,0,overlayRef.current.width,overlayRef.current.height);
-      ctx.globalAlpha=1;
-      ctx.strokeStyle=color;ctx.lineWidth=size+1;ctx.beginPath();
-      if(tool==='box'){
-        ctx.strokeRect(lastPtRef.current.x,lastPtRef.current.y,pt.x-lastPtRef.current.x,pt.y-lastPtRef.current.y);
-      }else{
-        // Arrow line + head
-        ctx.moveTo(lastPtRef.current.x,lastPtRef.current.y);ctx.lineTo(pt.x,pt.y);ctx.stroke();
-        var angle=Math.atan2(pt.y-lastPtRef.current.y,pt.x-lastPtRef.current.x);
-        var hs=14;
-        ctx.beginPath();
-        ctx.moveTo(pt.x,pt.y);
-        ctx.lineTo(pt.x-hs*Math.cos(angle-0.4),pt.y-hs*Math.sin(angle-0.4));
-        ctx.lineTo(pt.x-hs*Math.cos(angle+0.4),pt.y-hs*Math.sin(angle+0.4));
-        ctx.closePath();ctx.fillStyle=color;ctx.fill();
-      }
-    }else{
-      ctx.lineTo(pt.x,pt.y);ctx.stroke();
+    var ov=overlayRef.current;
+    var ctx=ov.getContext('2d');
+
+    if(tool==='arrow'&&arrowStartRef.current){
+      // Restore base, draw arrow preview
+      if(arrowBaseSnapRef.current)ctx.putImageData(arrowBaseSnapRef.current,0,0);
+      else ctx.clearRect(0,0,ov.width,ov.height);
+      ctx.strokeStyle=color;ctx.lineWidth=size+1;ctx.globalAlpha=1;
+      ctx.beginPath();ctx.moveTo(arrowStartRef.current.x,arrowStartRef.current.y);ctx.lineTo(pt.x,pt.y);ctx.stroke();
+      var angle=Math.atan2(pt.y-arrowStartRef.current.y,pt.x-arrowStartRef.current.x);
+      var hs=14;ctx.fillStyle=color;ctx.beginPath();
+      ctx.moveTo(pt.x,pt.y);
+      ctx.lineTo(pt.x-hs*Math.cos(angle-0.4),pt.y-hs*Math.sin(angle-0.4));
+      ctx.lineTo(pt.x-hs*Math.cos(angle+0.4),pt.y-hs*Math.sin(angle+0.4));
+      ctx.closePath();ctx.fill();
+      return;
     }
-    ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+    if(tool==='eraser'){
+      ctx.globalCompositeOperation='destination-out';
+      ctx.lineWidth=size*4;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(lastPtRef.current.x,lastPtRef.current.y);ctx.lineTo(pt.x,pt.y);ctx.stroke();
+      ctx.globalCompositeOperation='source-over';
+      lastPtRef.current=pt;return;
+    }
+    // pen
+    ctx.strokeStyle=color;ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.lineTo(pt.x,pt.y);ctx.stroke();
+    lastPtRef.current=pt;
   }
 
-  function onPointerUp(ev){
+  function onPointerUp(){
     if(!drawingRef.current)return;
     drawingRef.current=false;
-    // Clear tmp state used for arrow/box redraw
-    delete annotLayersRef.current['_tmp_'+pageIdx];
-    saveCurrentLayer();
+    saveStrokeLayer();
+    arrowStartRef.current=null;arrowBaseSnapRef.current=null;
   }
 
-  function onPointerDownBoxArrow(ev){
-    if(tool!=='arrow'&&tool!=='box')return onPointerDown(ev);
-    drawingRef.current=true;
-    lastPtRef.current=getPos(ev);
-    // Save current layer as tmp base for redraw during drag
-    var ov=overlayRef.current;
-    annotLayersRef.current['_tmp_'+pageIdx]=ov.getContext('2d').getImageData(0,0,ov.width,ov.height);
-  }
-
-  function clearAnnotations(){
-    var ov=overlayRef.current;
-    if(!ov)return;
-    ov.getContext('2d').clearRect(0,0,ov.width,ov.height);
-    delete annotLayersRef.current[pageIdx];
+  // Move/resize selected object
+  function onSelectMove(ev){
+    if(!selectedObjRef.current)return;
+    ev.preventDefault();
+    var pt=getPos(ev);
+    var list=objLayersRef.current[pageIdx]||[];
+    var newList=list.map(function(o){
+      if(o.id!==selectedObjRef.current)return o;
+      if(resizingRef.current){
+        var newW=Math.max(20,pt.x-o.x);
+        var newH=Math.max(10,newW*(o.h/o.w));
+        var newFontSize=o.type==='text'?Math.max(8,Math.round(newW/6)):o.fontSize;
+        return Object.assign({},o,{w:newW,h:newH,fontSize:newFontSize});
+      }
+      return Object.assign({},o,{x:pt.x-dragOffRef.current.x,y:pt.y-dragOffRef.current.y});
+    });
+    setPageObjs(pageIdx,newList);
+    redrawObjects(pageIdx,newList);
   }
 
   function insertImage(imgFile){
-    if(!imgFile)return;
+    if(!imgFile||!overlayRef.current)return;
+    pushUndo(pageIdx);
     var reader=new FileReader();
     reader.onload=function(ev){
       var img=new Image();
       img.onload=function(){
         var ov=overlayRef.current;
-        var ctx=ov.getContext('2d');
-        var maxW=ov.width*0.4,maxH=ov.height*0.4;
+        var maxW=ov.width*0.35,maxH=ov.height*0.35;
         var scale=Math.min(maxW/img.width,maxH/img.height,1);
-        ctx.drawImage(img,20,20,img.width*scale,img.height*scale);
-        saveCurrentLayer();
+        var w=img.width*scale,h=img.height*scale;
+        var id='i'+Date.now();
+        var obj={type:'image',id:id,x:40,y:40+h,w:w,h:h,imgEl:img,rotate:0};
+        var list=(objLayersRef.current[pageIdx]||[]).concat([obj]);
+        setPageObjs(pageIdx,list);
+        selectedObjRef.current=id;setSelectedObjId(id);
+        redrawObjects(pageIdx,list);
       };
       img.src=ev.target.result;
     };
     reader.readAsDataURL(imgFile);
   }
 
+  function deleteSelected(){
+    if(!selectedObjRef.current)return;
+    pushUndo(pageIdx);
+    var list=(objLayersRef.current[pageIdx]||[]).filter(function(o){return o.id!==selectedObjRef.current;});
+    setPageObjs(pageIdx,list);
+    selectedObjRef.current=null;setSelectedObjId(null);
+    redrawObjects(pageIdx,list);
+  }
+
+  function clearPage(){
+    pushUndo(pageIdx);
+    strokeLayersRef.current[pageIdx]=null;
+    setPageObjs(pageIdx,[]);
+    var ov=overlayRef.current;
+    if(ov)ov.getContext('2d').clearRect(0,0,ov.width,ov.height);
+    selectedObjRef.current=null;setSelectedObjId(null);
+  }
+
+  // Text object editing - double click
+  function onDblClick(ev){
+    if(tool!=='select')return;
+    var pt=getPos(ev);
+    var list=objLayersRef.current[pageIdx]||[];
+    var hit=hitTestObjs(pt,list);
+    if(!hit||hit.type!=='text')return;
+    var txt=window.prompt('Edit text:',hit.text);
+    if(txt===null)return;
+    pushUndo(pageIdx);
+    var newList=list.map(function(o){
+      if(o.id!==hit.id)return o;
+      var measured=txt.length*o.fontSize*0.55;
+      return Object.assign({},o,{text:txt,w:Math.max(40,measured)});
+    });
+    setPageObjs(pageIdx,newList);
+    redrawObjects(pageIdx,newList);
+  }
+
+  // Text fill color
+  var TEXT_FILLS=['none','rgba(255,235,150,0.7)','rgba(150,220,180,0.7)','rgba(150,180,255,0.7)','rgba(255,160,160,0.7)','rgba(220,200,255,0.7)'];
+  var selectedObj=(getObjs(pageIdx)).find(function(o){return o.id===selectedObjId;});
+
+  function setTextFill(fill){
+    if(!selectedObjId)return;
+    var list=(objLayersRef.current[pageIdx]||[]).map(function(o){return o.id===selectedObjId?Object.assign({},o,{fill:fill}):o;});
+    setPageObjs(pageIdx,list);redrawObjects(pageIdx,list);
+  }
+  function setTextRotate(deg){
+    if(!selectedObjId)return;
+    var list=(objLayersRef.current[pageIdx]||[]).map(function(o){return o.id===selectedObjId?Object.assign({},o,{rotate:(o.rotate||0)+deg}):o;});
+    setPageObjs(pageIdx,list);redrawObjects(pageIdx,list);
+  }
+
+  async function goPage(newIdx){
+    saveStrokeLayer();
+    setSelectedObjId(null);selectedObjRef.current=null;
+    setPageIdx(newIdx);
+    await renderPage(pdfDocRef.current,newIdx);
+  }
+
   async function exportPdf(){
     if(!file||!pdfDocRef.current){setStatus('Upload a PDF first','err');return;}
-    saveCurrentLayer();
+    saveStrokeLayer();
     setStatus('Exporting annotated PDF…');
     loadPdfLib(async function(PDFLib){
       if(!PDFLib){setStatus('Failed to load PDF engine','err');return;}
@@ -1089,18 +1276,32 @@ function ToolAnnotate(){
         var doc=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
         var pages=doc.getPages();
         for(var i=0;i<pages.length;i++){
-          var layer=annotLayersRef.current[i];
-          if(!layer)continue;
-          // Render annotation layer to canvas, embed as image
+          var hasStroke=strokeLayersRef.current[i];
+          var hasObjs=(objLayersRef.current[i]||[]).length>0;
+          if(!hasStroke&&!hasObjs)continue;
+          // Composite stroke + objects onto a temp canvas
+          var cv=canvasRef.current;
           var tmpCv=document.createElement('canvas');
-          tmpCv.width=layer.width;tmpCv.height=layer.height;
-          tmpCv.getContext('2d').putImageData(layer,0,0);
+          tmpCv.width=cv.width;tmpCv.height=cv.height;
+          var ctx=tmpCv.getContext('2d');
+          var stroke=strokeLayersRef.current[i];
+          if(stroke)ctx.putImageData(stroke,0,0);
+          // Draw objects
+          var list=objLayersRef.current[i]||[];
+          list.forEach(function(obj){
+            ctx.save();
+            if(obj.rotate){ctx.translate(obj.x+obj.w/2,obj.y+obj.h/2);ctx.rotate(obj.rotate*Math.PI/180);ctx.translate(-(obj.x+obj.w/2),-(obj.y+obj.h/2));}
+            if(obj.type==='text'){
+              if(obj.fill&&obj.fill!=='none'){ctx.fillStyle=obj.fill;ctx.globalAlpha=0.75;ctx.fillRect(obj.x-4,obj.y-obj.h+4,obj.w+8,obj.h+4);ctx.globalAlpha=1;}
+              ctx.font='bold '+obj.fontSize+'px Geist,sans-serif';ctx.fillStyle=obj.color;ctx.fillText(obj.text,obj.x,obj.y);
+            }else if(obj.type==='image'&&obj.imgEl){ctx.drawImage(obj.imgEl,obj.x,obj.y,obj.w,obj.h);}
+            ctx.restore();
+          });
           var dataUrl=tmpCv.toDataURL('image/png');
           var b64=dataUrl.split(',')[1];
           var imgBytes=Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0);});
           var embeddedImg=await doc.embedPng(imgBytes);
-          var pg=pages[i];
-          var pgsz=pg.getSize();
+          var pg=pages[i];var pgsz=pg.getSize();
           pg.drawImage(embeddedImg,{x:0,y:0,width:pgsz.width,height:pgsz.height,opacity:1});
         }
         var outBytes=await doc.save();
@@ -1111,14 +1312,15 @@ function ToolAnnotate(){
   }
 
   var toolBtns=[
+    {id:'select',label:'↖ Select / Move'},
     {id:'pen',label:'✏️ Pen'},
-    {id:'highlight',label:'🖌 Highlight'},
-    {id:'box',label:'⬜ Box'},
     {id:'arrow',label:'➡️ Arrow'},
     {id:'text',label:'T Text'},
     {id:'image',label:'🖼 Image'},
     {id:'eraser',label:'◻ Eraser'},
   ];
+
+  var isMoveTool=tool==='select';
 
   return e('div',null,
     e(DropZone,{accept:'.pdf,application/pdf',icon:'✏️',
@@ -1134,49 +1336,62 @@ function ToolAnnotate(){
         toolBtns.map(function(tb){
           return e('button',{key:tb.id,className:'ann-tool-btn'+(tool===tb.id?' sel':''),
             onClick:function(){setTool(tb.id);}},tb.label);
-        })
+        }),
+        e('button',{className:'ann-tool-btn',onClick:doUndo,title:'Undo last action'},'↩ Undo'),
+        e('button',{className:'ann-tool-btn',style:{color:'var(--red)'},onClick:clearPage},'🗑 Clear page')
       ),
-      // Color swatches
-      tool!=='eraser'&&e('div',null,
-        e('div',{className:'label',style:{marginBottom:4}},'Color:'),
+      // Color and size (not for select/image)
+      tool!=='select'&&tool!=='image'&&e('div',null,
         e('div',{className:'ann-colors'},
+          e('span',{className:'label',style:{marginRight:6,flexShrink:0}},'Color:'),
           ANN_COLORS.map(function(c){
             return e('div',{key:c,className:'ann-color-swatch'+(color===c?' sel':''),
               style:{background:c},onClick:function(){setColor(c);}});
           })
+        ),
+        tool!=='eraser'&&e('div',{className:'ann-size-row'},
+          e('span',{className:'label'},'Size: '+size),
+          e('input',{type:'range',min:1,max:12,value:size,style:{width:100},
+            onChange:function(ev){setSize(parseInt(ev.target.value));}})
         )
       ),
-      // Brush size
-      e('div',{className:'ann-size-row'},
-        e('span',{className:'label'},'Size: '+size),
-        e('input',{type:'range',min:1,max:12,value:size,style:{width:100},
-          onChange:function(ev){setSize(parseInt(ev.target.value));}})
+      // Selected object controls
+      selectedObj&&e('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',margin:'6px 0',padding:'8px 10px',background:'var(--surface2)',borderRadius:'var(--r-sm)'}},
+        e('span',{className:'label'},'Selected:'),
+        selectedObj.type==='text'&&e('span',{style:{fontSize:'0.72rem',color:'var(--muted)'}},'Fill:'),
+        selectedObj.type==='text'&&TEXT_FILLS.map(function(f,fi){
+          return e('div',{key:fi,
+            style:{width:18,height:18,borderRadius:4,cursor:'pointer',border:'2px solid '+(selectedObj.fill===f?'var(--accent)':'transparent'),background:f==='none'?'repeating-linear-gradient(45deg,var(--muted2) 0,var(--muted2) 2px,transparent 0,transparent 50%) 0/8px 8px':f},
+            onClick:function(){setTextFill(f);}});
+        }),
+        selectedObj.type==='text'&&e('button',{className:'ann-tool-btn',onClick:function(){setTextRotate(-15);}},'↺ -15°'),
+        selectedObj.type==='text'&&e('button',{className:'ann-tool-btn',onClick:function(){setTextRotate(15);}},'↻ +15°'),
+        e('span',{className:'label',style:{marginLeft:4}},'Drag to move · Corner handle to resize'),
+        e('button',{className:'ann-tool-btn',style:{color:'var(--red)',marginLeft:'auto'},onClick:deleteSelected},'✕ Delete')
       ),
       // Page nav
       e('div',{className:'ann-pg-nav'},
-        e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem'},
-          disabled:pageIdx===0,onClick:function(){goPage(pageIdx-1);}
+        e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem'},disabled:pageIdx===0,onClick:function(){goPage(pageIdx-1);}
         },'← Prev'),
         e('span',null,'Page '+(pageIdx+1)+' of '+total),
-        e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem'},
-          disabled:pageIdx>=total-1,onClick:function(){goPage(pageIdx+1);}
-        },'Next →'),
-        e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem',marginLeft:8},
-          onClick:clearAnnotations},'Clear page')
+        e('button',{className:'btn sec',style:{padding:'4px 10px',fontSize:'0.68rem'},disabled:pageIdx>=total-1,onClick:function(){goPage(pageIdx+1);}
+        },'Next →')
       ),
-      // Canvas stack
-      e('div',{className:'ann-canvas-wrap',style:{cursor:tool==='eraser'?'cell':tool==='text'?'text':'crosshair'}},
-        e('canvas',{ref:canvasRef,style:{display:'block',maxWidth:'100%',userSelect:'none'}}),
+      // Canvas
+      e('div',{className:'ann-canvas-wrap',style:{cursor:tool==='eraser'?'cell':tool==='select'?'default':tool==='text'?'text':'crosshair'}},
+        e('canvas',{ref:canvasRef,style:{display:'block',maxWidth:'100%'}}),
         e('canvas',{ref:overlayRef,
-          style:{position:'absolute',top:0,left:0,width:'100%',height:'100%',cursor:'inherit'},
-          onMouseDown:function(ev){tool==='arrow'||tool==='box'?onPointerDownBoxArrow(ev):onPointerDown(ev);},
-          onMouseMove:onPointerMove,
+          style:{position:'absolute',top:0,left:0,width:'100%',height:'100%'},
+          onMouseDown:onPointerDown,
+          onMouseMove:function(ev){if(isMoveTool&&selectedObjId)onSelectMove(ev);else onPointerMove(ev);},
           onMouseUp:onPointerUp,
-          onTouchStart:function(ev){tool==='arrow'||tool==='box'?onPointerDownBoxArrow(ev):onPointerDown(ev);},
-          onTouchMove:onPointerMove,
+          onDblClick:onDblClick,
+          onTouchStart:onPointerDown,
+          onTouchMove:function(ev){if(isMoveTool&&selectedObjId)onSelectMove(ev);else onPointerMove(ev);},
           onTouchEnd:onPointerUp,
         })
-      )
+      ),
+      e('div',{className:'note',style:{marginTop:6}},'Tip: Use Select tool to move, resize or delete text and images. Double-click a text box to edit it.')
     ),
     e('div',{className:'row'},
       e('button',{className:'btn pri',disabled:!file||!total,onClick:exportPdf},'Export annotated PDF')
@@ -1184,6 +1399,7 @@ function ToolAnnotate(){
     e('div',{className:'status '+stType},status)
   );
 }
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TOOL 8 — PAGE TOOLS (numbers/watermark + rotate + reorder)
@@ -1277,9 +1493,13 @@ function ToolPageTools(){
         if(wmText.trim()){
           pages.forEach(function(pg){
             var sz=pg.getSize();
+            var wmSize=44;
+            var wmW=font.widthOfTextAtSize(wmText,wmSize);
+            var wmH=wmSize*0.7;
             pg.drawText(wmText,{
-              x:sz.width*0.15,y:sz.height*0.35,
-              size:48,font:font,
+              x:(sz.width-wmW*Math.cos(35*Math.PI/180)+wmH*Math.sin(35*Math.PI/180))/2,
+              y:(sz.height-wmW*Math.sin(35*Math.PI/180)-wmH*Math.cos(35*Math.PI/180))/2,
+              size:wmSize,font:font,
               color:PDFLib.rgb(0.5,0.5,0.5),
               opacity:wmOpac/100,
               rotate:PDFLib.degrees(35),
