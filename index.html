@@ -1848,7 +1848,7 @@ function MistakeList(props){
 
   return e(React.Fragment,null,
     e('div',{style:{fontSize:'0.72rem',fontStyle:'italic',color:'var(--muted)',marginBottom:10,lineHeight:1.6}},
-      'Mistakes grouped by set — '+totalDistinct+' distinct mistake'+(totalDistinct!==1?'s':'')+' recorded. Repeated mistakes show a count.'),
+      'Mistakes grouped by set — last 50 distinct mistakes shown. '+totalDistinct+' recorded. Repeated mistakes show date and count.'),
     e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:8}},
       e('button',{
         onClick:function(){if(window.confirm('Clear all mistakes? This cannot be undone.'))props.onClear();},
@@ -1885,9 +1885,15 @@ function MistakeList(props){
                 e('div',{style:{flex:1}},
                   e('div',{style:{fontSize:'0.8rem',color:'var(--text)',marginBottom:3,lineHeight:1.5}},m.question),
                   e('div',{className:'mist-set'},
-                    fmtDate(m,{day:'numeric',month:'short'}),
-                    m.repeat_count>1&&e('span',{style:{marginLeft:6,color:'var(--red)',fontSize:'0.62rem',fontWeight:500}},
-                      '× '+m.repeat_count+' times')
+                    // Show first date and last date when repeated
+                    m.repeat_count>1
+                      ?e('span',null,
+                          'First: '+fmtDate(m,{day:'numeric',month:'short'}),
+                          e('span',{style:{marginLeft:6,color:'var(--red)',fontWeight:600}},'× '+m.repeat_count+' times'),
+                          m.last_date&&e('span',{style:{marginLeft:6,color:'var(--muted)'}},
+                            '· Last: '+new Date(m.last_date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}))
+                        )
+                      :e('span',null,fmtDate(m,{day:'numeric',month:'short'}))
                   )
                 ),
                 e('button',{
@@ -2955,17 +2961,33 @@ function App(){
       return (m.set_name||m.setName)===activeSetName&&m.question===question;
     });
     if(alreadyExists){
-      // Update the date on the existing mistake to show it was repeated, but don't duplicate
+      // Increment repeat_count and update last_date in local state
       setMistakes(function(prev){return prev.map(function(m){
         if((m.set_name||m.setName)===activeSetName&&m.question===question){
-          return Object.assign({},m,{
+          var updated=Object.assign({},m,{
             repeat_count:(m.repeat_count||1)+1,
             last_date:new Date().toISOString(),
           });
+          // Persist the updated repeat_count to Supabase (overwrite same id row)
+          if(loadToken()&&updated.id){
+            fetch('/api/data?resource=mistakes',{method:'POST',headers:authHeader(),
+              body:JSON.stringify({
+                id:updated.id,
+                set_name:activeSetName,
+                question:updated.question,
+                options:updated.options||[],
+                correct:updated.correct,
+                explanation:updated.explanation||'',
+                repeat_count:updated.repeat_count,
+                last_date:updated.last_date,
+              })
+            }).catch(function(){});
+          }
+          return updated;
         }
         return m;
       });});
-      return; // don't write new row to Supabase for a repeat
+      return;
     }
     var id=Date.now().toString(36);
     var entry={id,question,options:options||[],correct,explanation:explanation||'',set_name:activeSetName,setName:activeSetName,created_at:new Date().toISOString(),date:new Date().toISOString()};
