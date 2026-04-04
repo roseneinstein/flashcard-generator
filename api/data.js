@@ -113,13 +113,15 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { id, set_id, set_name, question, options, correct, explanation } = req.body;
+      const { id, set_id, set_name, question, options, correct, explanation, repeat_count, last_date } = req.body;
       if (!id || !set_name || !question) return res.status(400).json({ error: 'Missing fields' });
-      const { error } = await supabase.from('mistakes').insert({
+      const { error } = await supabase.from('mistakes').upsert({
         id, user_id: user.id,
         set_id: set_id || null, set_name,
         question, options: options || [], correct, explanation: explanation || '',
-      });
+        repeat_count: repeat_count || 1,
+        last_date: last_date || null,
+      }, { onConflict: 'id', ignoreDuplicates: false });
       if (error) return res.status(500).json({ error: error.message });
       return res.status(200).json({ ok: true });
     }
