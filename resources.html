@@ -933,7 +933,12 @@ function ToolAnnotate(){
   var editingObjIdS=useState(null),setEditingObjId=editingObjIdS[1];var editingObjId=editingObjIdS[0];
   var editTextS=useState(''),setEditText=editTextS[1];var editText=editTextS[0];
   var loadingPageS=useState(false),setLoadingPage=loadingPageS[1];var loadingPage=loadingPageS[0];
+  // floatingObj: object following cursor before being placed by double-click
+  var floatingObjS=useState(null),_setFloatingObjRaw=floatingObjS[1];var floatingObj=floatingObjS[0];
+  function setFloatingObj(v){floatingObjRef.current=v;_setFloatingObjRaw(v);}
+  var floatingPosS=useState({x:0,y:0}),setFloatingPos=floatingPosS[1];var floatingPos=floatingPosS[0];
   var renderPendingRef=useRef(null); // {pdf, idx} waiting for canvas mount
+  var floatingObjRef=useRef(null);   // mirror of floatingObj for sync access in event handlers
   var objsS=useState({}),setObjs=objsS[1];var objs=objsS[0]; // mirror of objLayersRef for render
 
   function getObjs(idx){return (objs[idx!=null?idx:pageIdx])||[];}
@@ -999,7 +1004,7 @@ function ToolAnnotate(){
       return;
     }
     var page=await pdf.getPage(idx+1);
-    var vp=page.getViewport({scale:1.4});
+    var vp=page.getViewport({scale:2.2}); // high-res render for annotation quality
     var cv=canvasRef.current;
     cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
     await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
@@ -1120,24 +1125,22 @@ function ToolAnnotate(){
       return;
     }
     if(tool==='text'){
-      // Check if clicking on existing text obj — if so, open it for editing
+      // If a floating text exists — single click does nothing (wait for double-click to drop)
+      if(floatingObj&&floatingObj.type==='text')return;
+      // Check if clicking on existing placed text obj → select it
       var hitExisting=hitTestObjs(pt,list);
       if(hitExisting&&hitExisting.type==='text'){
         selectedObjRef.current=hitExisting.id;setSelectedObjId(hitExisting.id);
-        setEditingObjId(hitExisting.id);setEditText(hitExisting.text);
         redrawObjects(pageIdx,list);
         return;
       }
-      // Place new text object
-      pushUndo(pageIdx);
+      // First click → create floating text that follows cursor
       var fontSize=(size*3+12);
       var id='t'+Date.now();
-      var obj={type:'text',id:id,x:pt.x,y:pt.y,w:160,h:fontSize,text:'',color:color,fill:'none',fontSize:fontSize,rotate:0};
-      var newList=list.concat([obj]);
-      setPageObjs(pageIdx,newList);
-      selectedObjRef.current=id;setSelectedObjId(id);
-      setEditingObjId(id);setEditText('');
-      redrawObjects(pageIdx,newList);
+      var floatObj={type:'text',id:id,x:pt.x,y:pt.y,w:160,h:fontSize,text:'New text',color:color,fill:'none',fontSize:fontSize,rotate:0,floating:true};
+      setFloatingObj(floatObj);
+      setFloatingPos({x:pt.x,y:pt.y});
+      setEditingObjId(id);setEditText('New text');
       return;
     }
     if(tool==='image'){
@@ -1170,6 +1173,12 @@ function ToolAnnotate(){
   }
 
   function onPointerMove(ev){
+    // Update floating object position to follow cursor
+    if(floatingObjRef.current){
+      var pt=getPos(ev);
+      setFloatingPos({x:pt.x,y:pt.y});
+      return; // don't draw while floating
+    }
     if(!drawingRef.current)return;
     ev.preventDefault();
     var pt=getPos(ev);
@@ -1246,22 +1255,19 @@ function ToolAnnotate(){
 
   function insertImage(imgFile){
     if(!imgFile||!overlayRef.current)return;
-    pushUndo(pageIdx);
     var reader=new FileReader();
     reader.onload=function(ev){
       var img=new Image();
       img.onload=function(){
         var ov=overlayRef.current;
-        var maxW=ov.width*0.35,maxH=ov.height*0.35;
+        var maxW=ov.width*0.40,maxH=ov.height*0.40;
         var scale=Math.min(maxW/img.width,maxH/img.height,1);
         var w=img.width*scale,h=img.height*scale;
         var id='i'+Date.now();
-        var obj={type:'image',id:id,x:40,y:40+h,w:w,h:h,imgEl:img,rotate:0};
-        var list=(objLayersRef.current[pageIdx]||[]).concat([obj]);
-        setPageObjs(pageIdx,list);
-        selectedObjRef.current=id;setSelectedObjId(id);
-        setTool('select'); // auto-switch to select so user can immediately move/resize
-        redrawObjects(pageIdx,list);
+        // Create floating image that follows cursor — double-click to place
+        var floatObj={type:'image',id:id,x:40,y:40,w:w,h:h,imgEl:img,rotate:0,floating:true};
+        setFloatingObj(floatObj);
+        setFloatingPos({x:40,y:40});
       };
       img.src=ev.target.result;
     };
@@ -1290,6 +1296,25 @@ function ToolAnnotate(){
   function onDblClick(ev){
     var pt=getPos(ev);
     var list=objLayersRef.current[pageIdx]||[];
+
+    // If floating obj exists — double click drops it at cursor position
+    if(floatingObjRef.current){
+      var fobj=floatingObjRef.current;
+      var placedObj=Object.assign({},fobj,{x:pt.x,y:pt.y,floating:false});
+      delete placedObj.floating;
+      pushUndo(pageIdx);
+      var newList=list.concat([placedObj]);
+      setPageObjs(pageIdx,newList);
+      setFloatingObj(null);floatingObjRef.current=null;
+      selectedObjRef.current=placedObj.id;setSelectedObjId(placedObj.id);
+      if(placedObj.type==='text'){
+        setEditingObjId(placedObj.id);setEditText(placedObj.text);
+      }
+      redrawObjects(pageIdx,newList);
+      return;
+    }
+
+    // No floating obj — double click on existing text opens editor
     var hit=hitTestObjs(pt,list);
     if(!hit||hit.type!=='text')return;
     selectedObjRef.current=hit.id;setSelectedObjId(hit.id);
@@ -1437,8 +1462,8 @@ function ToolAnnotate(){
             style:{width:18,height:18,borderRadius:4,cursor:'pointer',border:'2px solid '+(selectedObj.fill===f?'var(--accent)':'transparent'),background:f==='none'?'repeating-linear-gradient(45deg,var(--muted2) 0,var(--muted2) 2px,transparent 0,transparent 50%) 0/8px 8px':f},
             onClick:function(){setTextFill(f);}});
         }),
-        selectedObj.type==='text'&&e('button',{className:'ann-tool-btn',onClick:function(){setTextRotate(-15);}},'↺ -15°'),
-        selectedObj.type==='text'&&e('button',{className:'ann-tool-btn',onClick:function(){setTextRotate(15);}},'↻ +15°'),
+        (selectedObj.type==='text'||selectedObj.type==='image')&&e('button',{className:'ann-tool-btn',onClick:function(){setTextRotate(-15);}},'↺ -15°'),
+        (selectedObj.type==='text'||selectedObj.type==='image')&&e('button',{className:'ann-tool-btn',onClick:function(){setTextRotate(15);}},'↻ +15°'),
         e('span',{className:'label',style:{marginLeft:4}},'Drag to move · Corner handle to resize'),
         e('button',{className:'ann-tool-btn',style:{color:'var(--red)',marginLeft:'auto'},onClick:deleteSelected},'✕ Delete')
       ),
@@ -1470,7 +1495,16 @@ function ToolAnnotate(){
         )
       ),
       // Canvas — always mounted once file loaded so canvasRef is always available
-      e('div',{className:'ann-canvas-wrap',style:{cursor:tool==='eraser'?'cell':tool==='select'?'default':tool==='text'?'text':tool==='highlight'?'text':'crosshair',position:'relative',minHeight:loadingPage?120:undefined}},
+      e('div',{
+        className:'ann-canvas-wrap',
+        tabIndex:0,
+        style:{cursor:floatingObj?'crosshair':tool==='eraser'?'cell':tool==='select'?'default':tool==='text'?'text':tool==='highlight'?'text':'crosshair',position:'relative',minHeight:loadingPage?120:undefined,outline:'none'},
+        onKeyDown:function(ev){
+          if(ev.key==='Escape'&&floatingObjRef.current){
+            setFloatingObj(null);setEditingObjId(null);setEditText('');
+          }
+        },
+      },
         loadingPage&&e('div',{style:{
           position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
           background:'var(--surface2)',borderRadius:'var(--r-sm)',zIndex:5,
@@ -1508,6 +1542,51 @@ function ToolAnnotate(){
           },
           onTouchEnd:onPointerUp,
         }),
+        // Floating ghost — object following cursor before placement (double-click to drop)
+        floatingObj&&(function(){
+          var cv=overlayRef.current;
+          if(!cv)return null;
+          var b=cv.getBoundingClientRect();
+          var scaleX=b.width/cv.width;
+          var relX=floatingPos.x*scaleX;
+          var relY=floatingPos.y*scaleX;
+          var isImg=floatingObj.type==='image';
+          return e('div',{style:{
+            position:'absolute',
+            left:relX+'px',
+            top:relY+'px',
+            pointerEvents:'none',
+            zIndex:30,
+            opacity:0.72,
+            transform:'translate(-50%,-50%)',
+          }},
+            isImg&&floatingObj.imgEl
+              ?e('img',{
+                  src:floatingObj.imgEl.src,
+                  style:{
+                    width:floatingObj.w*scaleX+'px',
+                    height:floatingObj.h*scaleX+'px',
+                    display:'block',
+                    border:'2px dashed rgba(232,213,176,0.8)',
+                    borderRadius:4,
+                  }
+                })
+              :e('div',{style:{
+                  padding:'4px 10px',
+                  background:floatingObj.fill&&floatingObj.fill!=='none'?floatingObj.fill:'rgba(255,255,255,0.85)',
+                  border:'2px dashed rgba(232,213,176,0.8)',
+                  borderRadius:4,
+                  fontSize:(floatingObj.fontSize*scaleX)+'px',
+                  fontFamily:'Geist,sans-serif',
+                  fontWeight:'bold',
+                  color:floatingObj.color,
+                  whiteSpace:'pre',
+                  boxShadow:'0 2px 12px rgba(0,0,0,0.25)',
+                }},
+                editText||floatingObj.text||'Text'
+              )
+          );
+        })(),
         // Inline text editor — positioned over the text object being edited
         editingObjId&&(function(){
           var editObj=(objLayersRef.current[pageIdx]||[]).find(function(o){return o.id===editingObjId;});
@@ -1558,7 +1637,11 @@ function ToolAnnotate(){
           );
         })()
       ),
-      e('div',{className:'note',style:{marginTop:6}},
+      floatingObj&&e('div',{className:'note',style:{marginTop:6,borderColor:'rgba(232,213,176,0.4)',color:'var(--accent)'}},
+        floatingObj.type==='image'?'Image loaded — move cursor to position, double-click to place. Press Esc to cancel.'
+        :'Move cursor to position, double-click to place. Press Esc to cancel.'
+      ),
+      !floatingObj&&e('div',{className:'note',style:{marginTop:6}},
         tool==='text'?'Click anywhere on the page to place a text box. Click an existing text to edit it. Shift+Enter to confirm, Esc to cancel.'
         :tool==='highlight'?'Click and drag across text to highlight it. Choose a color above.'
         :tool==='image'?'Click the Image button to upload — then use Select tool to move, resize or rotate.'
@@ -1909,14 +1992,14 @@ function ToolPageTools(){
 // MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 var TOOLS=[
-  {id:'merge',icon:'📑',title:'Merge PDFs',desc:'Combine multiple PDFs into one document in any order.',Comp:ToolMerge},
-  {id:'split',icon:'✂️',title:'Split PDF',desc:'Extract specific pages visually or by entering a page range.',Comp:ToolSplit},
-  {id:'compress',icon:'📦',title:'Compress PDF',desc:'Reduce PDF file size with mild, standard, or hard compression.',Comp:ToolCompress},
-  {id:'pdfimg',icon:'🖼',title:'PDF to Images',desc:'Convert each PDF page to JPEG or PNG — downloaded as a single ZIP.',Comp:ToolPdfImg},
-  {id:'imgpdf',icon:'📷',title:'Images to PDF',desc:'Combine JPEG, PNG or WebP images into a single PDF document.',Comp:ToolImgPdf},
-  {id:'imgres',icon:'⬛',title:'Image Resizer',desc:'Resize any image by pixels or inches@DPI, with quality and size control.',Comp:ToolImgResize},
-  {id:'annotate',icon:'✏️',title:'Annotate PDF',desc:'Draw, highlight, add text, arrows, boxes and images directly on PDF pages.',Comp:ToolAnnotate},
-  {id:'pagetools',icon:'📐',title:'Page Tools',desc:'Add page numbers or watermark, rotate pages, or drag-and-drop to reorder pages.',Comp:ToolPageTools},
+  {id:'annotate', icon:'✏️', title:'Annotate PDF',      desc:'Draw, highlight, add text, arrows and images directly on any PDF page.',  Comp:ToolAnnotate},
+  {id:'imgres',   icon:'⬛', title:'Image Resizer',     desc:'Resize any image by pixels or inches@DPI, with quality and size control.', Comp:ToolImgResize},
+  {id:'merge',    icon:'📑', title:'Merge PDFs',        desc:'Combine multiple PDFs into one document in any order.',                    Comp:ToolMerge},
+  {id:'split',    icon:'✂️', title:'Split PDF',         desc:'Extract specific pages visually or by entering a page range.',             Comp:ToolSplit},
+  {id:'compress', icon:'📦', title:'Compress PDF',      desc:'Reduce PDF file size with mild, standard, or hard compression.',           Comp:ToolCompress},
+  {id:'pagetools',icon:'📐', title:'Page Tools',        desc:'Add page numbers or watermark, rotate pages, or reorder pages.',           Comp:ToolPageTools},
+  {id:'imgpdf',   icon:'📷', title:'Images to PDF',     desc:'Combine JPEG, PNG or WebP images into a single PDF document.',             Comp:ToolImgPdf},
+  {id:'pdfimg',   icon:'🖼', title:'PDF to Images',     desc:'Convert each PDF page to JPEG or PNG — downloaded as a single ZIP.',      Comp:ToolPdfImg},
 ];
 
 function App(){
