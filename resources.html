@@ -940,7 +940,8 @@ function ToolAnnotate(){
   var draggingRef=useRef(false);
   var dragOffRef=useRef({x:0,y:0});
   var resizingRef=useRef(false);
-  var moveModeRef=useRef(false); // true when user clicked Move button in control panel
+  var moveModeS=useState(false),setMoveMode=moveModeS[1];var moveMode=moveModeS[0];
+  var moveModeRef=useRef(false); // kept in sync with state
 
   // ── helpers ─────────────────────────────────────────────────────────────
   function setPageObjs(idx,list){
@@ -1070,7 +1071,12 @@ function ToolAnnotate(){
 
   async function goPage(newIdx){
     saveStroke();
-    setSelectedObjId(null);selectedObjRef.current=null;setEditingObjId(null);
+    // Full interaction state reset on page navigation
+    drawingRef.current=false;draggingRef.current=false;resizingRef.current=false;
+    arrowStartRef.current=null;arrowBaseSnapRef.current=null;mouseDownPtRef.current=null;
+    moveModeRef.current=false;setMoveMode(false);
+    selectedObjRef.current=null;setSelectedObjId(null);
+    setEditingObjId(null);setEditText('');
     setPageIdx(newIdx);
     await renderPage(pdfDocRef.current,newIdx);
   }
@@ -1091,6 +1097,8 @@ function ToolAnnotate(){
   function onMouseDown(ev){
     if(!pdfDocRef.current||editingObjId)return;
     ev.preventDefault();
+    // Always clean up any stuck state before starting new interaction
+    draggingRef.current=false;resizingRef.current=false;
     var pt=getPos(ev);
     var list=getObjs(pageIdx);
     mouseDownPtRef.current=pt;
@@ -1169,6 +1177,10 @@ function ToolAnnotate(){
     if(draggingRef.current&&selectedObjRef.current&&(tool==='select'||tool==='text'||tool==='image'||moveModeRef.current)){
       ev.preventDefault();
       var list=getObjs(pageIdx);
+      // Verify the selected object still exists on this page (prevents phantom drag after page nav)
+      if(!list.some(function(o){return o.id===selectedObjRef.current;})){
+        draggingRef.current=false;return;
+      }
       var nl=list.map(function(o){
         if(o.id!==selectedObjRef.current)return o;
         if(resizingRef.current){
@@ -1197,7 +1209,8 @@ function ToolAnnotate(){
       ctx.strokeStyle=color;ctx.lineWidth=size+1;
       ctx.beginPath();ctx.moveTo(arrowStartRef.current.x,arrowStartRef.current.y);ctx.lineTo(pt.x,pt.y);ctx.stroke();
       var ang=Math.atan2(pt.y-arrowStartRef.current.y,pt.x-arrowStartRef.current.x);
-      var hs=14;ctx.fillStyle=color;ctx.beginPath();
+      var hs=10+size*2; // arrowhead scales with size
+      ctx.fillStyle=color;ctx.beginPath();
       ctx.moveTo(pt.x,pt.y);
       ctx.lineTo(pt.x-hs*Math.cos(ang-0.4),pt.y-hs*Math.sin(ang-0.4));
       ctx.lineTo(pt.x-hs*Math.cos(ang+0.4),pt.y-hs*Math.sin(ang+0.4));
@@ -1224,6 +1237,16 @@ function ToolAnnotate(){
     ctx.lineTo(pt.x,pt.y);ctx.stroke();
     lastPtRef.current=pt;
   }
+
+  // Global mouseup anywhere (window) to prevent stuck drag when mouse leaves canvas
+  useEffect(function(){
+    function onWindowMouseUp(){
+      if(drawingRef.current){saveStroke();arrowStartRef.current=null;arrowBaseSnapRef.current=null;}
+      drawingRef.current=false;draggingRef.current=false;resizingRef.current=false;
+    }
+    window.addEventListener('mouseup',onWindowMouseUp);
+    return function(){window.removeEventListener('mouseup',onWindowMouseUp);};
+  },[]);
 
   function onMouseUp(ev){
     if(drawingRef.current){saveStroke();arrowStartRef.current=null;arrowBaseSnapRef.current=null;}
@@ -1413,6 +1436,10 @@ function ToolAnnotate(){
         toolBtns.map(function(tb){
           return e('button',{key:tb.id,className:'ann-tool-btn'+(tool===tb.id?' sel':''),
             onClick:function(){
+              // Reset all interaction state when switching tools
+              drawingRef.current=false;draggingRef.current=false;resizingRef.current=false;
+              moveModeRef.current=false;setMoveMode(false);
+              arrowStartRef.current=null;arrowBaseSnapRef.current=null;mouseDownPtRef.current=null;
               setTool(tb.id);
               if(tb.id==='image')setTimeout(function(){imgInputRef.current&&imgInputRef.current.click();},50);
             }
@@ -1455,12 +1482,11 @@ function ToolAnnotate(){
         // Row 2: Move button + rotate
         e('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
           e('button',{
-            className:'ann-tool-btn'+(moveModeRef.current?' sel':''),
+            className:'ann-tool-btn'+(moveMode?' sel':''),
             style:{padding:'5px 14px',fontWeight:500},
             onClick:function(){
-              moveModeRef.current=!moveModeRef.current;
-              // force re-render by toggling selected
-              setSelectedObjId(function(prev){return prev;});
+              var newMM=!moveModeRef.current;
+              moveModeRef.current=newMM;setMoveMode(newMM);
             }
           },'✥ Move'),
           e('span',{style:{fontSize:'0.7rem',color:'var(--muted)'}},'Rotate:'),
