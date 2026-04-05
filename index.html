@@ -4148,29 +4148,54 @@ function App(){
 
             // ── Overview screen (no active session) ──
             // Settings row
-            var settingsEl=isElite()&&e('div',{className:'fsrs-setup'},
+            var settingsEl=e('div',{className:'fsrs-setup'},
+              // Target retention row
               e('div',{className:'fsrs-setup-row'},
                 e('span',{className:'fsrs-label'},'Target retention'),
-                e('select',{className:'fsrs-select',value:retention,
-                  onChange:function(ev){saveFsrsSettings({retention:parseFloat(ev.target.value),examDate:examDate});}},
-                  e('option',{value:0.80},'80% — Relaxed'),
-                  e('option',{value:0.85},'85% — Moderate'),
-                  e('option',{value:0.90},'90% — Standard'),
-                  e('option',{value:0.92},'92% — Recommended'),
-                  e('option',{value:0.95},'95% — Intensive'),
-                  e('option',{value:0.98},'98% — Near-perfect')
-                )
+                isElite()
+                  ? e('select',{className:'fsrs-select',value:retention,
+                      onChange:function(ev){saveFsrsSettings({retention:parseFloat(ev.target.value),examDate:examDate});}},
+                      e('option',{value:0.80},'80% — Relaxed'),
+                      e('option',{value:0.85},'85% — Moderate'),
+                      e('option',{value:0.90},'90% — Standard'),
+                      e('option',{value:0.92},'92% — Recommended'),
+                      e('option',{value:0.95},'95% — Intensive'),
+                      e('option',{value:0.98},'98% — Near-perfect')
+                    )
+                  : e('div',{style:{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}},
+                      e('select',{className:'fsrs-select',value:0.85,disabled:true,
+                        style:{opacity:0.45,cursor:'not-allowed',pointerEvents:'none'}},
+                        e('option',{value:0.85},'85% — Moderate (fixed)')
+                      ),
+                      e('span',{style:{fontSize:'0.68rem',fontStyle:'italic',color:'var(--accent)',opacity:0.85}},
+                        '🔒 Unlock 80–98% custom retention — ',
+                        e('span',{style:{textDecoration:'underline',cursor:'pointer'},
+                          onClick:function(){setPw(true);}},'upgrade to Elite')
+                      )
+                    )
               ),
+              // Exam date row
               e('div',{className:'fsrs-setup-row'},
                 e('span',{className:'fsrs-label'},'Exam date'),
-                e('input',{type:'date',className:'fsrs-date-input',
-                  value:examDate||'',
-                  min:today,
-                  onChange:function(ev){saveFsrsSettings({retention:retention,examDate:ev.target.value||null});}}),
-                examDate&&e('button',{className:'fsrs-btn',style:{fontSize:'0.68rem'},
-                  onClick:function(){saveFsrsSettings({retention:retention,examDate:null});}
-                },'Clear'),
-                examDate&&e('span',{className:'fsrs-exam-badge'},'📅 '+Math.max(0,Math.round((new Date(examDate)-new Date(today))/(1000*86400)))+' days to exam')
+                isElite()
+                  ? e(React.Fragment,null,
+                      e('input',{type:'date',className:'fsrs-date-input',
+                        value:examDate||'',min:today,
+                        onChange:function(ev){saveFsrsSettings({retention:retention,examDate:ev.target.value||null});}}),
+                      examDate&&e('button',{className:'fsrs-btn',style:{fontSize:'0.68rem'},
+                        onClick:function(){saveFsrsSettings({retention:retention,examDate:null});}
+                      },'Clear'),
+                      examDate&&e('span',{className:'fsrs-exam-badge'},'📅 '+Math.max(0,Math.round((new Date(examDate)-new Date(today))/(1000*86400)))+' days to exam')
+                    )
+                  : e('div',{style:{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}},
+                      e('input',{type:'date',className:'fsrs-date-input',disabled:true,
+                        style:{opacity:0.4,cursor:'not-allowed',pointerEvents:'none'},value:''}),
+                      e('span',{style:{fontSize:'0.68rem',fontStyle:'italic',color:'var(--accent)',opacity:0.85}},
+                        '🔒 FSRS auto-syncs your revision schedule to your exam date — ',
+                        e('span',{style:{textDecoration:'underline',cursor:'pointer'},
+                          onClick:function(){setPw(true);}},'Elite only')
+                      )
+                    )
               )
             );
 
