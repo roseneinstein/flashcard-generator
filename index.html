@@ -2238,34 +2238,39 @@ function App(){
       var ur=await fetch('/api/data?resource=usage',{headers:authHeader()});
       if(ur.ok){var ud=await ur.json();setUsage(ud.count);setLocalUsage(ud.count);}
     }catch(e){}
-    try{
-      var sr=await fetch('/api/data?resource=sets',{headers:authHeader()});
-      if(sr.ok){
-        var sd=await sr.json();
-        var fetchedSets=sd.sets||[];
-        setSavedSets(fetchedSets);
-        // Auto-pick daily card from most recent saved set if not yet picked today
-        var uid2=(user&&user.id)||'g';
-        var todayKey2=getISTDateKey();
-        var existing=null;
-        try{existing=JSON.parse(localStorage.getItem('cs_daily_'+uid2)||'null');}catch(ex){}
-        if((!existing||existing.date!==todayKey2)&&fetchedSets.length){
-          // Use most recent set's cards as the pool
-          var poolCards=fetchedSets[0].cards||[];
-          if(poolCards.length)setTimeout(function(){pickDailyCard(poolCards);},0);
+    // Sets, history, mistakes — Pro/Elite only
+    if(isPro()||isElite()){
+      try{
+        var sr=await fetch('/api/data?resource=sets',{headers:authHeader()});
+        if(sr.ok){
+          var sd=await sr.json();
+          var fetchedSets=sd.sets||[];
+          setSavedSets(fetchedSets);
+          // Auto-pick daily card from most recent saved set
+          var uid2=(user&&user.id)||'g';
+          var todayKey2=getISTDateKey();
+          var existing=null;
+          try{existing=JSON.parse(localStorage.getItem('cs_daily_'+uid2)||'null');}catch(ex){}
+          if((!existing||existing.date!==todayKey2)&&fetchedSets.length){
+            var poolCards=fetchedSets[0].cards||[];
+            if(poolCards.length)setTimeout(function(){pickDailyCard(poolCards);},0);
+          }
         }
-      }
-    }catch(e){}
-    try{
-      var mr=await fetch('/api/data?resource=mistakes',{headers:authHeader()});
-      if(mr.ok){var md=await mr.json();setMistakes(md.mistakes||[]);}
-      // Elite: also load FSRS data
-      if(isProOrElite())loadFsrsData();
-    }catch(e){}
-    try{
-      var hr=await fetch('/api/data?resource=history',{headers:authHeader()});
-      if(hr.ok){var hd=await hr.json();setQuizHist(hd.history||[]);}
-    }catch(e){}
+      }catch(e){}
+      try{
+        var mr=await fetch('/api/data?resource=mistakes',{headers:authHeader()});
+        if(mr.ok){var md=await mr.json();setMistakes(md.mistakes||[]);}
+      }catch(e){}
+      try{
+        var hr=await fetch('/api/data?resource=history',{headers:authHeader()});
+        if(hr.ok){var hd=await hr.json();setQuizHist(hd.history||[]);}
+      }catch(e){}
+    } else {
+      // Free tier: clear any cached pro data immediately
+      setSavedSets([]);setMistakes([]);setQuizHist([]);
+    }
+    // FSRS data — Pro/Elite only
+    if(isProOrElite())loadFsrsData();
   }
 
   // On mount: check for OAuth token in URL hash (after Google redirect) OR restore saved token
@@ -3029,6 +3034,7 @@ function App(){
   // ── Pro: save quiz result — only for saved sets ──
   function saveQuizResult(score,total){
     if(!activeSetName)return;
+    if(!isPro()&&!isElite())return; // Free users: quiz works but results not saved
     var id=Date.now().toString(36);
     var entry={id,score,total,set_name:activeSetName,setName:activeSetName,completed_at:new Date().toISOString(),date:new Date().toISOString()};
     setQuizHist(function(prev){return [entry].concat(prev).slice(0,100);});
@@ -3224,7 +3230,8 @@ function App(){
               style:{paddingBottom:8}},
               e('div',{className:'auth-btn'},
                 user.avatar&&e('img',{src:user.avatar,alt:''}),
-                user.name?user.name.split(' ')[0]:user.email.split('@')[0],
+                e('span',{style:{maxWidth:'clamp(60px,18vw,120px)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'inline-block',verticalAlign:'middle'}},
+                  user.name?user.name.split(' ')[0]:user.email.split('@')[0]),
                 e('span',{className:'tier-badge '+(user.tier||'free')},user.tier||'free')
               ),
               // ── Slim dropdown: name/tier/days · cancel · sign out ─────
@@ -3865,7 +3872,7 @@ function App(){
                 var fsrsDue=isProOrElite()?getFsrsTotalDue():0;var counts={today:'',revise:fsrsDue||'',confidence:'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
                 // Determine if tab is accessible for current tier
                 var tabAccess={
-                  today:true, // all tiers
+                  today:isPro()||isElite(), // today card needs saved sets — Pro/Elite only
                   revise:isProOrElite(),
                   confidence:isElite(),
                   sets:isPro()||isElite(),
@@ -3896,7 +3903,7 @@ function App(){
         e('div',{className:'ws-body'},
 
           /* ── SETS TAB ── */
-          wsTab==='sets'&&(
+          wsTab==='sets'&&(isPro()||isElite())&&(
             savedSets.length===0
               ? e('div',{className:'ws-empty'},
                   e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📚'),
@@ -3926,7 +3933,7 @@ function App(){
           ),
 
           /* ── HISTORY TAB ── */
-          wsTab==='history'&&(function(){
+          wsTab==='history'&&(isPro()||isElite())&&(function(){
             if(quizHist.length===0) return e('div',{className:'ws-empty'},
               e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'📊'),
               t('No quiz history yet.'),e('br'),
@@ -4362,7 +4369,7 @@ function App(){
           })(),
 
           /* ── MISTAKES TAB ── */
-          wsTab==='today'&&(function(){
+          wsTab==='today'&&(isPro()||isElite())&&(function(){
             var uid=(user&&user.id)||'g';
             var todayKey=getISTDateKey();
             var stored=dailyCard;
@@ -4696,7 +4703,7 @@ function App(){
             );
           })(),
 
-          wsTab==='mistakes'&&(
+          wsTab==='mistakes'&&(isPro()||isElite())&&(
             mistakes.length===0
               ? e('div',{className:'ws-empty'},
                   e('div',{style:{fontSize:'2.2rem',marginBottom:12}},'✓'),
@@ -4712,8 +4719,8 @@ function App(){
           (function(){
             var tabInfo={
               today:{
-                title:'\u2b50 Today\'s Card',tiers:'Free, Pro & Elite',cta:null,
-                desc:'Your personalised card of the day — drawn from your saved sets to keep your memory warm without a full revision session. Available to all signed-in users.',
+                title:'\u2b50 Today\'s Card',tiers:'Pro & Elite',cta:'Pro or Elite',
+                desc:'Your personalised card of the day — a single card drawn from your saved sets every morning to keep your memory warm without a full revision session. Available to Pro and Elite users.',
               },
               revise:{
                 title:'\uD83D\uDD01 Revise Today',tiers:'Pro & Elite',cta:'Pro or Elite',
