@@ -305,7 +305,25 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .ios-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:0.82rem;color:var(--text);line-height:1.5}
 .ios-step-num{background:var(--accent);color:var(--bg);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0;margin-top:1px}
 .ios-step strong{color:var(--accent)}
-.nav-r{display:flex;gap:24px;align-items:center}
+.nav-r{display:flex;gap:18px;align-items:center}
+/* Hamburger menu (mobile) */
+.ham-btn{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px;z-index:102;}
+.ham-btn span{display:block;width:22px;height:2px;background:var(--muted);border-radius:2px;transition:all .2s;}
+.ham-menu{display:none;position:fixed;top:62px;right:0;left:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:101;padding:8px 0;box-shadow:0 8px 24px rgba(0,0,0,0.18);animation:slideDown .18s ease;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
+.ham-menu.open{display:block;}
+.ham-item{display:block;width:100%;padding:11px 20px;text-align:left;background:none;border:none;color:var(--text);font-family:'Geist',sans-serif;font-size:0.82rem;cursor:pointer;transition:background .15s;letter-spacing:0.03em;}
+.ham-item:hover{background:var(--surface2);}
+/* Locked workspace tab placeholder */
+.ws-locked{padding:18px 4px;text-align:center;}
+.ws-locked-title{font-family:'Instrument Serif',serif;font-size:1.05rem;color:var(--text);margin-bottom:8px;letter-spacing:-0.01em;}
+.ws-locked-desc{font-size:0.78rem;color:var(--muted);line-height:1.75;max-width:480px;margin:0 auto 14px;}
+.ws-locked-cta{font-size:0.74rem;color:var(--accent);text-decoration:underline;cursor:pointer;background:none;border:none;font-family:'Geist',sans-serif;}
+.ws-locked-cta:hover{opacity:0.8;}
+/* Nav link style for new desktop items */
+.nav-link{font-size:0.75rem;font-weight:400;color:var(--muted);background:none;border:none;cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;transition:color .2s;padding:0;}
+.nav-link:hover{color:var(--text);}
+@media(max-width:700px){.nav-desktop-only{display:none!important;}.ham-btn{display:flex;}}
 .nl{font-size:0.75rem;font-weight:400;color:var(--muted);background:none;border:none;cursor:none;letter-spacing:0.06em;text-transform:uppercase;transition:color .2s;padding:0}
 .nl:hover{color:var(--text)}
 @media(max-width:600px){.nl{display:none}.nav-logo-txt{font-size:1.4rem}.nav-logo img{width:24px;height:24px}.nav-r{gap:14px}}
@@ -1979,6 +1997,7 @@ function App(){
   // ── Pro state ──
   var showWsS=useState(false),setShowWs=showWsS[1];var showWs=showWsS[0];
   var showResS=useState(false),setShowRes=showResS[1];var showRes=showResS[0];
+  var hamOpenS=useState(false),setHamOpen=hamOpenS[1];var hamOpen=hamOpenS[0];
   var wsTabS=useState('sets'),setWsTab=wsTabS[1];var wsTab=wsTabS[0];
   var dailyCardS=useState(null),setDailyCard=dailyCardS[1];var dailyCard=dailyCardS[0];
   var regenCountS=useState(function(){try{var s=JSON.parse(localStorage.getItem('cs_regen')||'{}');var t=new Date().toDateString();return s.d===t?s.c||0:0;}catch(e){return 0;}}),setRegenCount=regenCountS[1];var regenCount=regenCountS[0];
@@ -3170,62 +3189,92 @@ function App(){
   return e(React.Fragment,null,
     /* NAV */
     e('nav',null,
+      // Logo (left) — unchanged
       e('div',{className:'nav-logo'},
         e('img',{src:dark?'/icons/icon-dark-192.png':'/icons/icon-light-192.png',alt:'CogniSwift'}),
         e('span',{className:'nav-logo-txt'},e(React.Fragment,null,'CogniSwift',e('sup',{style:{fontSize:'0.45em',verticalAlign:'super',letterSpacing:'0',opacity:0.7}},'™')))
       ),
+      // Right side
       e('div',{className:'nav-r'},
-        e('button',{className:'nl',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Features')),
-        e('button',{className:'nl',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Plans')),
+        // ── Desktop links (hidden on mobile) ──────────────────────────────
+        e('button',{className:'nl nav-desktop-only',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Features')),
+        e('button',{className:'nl nav-desktop-only',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Plans')),
+        e('button',{className:'nl nav-desktop-only',onClick:function(){setHamOpen(false);setShowRes(true);}},t('Resources')),
+        e('button',{className:'nl nav-desktop-only',onClick:function(){setHamOpen(false);handleInstall();}},t('Install App')),
+        e('button',{className:'nl nav-desktop-only',onClick:function(){
+          setHamOpen(false);
+          if(user&&(isPro()||isElite()))loadProData();
+          setWsTab('today');setShowWs(true);
+        }},'Workspace'),
+
+        // ── Lang + theme toggle (always visible) ─────────────────────────
         e('button',{'data-tour':'lang',className:'thm-tog',
           title:'Switch language / भाषा बदलें',
           onClick:function(){setLang(function(l){return l==='en'?'hi':'en';});},
           style:{fontSize:'0.62rem',fontWeight:700,width:'auto',padding:'0 9px',borderRadius:'50px',letterSpacing:'0.02em'}},
           lang==='en'?'हिं':'EN'),
         e('button',{'data-tour':'theme',className:'thm-tog',onClick:toggleTheme,title:'Toggle theme'},dark?'☀':'🌙'),
+
+        // ── Sign in / user profile ────────────────────────────────────────
         user
-          ? e('div',{className:'user-menu',onMouseEnter:function(){setShowUserMenu(true);},onMouseLeave:function(){setShowUserMenu(false);},onClick:function(ev){ev.stopPropagation();setShowUserMenu(function(v){return !v;});},style:{paddingBottom:8}},
+          ? e('div',{className:'user-menu',
+              onMouseEnter:function(){setShowUserMenu(true);},
+              onMouseLeave:function(){setShowUserMenu(false);},
+              onClick:function(ev){ev.stopPropagation();setShowUserMenu(function(v){return !v;});},
+              style:{paddingBottom:8}},
               e('div',{className:'auth-btn'},
                 user.avatar&&e('img',{src:user.avatar,alt:''}),
                 user.name?user.name.split(' ')[0]:user.email.split('@')[0],
                 e('span',{className:'tier-badge '+(user.tier||'free')},user.tier||'free')
               ),
+              // ── Slim dropdown: name/tier/days · cancel · sign out ─────
               e('div',{className:'user-drop',style:{
                 opacity:showUserMenu?1:0,
                 pointerEvents:showUserMenu?'auto':'none',
                 transform:showUserMenu?'translateY(0)':'translateY(-6px)',
                 transition:'opacity .18s ease, transform .18s ease',
+                minWidth:220,
               }},
-                e('div',{style:{padding:'8px 12px 6px',borderBottom:'1px solid var(--border)',marginBottom:4}},
-                  e('div',{style:{fontSize:'0.72rem',color:'var(--muted)',marginBottom:2}},user.email),
+                // Header: name + email + tier + days left
+                e('div',{style:{padding:'10px 14px 8px',borderBottom:'1px solid var(--border)',marginBottom:4}},
+                  e('div',{style:{fontWeight:500,fontSize:'0.8rem',color:'var(--text)',marginBottom:2}},
+                    user.name||user.email.split('@')[0]),
+                  e('div',{style:{fontSize:'0.7rem',color:'var(--muted)',marginBottom:4}},user.email),
                   e('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
-                    e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}},user.tier||'free'),
-                    user.days_left!=null&&user.tier!=='free'&&e('div',{style:{fontSize:'0.65rem',color:user.days_left<=5?'var(--red)':user.days_left<=10?'#f59e0b':'var(--muted)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},user.days_left+' days left'),
-                    user.sub_status==='cancel_pending'&&e('div',{style:{fontSize:'0.65rem',color:'#f59e0b',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},'cancels end of period'),
-                    user.sub_status==='halted'&&e('div',{style:{fontSize:'0.65rem',color:'var(--red)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},'⚠ payment failed')
+                    e('span',{className:'tier-badge '+(user.tier||'free'),style:{fontSize:'0.62rem'}},user.tier||'free'),
+                    user.days_left!=null&&user.tier!=='free'&&e('span',{style:{fontSize:'0.65rem',color:user.days_left<=5?'var(--red)':user.days_left<=10?'#f59e0b':'var(--muted)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},user.days_left+' days left'),
+                    user.sub_status==='cancel_pending'&&e('span',{style:{fontSize:'0.63rem',color:'#f59e0b'}},'· cancels end of period'),
+                    user.sub_status==='halted'&&e('span',{style:{fontSize:'0.63rem',color:'var(--red)'}},'· ⚠ payment failed')
                   )
                 ),
-                user.sub_status==='halted'&&e('div',{style:{padding:'6px 12px 8px',fontSize:'0.72rem',color:'var(--red)',borderBottom:'1px solid var(--border)',marginBottom:4,lineHeight:1.5}},'Last payment failed. Resubscribe to restore access.'),
-                (user.tier==='free'&&user.sub_status!=='halted')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
+                user.sub_status==='halted'&&e('div',{style:{padding:'6px 14px 8px',fontSize:'0.72rem',color:'var(--red)',borderBottom:'1px solid var(--border)',marginBottom:4,lineHeight:1.5}},'Payment failed. '),
                 user.sub_status==='halted'&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'↺ Resubscribe'),
-                (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');loadProData();setShowWs(true);}},
-                  '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
-                ),
-                isProOrElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('revise');loadProData();setShowWs(true);}},
-                '🔁 Revise Today'),
-                isElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('favs');setShowWs(true);}},
-                  '♥ Favourites'+(Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length?' ('+Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length+')':'')
-                ),
-                (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab(isElite()?'streak':'history');loadProData();setShowWs(true);}},
-                  isElite()?'📊 Progress & Stats':'📊 Quiz History'
-                ),
-                e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setShowRes(true);}},'🗂 Resources'),
-                e('button',{className:'user-drop-item',onClick:handleInstall},'📲 Install App'),
-                (user.tier==='pro'||user.tier==='elite')&&user.sub_status!=='cancel_pending'&&user.sub_status!=='cancelled'&&e('button',{className:'user-drop-item',style:{color:'var(--muted)',fontSize:'0.7rem'},onClick:cancelSubscription},'✕ Cancel subscription'),
+                (user.tier==='free'&&user.sub_status!=='halted')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
+                (user.tier==='pro'&&user.sub_status!=='halted')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Elite'),
+                (user.tier==='pro'||user.tier==='elite')&&user.sub_status!=='cancel_pending'&&user.sub_status!=='cancelled'&&user.sub_status!=='halted'&&e('button',{className:'user-drop-item',style:{color:'var(--muted)',fontSize:'0.7rem'},onClick:cancelSubscription},'✕ Cancel subscription'),
                 e('button',{className:'user-drop-item danger',onClick:logout},t('Sign out'))
               )
             )
-          : e('button',{'data-tour':'signin',className:'np',onClick:function(){setShowAuth(true);},},t('Sign in'))
+          : e('button',{'data-tour':'signin',className:'np',onClick:function(){setShowAuth(true);},},t('Sign in')),
+
+        // ── Hamburger (mobile only) ───────────────────────────────────────
+        e('button',{className:'ham-btn',onClick:function(){setHamOpen(function(v){return !v;});},
+          'aria-label':'Menu'},
+          e('span'),e('span'),e('span')
+        ),
+
+        // ── Hamburger dropdown (mobile) ───────────────────────────────────
+        hamOpen&&e('div',{className:'ham-menu open',
+          onClick:function(){setHamOpen(false);}},
+          e('button',{className:'ham-item',onClick:function(){var el=document.getElementById('ft');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Features')),
+          e('button',{className:'ham-item',onClick:function(){var el=document.getElementById('pr');if(el)el.scrollIntoView({behavior:'smooth'});}},t('Plans')),
+          e('button',{className:'ham-item',onClick:function(){setShowRes(true);}},t('Resources')),
+          e('button',{className:'ham-item',onClick:function(){
+            if(user&&(isPro()||isElite()))loadProData();
+            setWsTab('today');setShowWs(true);
+          }},'Workspace'),
+          e('button',{className:'ham-item',onClick:handleInstall},'Install App')
+        )
       )
     ),
 
@@ -3810,20 +3859,36 @@ function App(){
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
-              (isElite()?['today','revise','confidence','sets','favs','history','mistakes','streak','weak']:isPro()?['today','revise','sets','history','mistakes']:['today','sets','history','mistakes']).map(function(tab){
+              // All 9 tabs always shown — locked tabs show placeholder for ineligible tiers
+              ['today','revise','confidence','sets','favs','history','mistakes','streak','weak'].map(function(tab){
                 var labels={today:'⭐ Today',revise:'🔁 Revise Today',confidence:'📈 Confidence',sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
                 var fsrsDue=isProOrElite()?getFsrsTotalDue():0;var counts={today:'',revise:fsrsDue||'',confidence:'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
+                // Determine if tab is accessible for current tier
+                var tabAccess={
+                  today:true, // all tiers
+                  revise:isProOrElite(),
+                  confidence:isElite(),
+                  sets:isPro()||isElite(),
+                  favs:isElite(),
+                  history:isPro()||isElite(),
+                  mistakes:isPro()||isElite(),
+                  streak:isElite(),
+                  weak:isElite(),
+                };
+                var canAccess=user&&tabAccess[tab];
+                var isActive=wsTab===tab;
                 return e('button',{key:tab,
                   onClick:function(){setWsTab(tab);},
                   style:{
                     padding:'5px 12px',border:'1px solid',borderRadius:'50px',
-                    fontSize:'0.72rem',cursor:'none',fontFamily:'Geist,sans-serif',
-                    background:wsTab===tab?'var(--accent)':'transparent',
-                    color:wsTab===tab?'var(--bg)':'var(--muted)',
-                    borderColor:wsTab===tab?'var(--accent)':'var(--border)',
+                    fontSize:'0.72rem',cursor:'pointer',fontFamily:'Geist,sans-serif',
+                    background:isActive?'var(--accent)':'transparent',
+                    color:isActive?'var(--bg)':canAccess?'var(--muted)':'var(--muted2)',
+                    borderColor:isActive?'var(--accent)':canAccess?'var(--border)':'var(--border)',
+                    opacity:canAccess?1:0.55,
                     transition:'all .2s',
                   }
-                },labels[tab]+(counts[tab]?' ('+counts[tab]+')':''));
+                },labels[tab]+(counts[tab]?' ('+counts[tab]+')':'')+(canAccess?'':' 🔒'));
               })
             )
           )
@@ -4641,7 +4706,70 @@ function App(){
               : e('div',null,
                   e(MistakeList,{mistakes:mistakes,onClear:clearMistakes})
                 )
-          )
+          ),
+
+          // ── Locked tab placeholders — shown when user doesn't have access ──
+          (function(){
+            var tabInfo={
+              today:{
+                title:'\u2b50 Today\'s Card',tiers:'Free, Pro & Elite',cta:null,
+                desc:'Your personalised card of the day — drawn from your saved sets to keep your memory warm without a full revision session. Available to all signed-in users.',
+              },
+              revise:{
+                title:'\uD83D\uDD01 Revise Today',tiers:'Pro & Elite',cta:'Pro or Elite',
+                desc:'A science-backed revision engine powered by FSRS-4.5 — one of the most accurate spaced repetition algorithms in existence. The algorithm computes a unique review schedule for every card based on your personal stability, difficulty, and current retrievability. Pro users get FSRS at a calibrated 85% retention target. Elite users can customise their target from 80% to 98% and additionally sync their schedule to an exam date — the algorithm automatically adjusts intervals as the exam approaches so your retention peaks exactly when it matters most.',
+              },
+              confidence:{
+                title:'\uD83D\uDCC8 Confidence Score',tiers:'Elite only',cta:'Elite',
+                desc:'Two mathematically distinct metrics for every saved set. Memory Strength is the model\'s prediction of your recall probability right now, based on review history and elapsed time. True Confidence adjusts that same score for how you actually performed in timed revision — if you hesitated before marking a card correct, that hesitation is factored in. The Confidence Gap between them reveals overconfidence (you know it in theory but not on reflex) or underconfidence (you\'re recalling faster than the model expected). Leo AI analyses the gap per set and gives tailored insights on what to do next.',
+              },
+              sets:{
+                title:'\uD83D\uDCDA Saved Sets',tiers:'Pro & Elite',cta:'Pro or Elite',
+                desc:'Save any generated card set to your account and access it from any device. Saved sets are the foundation of all other features — FSRS scheduling, quiz history, mistake tracking, and confidence scores all operate on your saved sets.',
+              },
+              favs:{
+                title:'\u2665 Favourites',tiers:'Elite only',cta:'Elite',
+                desc:'Mark individual cards as favourites to build a personal curated deck of your most important or difficult cards — a quick-access collection separate from your full sets.',
+              },
+              history:{
+                title:'\uD83D\uDCCA Quiz History',tiers:'Pro & Elite',cta:'Pro or Elite',
+                desc:'Every quiz you attempt is logged with score, date, and set name. Results are grouped by set so you can track improvement across multiple attempts on the same material.',
+              },
+              mistakes:{
+                title:'\u2717 Mistakes',tiers:'Pro & Elite',cta:'Pro or Elite',
+                desc:'Every quiz question you answer incorrectly is saved here with the correct answer and explanation. Mistakes are grouped by set and deduplicated — repeated errors show a count, helping you identify persistent blind spots.',
+              },
+              streak:{
+                title:'\uD83D\uDD25 Streak & Heatmap',tiers:'Elite only',cta:'Elite',
+                desc:'Your daily study streak calendar and activity heatmap. Every day you generate a set or complete a quiz counts toward your streak. Consistent daily practice is one of the strongest predictors of exam performance.',
+              },
+              weak:{
+                title:'\uD83D\uDCC9 Weak Areas',tiers:'Elite only',cta:'Elite',
+                desc:'Automated analysis of your quiz performance across all saved sets, identifying topics where your accuracy is consistently below your average. Weak areas are ranked by severity so you know exactly which sets to prioritise next.',
+              },
+            };
+            var info=tabInfo[wsTab];
+            if(!info)return null;
+            // Determine if tab is locked for current user
+            var tabAccess2={today:true,revise:isProOrElite(),confidence:isElite(),sets:isPro()||isElite(),favs:isElite(),history:isPro()||isElite(),mistakes:isPro()||isElite(),streak:isElite(),weak:isElite()};
+            if(user&&tabAccess2[wsTab])return null; // tab is accessible, existing render handles it
+            // Show locked placeholder
+            return e('div',{className:'ws-locked'},
+              e('div',{style:{fontSize:'2rem',marginBottom:10}},'🔒'),
+              e('div',{className:'ws-locked-title'},info.title),
+              e('div',{style:{fontSize:'0.7rem',color:'var(--accent)',marginBottom:10,letterSpacing:'0.04em',textTransform:'uppercase'}},info.tiers),
+              e('div',{className:'ws-locked-desc'},
+                info.desc.split('\n\n').map(function(para,i){
+                  return e('p',{key:i,style:{marginBottom:i<info.desc.split('\n\n').length-1?8:0}},para);
+                })
+              ),
+              info.cta&&e('div',null,
+                e('button',{className:'ws-locked-cta',onClick:function(){setPw(true);}},
+                  !user?'Sign in to get started →':('Upgrade to '+info.cta+' to unlock this →')
+                )
+              )
+            );
+          })()
 
         )
       )
