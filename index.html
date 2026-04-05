@@ -167,7 +167,7 @@ body.hov #cur{width:5px;height:5px;opacity:0.5}
 body.hov #cur-r{width:48px;height:48px;border-radius:6px;opacity:0.2}
 
 /* NAV */
-nav{position:fixed;top:0;left:0;right:0;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--border);background:rgba(34,32,58,0.92);backdrop-filter:blur(20px);z-index:100;transition:background .3s,border-color .3s}
+nav{position:fixed;top:0;left:0;right:0;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--border);background:rgba(34,32,58,0.92);backdrop-filter:blur(20px);z-index:100;transition:background .3s,border-color .3s;overflow:hidden}
 html.light nav{background:rgba(244,241,235,0.92)}
 .logo{font-family:'Instrument Serif',serif;font-size:1.9rem;color:var(--accent);letter-spacing:-0.02em;font-weight:400}
 .nav-logo{display:flex;align-items:center;gap:6px;user-select:none}
@@ -324,9 +324,20 @@ html.light nav{background:rgba(244,241,235,0.92)}
 .nav-link{font-size:0.75rem;font-weight:400;color:var(--muted);background:none;border:none;cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;transition:color .2s;padding:0;}
 .nav-link:hover{color:var(--text);}
 @media(max-width:700px){.nav-desktop-only{display:none!important;}.ham-btn{display:flex;}}
+@media(max-width:700px){
+  nav{padding:0 14px;}
+  .auth-name{display:none!important;}
+  .auth-avatar{display:none!important;}
+  .auth-btn{padding:4px 8px;font-size:0.68rem;}
+  .tier-badge{font-size:0.55rem;padding:1px 5px;}
+  .nav-r{gap:8px;flex-shrink:0;}
+  .thm-tog{padding:0 7px;min-width:28px;}
+  .nav-logo-txt{font-size:1.35rem;}
+  .nav-logo img{width:22px;height:22px;}
+}
 .nl{font-size:0.75rem;font-weight:400;color:var(--muted);background:none;border:none;cursor:none;letter-spacing:0.06em;text-transform:uppercase;transition:color .2s;padding:0}
 .nl:hover{color:var(--text)}
-@media(max-width:600px){.nl{display:none}.nav-logo-txt{font-size:1.4rem}.nav-logo img{width:24px;height:24px}.nav-r{gap:14px}}
+@media(max-width:600px){.nl{display:none}}
 .np{font-size:0.78rem;font-weight:500;color:var(--bg);background:var(--accent);border:none;border-radius:50px;padding:7px 16px;cursor:none;transition:opacity .2s,transform .15s;letter-spacing:0.02em}
 .np:hover{opacity:0.85;transform:scale(1.04)}
 
@@ -3229,8 +3240,8 @@ function App(){
               onClick:function(ev){ev.stopPropagation();setShowUserMenu(function(v){return !v;});},
               style:{paddingBottom:8}},
               e('div',{className:'auth-btn'},
-                user.avatar&&e('img',{src:user.avatar,alt:''}),
-                e('span',{style:{maxWidth:'clamp(60px,18vw,120px)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'inline-block',verticalAlign:'middle'}},
+                user.avatar&&e('img',{className:'auth-avatar',src:user.avatar,alt:''}),
+                e('span',{className:'auth-name',style:{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'inline-block',verticalAlign:'middle'}},
                   user.name?user.name.split(' ')[0]:user.email.split('@')[0]),
                 e('span',{className:'tier-badge '+(user.tier||'free')},user.tier||'free')
               ),
@@ -4758,7 +4769,7 @@ function App(){
             var info=tabInfo[wsTab];
             if(!info)return null;
             // Determine if tab is locked for current user
-            var tabAccess2={today:true,revise:isProOrElite(),confidence:isElite(),sets:isPro()||isElite(),favs:isElite(),history:isPro()||isElite(),mistakes:isPro()||isElite(),streak:isElite(),weak:isElite()};
+            var tabAccess2={today:isPro()||isElite(),revise:isProOrElite(),confidence:isElite(),sets:isPro()||isElite(),favs:isElite(),history:isPro()||isElite(),mistakes:isPro()||isElite(),streak:isElite(),weak:isElite()};
             if(user&&tabAccess2[wsTab])return null; // tab is accessible, existing render handles it
             // Show locked placeholder
             return e('div',{className:'ws-locked'},
