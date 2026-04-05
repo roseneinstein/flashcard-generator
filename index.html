@@ -1330,6 +1330,7 @@ function getSession(){return _userCache;}
 function setSession(u){_userCache=u;}
 function isPro(){return _userCache&&(_userCache.tier==='pro'||_userCache.tier==='elite');}
 function isElite(){return _userCache&&_userCache.tier==='elite';}
+function isProOrElite(){return _userCache&&(_userCache.tier==='pro'||_userCache.tier==='elite');}
 function getTier(){return _userCache?_userCache.tier:'free';}
 
 async function callSummary(text,depth,tier){
@@ -2240,7 +2241,7 @@ function App(){
       var mr=await fetch('/api/data?resource=mistakes',{headers:authHeader()});
       if(mr.ok){var md=await mr.json();setMistakes(md.mistakes||[]);}
       // Elite: also load FSRS data
-      if(isElite())loadFsrsData();
+      if(isProOrElite())loadFsrsData();
     }catch(e){}
     try{
       var hr=await fetch('/api/data?resource=history',{headers:authHeader()});
@@ -2847,7 +2848,7 @@ function App(){
 
   // ── Elite: load FSRS data ──
   async function loadFsrsData(){
-    if(!isElite()||!loadToken())return;
+    if(!isProOrElite()||!loadToken())return;
     try{
       var sr=await fetch('/api/data?resource=fsrs&type=settings',{headers:authHeader()});
       if(sr.ok){var sd=await sr.json();setFsrsSettings(sd.settings||{retention:0.92,examDate:null});}
@@ -2868,7 +2869,7 @@ function App(){
   // ── Elite: record FSRS results after quiz — called on quiz completion ──
   // quizResults: array of {question, correct, userAnswer, setId, setName, cardKey, cardTopic}
   function recordFsrsResults(quizResults, setId, setName){
-    if(!isElite()||!loadToken()||!quizResults||!quizResults.length)return;
+    if(!isProOrElite()||!loadToken()||!quizResults||!quizResults.length)return;
     var today=FSRS.todayIST();
     var retention=fsrsSettings.retention||0.92;
     var examDate=fsrsSettings.examDate||null;
@@ -2939,7 +2940,7 @@ function App(){
 
   // ── Elite: total due cards count across all saved sets (for tab badge) ──
   function getFsrsTotalDue(){
-    if(!isElite())return 0;
+    if(!isProOrElite())return 0;
     var today=FSRS.todayIST();
     var due=0;
     savedSets.forEach(function(s){
@@ -3126,8 +3127,8 @@ function App(){
       setFsrsSession(function(s){
         if(!s)return s;
         return Object.assign({},s,{
-          lrTimer:timerPause(s.lrTimer||makeTimer()),
-          ldTimer:timerPause(s.ldTimer||makeTimer()),
+          lrTimer:s.lrTimer?timerPause(s.lrTimer):null,
+          ldTimer:s.ldTimer?timerPause(s.ldTimer):null,
         });
       });
     }
@@ -3210,7 +3211,7 @@ function App(){
                 (user.tier==='pro'||user.tier==='elite')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('sets');loadProData();setShowWs(true);}},
                   '📚 My Sets'+(savedSets.length?' ('+savedSets.length+')':'')
                 ),
-                isElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('revise');loadProData();setShowWs(true);}},
+                isProOrElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('revise');loadProData();setShowWs(true);}},
                 '🔁 Revise Today'),
                 isElite()&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setWsTab('favs');setShowWs(true);}},
                   '♥ Favourites'+(Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length?' ('+Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length+')':'')
@@ -3809,9 +3810,9 @@ function App(){
               e('button',{className:'ws-close',onClick:function(){setShowWs(false);}},'✕')
             ),
             e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',rowGap:6}},
-              (isElite()?['today','revise','confidence','sets','favs','history','mistakes','streak','weak']:['today','sets','history','mistakes']).map(function(tab){
+              (isElite()?['today','revise','confidence','sets','favs','history','mistakes','streak','weak']:isPro()?['today','revise','sets','history','mistakes']:['today','sets','history','mistakes']).map(function(tab){
                 var labels={today:'⭐ Today',revise:'🔁 Revise Today',confidence:'📈 Confidence',sets:'📚 Saved Sets',favs:'♥ Favourites',history:'📊 Quiz History',mistakes:'✗ Mistakes',streak:'🔥 Streak',weak:'📉 Weak Areas'};
-                var fsrsDue=isElite()?getFsrsTotalDue():0;var counts={today:'',revise:fsrsDue||'',confidence:'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
+                var fsrsDue=isProOrElite()?getFsrsTotalDue():0;var counts={today:'',revise:fsrsDue||'',confidence:'',sets:savedSets.length,favs:Object.keys(favs).filter(function(k){return favs[k]&&favs[k].topic;}).length,history:quizHist.length,mistakes:mistakes.length,streak:'',weak:''};
                 return e('button',{key:tab,
                   onClick:function(){setWsTab(tab);},
                   style:{
@@ -3920,11 +3921,12 @@ function App(){
           })(),
 
 
-          /* ── REVISE TODAY TAB (Elite only) ── */
-          wsTab==='revise'&&isElite()&&(function(){
+          /* ── REVISE TODAY TAB (Pro and Elite) ── */
+          wsTab==='revise'&&isProOrElite()&&(function(){
             var today=FSRS.todayIST();
-            var retention=fsrsSettings.retention||0.92;
-            var examDate=fsrsSettings.examDate||null;
+            // Pro: fixed retention 0.85, no exam date. Elite: user-configured.
+            var retention=isElite()?(fsrsSettings.retention||0.92):0.85;
+            var examDate=isElite()?(fsrsSettings.examDate||null):null;
 
             // If a session is active, show session UI
             if(fsrsSession){
@@ -3980,14 +3982,14 @@ function App(){
                 // Start L_r timer when question first appears (not yet answered)
                 if(!answered&&!(sess.lrTimerStarted)){
                   setFsrsSession(function(s){return Object.assign({},s,{
-                    lrTimer:timerStart(s.lrTimer||makeTimer()),
+                    lrTimer:s.lrTimer?timerStart(s.lrTimer):null,
                     lrTimerStarted:true,
                   });});
                 }
                 // Start L_d timer when answer is revealed
                 if(answered&&!(sess.ldTimerStarted)){
                   setFsrsSession(function(s){return Object.assign({},s,{
-                    ldTimer:timerStart(s.ldTimer||makeTimer()),
+                    ldTimer:s.ldTimer?timerStart(s.ldTimer):null,
                     ldTimerStarted:true,
                   });});
                 }
@@ -4014,7 +4016,7 @@ function App(){
                             setFsrsSession(function(s){return Object.assign({},s,{
                               answered:true,userChoice:oi,
                               lrSec:lrSec,
-                              lrTimer:timerPause(s.lrTimer||makeTimer()),
+                              lrTimer:s.lrTimer?timerPause(s.lrTimer):null,
                             });});
                           }},
                           e('span',{style:{opacity:.4,marginRight:7,fontSize:'0.65rem',letterSpacing:'0.06em'}},['A','B','C','D'][oi]),
@@ -4037,31 +4039,28 @@ function App(){
                             var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,interval_fsrs:ns.interval,r_eff:null,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
                             setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
                             fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
-                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,lrSec:null,lrTimerStarted:false,ldTimerStarted:false,lrTimer:timerReset(),ldTimer:timerReset(),doneItems:(s.doneItems||0)+1});});
+                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,lrSec:null,lrTimerStarted:false,ldTimerStarted:false,lrTimer:s.lrTimer?timerReset():null,ldTimer:s.ldTimer?timerReset():null,doneItems:(s.doneItems||0)+1});});
                           }
                         },'✗ Missed it'),
                         e('button',{className:'fsrs-rating-btn good',
                           onClick:function(){
                             var rating=userChoice===q.correct?3:1;
-                            var ldSec=timerReadSec(sess.ldTimer||makeTimer());
+                            var ldSec=sess.ldTimer?timerReadSec(sess.ldTimer):0;
                             var lrSec=sess.lrSec||null;
                             var cardKey=sess.setId+'::'+qi;
                             var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
                             var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
-                            // Compute R_eff and apply latency interval correction for rating=3
-                            var rFsrs=existing&&existing.stability?FSRS.forgettingCurve(Math.max(1,Math.round((new Date(today)-new Date((existing.last_reviewed||today).slice(0,10)))/(1000*86400))),existing.stability):0.9;
-                            var rEff=FSRS.computeReff(rFsrs,rating,lrSec,ldSec);
-                            var correctedInterval=rEff!==null?FSRS.applyLatencyInterval(ns.interval,rFsrs,rEff,examDate,today):null;
-                            var finalDueDate=correctedInterval!==null?FSRS.addDays?today:ns.due_date:ns.due_date;
-                            // Compute final due date with latency correction
-                            if(rEff!==null&&correctedInterval!==null){
-                              var d2=new Date(today+'T00:00:00Z');d2.setUTCDate(d2.getUTCDate()+correctedInterval);
-                              finalDueDate=d2.toISOString().slice(0,10);
+                            // Elite: latency-corrected schedule. Pro: pure FSRS.
+                            var rEff=null;var finalDueDate=ns.due_date;
+                            if(isElite()&&sess.lrTimer){
+                              var rFsrs=existing&&existing.stability?FSRS.forgettingCurve(Math.max(1,Math.round((new Date(today)-new Date((existing.last_reviewed||today).slice(0,10)))/(1000*86400))),existing.stability):0.9;
+                              rEff=FSRS.computeReff(rFsrs,rating,lrSec,ldSec);
+                              if(rEff!==null){var ci2=FSRS.applyLatencyInterval(ns.interval,rFsrs,rEff,examDate,today);if(ci2!==null){var d2=new Date(today+'T00:00:00Z');d2.setUTCDate(d2.getUTCDate()+ci2);finalDueDate=d2.toISOString().slice(0,10);}}
                             }
-                            var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:finalDueDate,interval_fsrs:ns.interval,r_eff:rEff,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                            var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:q.question.slice(0,60),rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:finalDueDate,interval_fsrs:isElite()?ns.interval:null,r_eff:rEff,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
                             setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
                             fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
-                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,lrSec:null,lrTimerStarted:false,ldTimerStarted:false,lrTimer:timerReset(),ldTimer:timerReset(),doneItems:(s.doneItems||0)+1});});
+                            setFsrsSession(function(s){return Object.assign({},s,{qIdx:qi+1,answered:false,userChoice:null,lrSec:null,lrTimerStarted:false,ldTimerStarted:false,lrTimer:s.lrTimer?timerReset():null,ldTimer:s.ldTimer?timerReset():null,doneItems:(s.doneItems||0)+1});});
                           }
                         },'✓ Got it')
                       )
@@ -4085,7 +4084,7 @@ function App(){
                 // Start L_d timer when card renders (no L_r in card mode — content shown directly)
                 if(!(sess.ldTimerStarted)){
                   setFsrsSession(function(s){return Object.assign({},s,{
-                    ldTimer:timerStart(s.ldTimer||makeTimer()),
+                    ldTimer:s.ldTimer?timerStart(s.ldTimer):null,
                     ldTimerStarted:true,
                   });});
                 }
@@ -4114,29 +4113,27 @@ function App(){
                         var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:ns.due_date,interval_fsrs:ns.interval,r_eff:null,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
                         setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
                         fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
-                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,ldTimerStarted:false,ldTimer:timerReset(),doneItems:(s.doneItems||0)+1});});
+                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,ldTimerStarted:false,ldTimer:s.ldTimer?timerReset():null,doneItems:(s.doneItems||0)+1});});
                       }
                     },'✗ Need more review'),
                     e('button',{className:'fsrs-rating-btn good',
                       onClick:function(){
                         var rating=3; // Know it — apply L_d latency correction
-                        var ldSec=timerReadSec(sess.ldTimer||makeTimer());
+                        var ldSec=sess.ldTimer?timerReadSec(sess.ldTimer):0;
                         var cardKey=sess.setId+'::'+cardOrigIdx;
                         var existing=fsrsReviews.find(function(r){return r.card_key===cardKey;});
                         var ns=existing?FSRS.scheduleReview(existing,rating,retention,examDate):FSRS.scheduleNew(rating,retention,examDate);
-                        // L_r is null for card mode (no question/recall phase)
-                        var rFsrs=existing&&existing.stability?FSRS.forgettingCurve(Math.max(1,Math.round((new Date(today)-new Date((existing.last_reviewed||today).slice(0,10)))/(1000*86400))),existing.stability):0.9;
-                        var rEff=FSRS.computeReff(rFsrs,rating,null,ldSec);
-                        var correctedInterval=rEff!==null?FSRS.applyLatencyInterval(ns.interval,rFsrs,rEff,examDate,today):null;
-                        var finalDueDate=ns.due_date;
-                        if(rEff!==null&&correctedInterval!==null){
-                          var d2=new Date(today+'T00:00:00Z');d2.setUTCDate(d2.getUTCDate()+correctedInterval);
-                          finalDueDate=d2.toISOString().slice(0,10);
+                        // Elite: latency-corrected schedule. Pro: pure FSRS.
+                        var rEff=null;var finalDueDate=ns.due_date;
+                        if(isElite()&&sess.ldTimer){
+                          var rFsrs=existing&&existing.stability?FSRS.forgettingCurve(Math.max(1,Math.round((new Date(today)-new Date((existing.last_reviewed||today).slice(0,10)))/(1000*86400))),existing.stability):0.9;
+                          rEff=FSRS.computeReff(rFsrs,rating,null,ldSec);
+                          if(rEff!==null){var ci3=FSRS.applyLatencyInterval(ns.interval,rFsrs,rEff,examDate,today);if(ci3!==null){var d3=new Date(today+'T00:00:00Z');d3.setUTCDate(d3.getUTCDate()+ci3);finalDueDate=d3.toISOString().slice(0,10);}}
                         }
-                        var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:finalDueDate,interval_fsrs:ns.interval,r_eff:rEff,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
+                        var nr={id:(existing&&existing.id)||cardKey,set_id:sess.setId,set_name:sess.setName,card_key:cardKey,card_topic:card.topic,rating:rating,stability:ns.stability,difficulty:ns.difficulty,due_date:finalDueDate,interval_fsrs:isElite()?ns.interval:null,r_eff:rEff,reps:ns.reps,lapses:ns.lapses,last_reviewed:today};
                         setFsrsReviews(function(prev){var u=prev.filter(function(r){return r.card_key!==cardKey;});return u.concat([nr]);});
                         fetch('/api/data?resource=fsrs&type=reviews',{method:'POST',headers:authHeader(),body:JSON.stringify({reviews:[nr]})}).catch(function(){});
-                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,ldTimerStarted:false,ldTimer:timerReset(),doneItems:(s.doneItems||0)+1});});
+                        setFsrsSession(function(s){return Object.assign({},s,{cIdx:ci+1,ldTimerStarted:false,ldTimer:s.ldTimer?timerReset():null,doneItems:(s.doneItems||0)+1});});
                       }
                     },'✓ Know it')
                   ),
@@ -4151,7 +4148,7 @@ function App(){
 
             // ── Overview screen (no active session) ──
             // Settings row
-            var settingsEl=e('div',{className:'fsrs-setup'},
+            var settingsEl=isElite()&&e('div',{className:'fsrs-setup'},
               e('div',{className:'fsrs-setup-row'},
                 e('span',{className:'fsrs-label'},'Target retention'),
                 e('select',{className:'fsrs-select',value:retention,
@@ -4235,12 +4232,14 @@ function App(){
                           setId:s.id,setName:s.name,
                           mode:'quiz',
                           dueQuestions:dueQs,
-                          allCards:dueCardObjs,        // only scheduled cards
-                          dueCardIdxs:dueCards.map(function(dc){return dc.idx;}), // original indices for card_key
+                          allCards:dueCardObjs,
+                          dueCardIdxs:dueCards.map(function(dc){return dc.idx;}),
                           qIdx:0,cIdx:0,
                           answered:false,userChoice:null,
                           totalItems:totalItems,doneItems:0,
-                          lrTimer:makeTimer(),ldTimer:makeTimer(),
+                          // Pro: no latency timers. Elite: timers active.
+                          lrTimer:isElite()?makeTimer():null,
+                          ldTimer:isElite()?makeTimer():null,
                           lrSec:null,lrTimerStarted:false,
                         });
                       }
@@ -4252,12 +4251,13 @@ function App(){
                           setId:s.id,setName:s.name,
                           mode:'cards',
                           dueQuestions:[],
-                          allCards:dueCardObjs,        // only scheduled cards
+                          allCards:dueCardObjs,
                           dueCardIdxs:dueCards.map(function(dc){return dc.idx;}),
                           qIdx:0,cIdx:0,
                           answered:false,userChoice:null,
                           totalItems:dueCardObjs.length,doneItems:0,
-                          lrTimer:makeTimer(),ldTimer:timerStart(makeTimer()),
+                          lrTimer:null,
+                          ldTimer:isElite()?timerStart(makeTimer()):null,
                           lrSec:null,lrTimerStarted:false,
                         });
                       }
