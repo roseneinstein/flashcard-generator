@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Graphing Calculator — CogniSwift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+<style>
+:root{
+  --bg:#22203a;--surface:#2a2740;--surface2:#322e4a;--surface3:#3a3656;
+  --border:#ffffff18;--border-h:#ffffff30;
+  --text:#ededf0;--muted:#8888aa;--muted2:#4a4a60;
+  --accent:#e8d5b0;--accent2:rgba(232,213,176,0.12);
+  --red:#ef4444;--green:#4ade80;--blue:#60a5fa;--purple:#c084fc;
+  --r:12px;--r-sm:7px;
+  --panel:280px;
+}
+.light{
+  --bg:#f4f1eb;--surface:#fdfcf8;--surface2:#edeae2;--surface3:#e4e0d6;
+  --border:#00000014;--border-h:#00000028;
+  --text:#1e1b14;--muted:#7a7060;--muted2:#c0b89e;
+  --accent:#9a7c3f;--accent2:rgba(154,124,63,0.08);
+  --red:#dc2626;--green:#16a34a;--blue:#2563eb;--purple:#9333ea;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:'Geist',system-ui,sans-serif;font-size:13px;line-height:1.5;}
+button{font-family:inherit;cursor:pointer;}
+input{font-family:inherit;}
+
+/* ── Top bar ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;
+  background:rgba(34,32,58,0.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  z-index:100;
+}
+.light .topbar{background:rgba(244,241,235,0.92);}
+.topbar-logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--accent);}
+.topbar-logo-name{font-family:'Instrument Serif',serif;font-size:1.3rem;letter-spacing:-0.02em;}
+.topbar-title{font-size:0.72rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;}
+.topbar-r{display:flex;align-items:center;gap:10px;}
+.tb-btn{background:none;border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:5px 12px;color:var(--muted);font-size:0.72rem;letter-spacing:0.04em;
+  text-transform:uppercase;transition:all .18s;}
+.tb-btn:hover{border-color:var(--border-h);color:var(--text);}
+.tb-btn.pri{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.tb-btn.pri:hover{opacity:0.85;}
+.thm-btn{background:none;border:1px solid var(--border);border-radius:var(--r-sm);
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  font-size:0.9rem;color:var(--muted);transition:all .18s;}
+.thm-btn:hover{border-color:var(--border-h);color:var(--text);}
+
+/* ── Layout ── */
+.layout{
+  position:fixed;top:52px;bottom:0;left:0;right:0;
+  display:flex;
+}
+.panel{
+  width:var(--panel);
+  flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  z-index:10;
+}
+.canvas-area{
+  flex:1;position:relative;overflow:hidden;
+  background:var(--bg);
+}
+canvas{position:absolute;top:0;left:0;touch-action:none;}
+
+/* ── Panel sections ── */
+.p-section{
+  border-bottom:1px solid var(--border);
+  padding:12px 14px;
+}
+.p-section:last-child{border-bottom:none;}
+.p-label{
+  font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px;font-weight:500;
+}
+.p-scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
+.p-scroll::-webkit-scrollbar{width:3px;}
+.p-scroll::-webkit-scrollbar-track{background:transparent;}
+.p-scroll::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px;}
+
+/* ── Function rows ── */
+.fn-row{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--r-sm);
+  border:1px solid transparent;
+  transition:all .15s;margin-bottom:4px;
+  cursor:pointer;
+  position:relative;
+}
+.fn-row:hover{background:var(--surface2);border-color:var(--border);}
+.fn-row.active{background:var(--surface2);border-color:var(--border-h);}
+.fn-dot{
+  width:12px;height:12px;border-radius:50%;flex-shrink:0;
+  border:2px solid rgba(255,255,255,0.2);
+}
+.fn-expr{
+  flex:1;font-size:0.78rem;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:'Instrument Serif',serif;font-size:0.82rem;font-style:italic;
+}
+.fn-vis-btn{
+  background:none;border:none;color:var(--muted);font-size:0.7rem;
+  padding:2px 4px;border-radius:3px;transition:color .15s;flex-shrink:0;
+}
+.fn-vis-btn:hover{color:var(--text);}
+.fn-del-btn{
+  background:none;border:none;color:var(--muted);font-size:0.7rem;
+  padding:2px 4px;border-radius:3px;transition:color .15s;flex-shrink:0;
+}
+.fn-del-btn:hover{color:var(--red);}
+
+/* ── Input ── */
+.fn-input-wrap{
+  display:flex;align-items:center;gap:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:4px 8px;
+  transition:border-color .18s;
+  margin-bottom:8px;
+}
+.fn-input-wrap:focus-within{border-color:var(--accent);}
+.fn-input-wrap span{color:var(--muted);font-size:0.78rem;flex-shrink:0;font-style:italic;}
+.fn-input{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--text);font-size:0.82rem;
+  font-family:'Geist',monospace;
+}
+.fn-input::placeholder{color:var(--muted2);}
+
+/* ── Symbol keyboard ── */
+.sym-kbd{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;}
+.sym-btn{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:4px;padding:3px 6px;font-size:0.68rem;color:var(--muted);
+  transition:all .15s;
+}
+.sym-btn:hover{border-color:var(--border-h);color:var(--text);}
+.sym-btn.grp{color:var(--accent);border-color:rgba(232,213,176,0.2);}
+
+/* ── Add button ── */
+.add-fn-btn{
+  width:100%;padding:7px;background:var(--accent2);
+  border:1px dashed rgba(232,213,176,0.25);border-radius:var(--r-sm);
+  color:var(--accent);font-size:0.75rem;letter-spacing:0.06em;
+  text-transform:uppercase;transition:all .18s;
+}
+.add-fn-btn:hover{background:rgba(232,213,176,0.15);border-style:solid;}
+
+/* ── Analysis panel ── */
+.ana-block{
+  background:var(--surface2);border-radius:var(--r-sm);
+  padding:10px 12px;margin-bottom:8px;
+  border:1px solid var(--border);
+}
+.ana-head{
+  font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px;
+}
+.ana-head-dot{width:6px;height:6px;border-radius:50%;}
+.ana-vals{font-size:0.74rem;color:var(--text);line-height:1.8;}
+.ana-pattern{
+  font-size:0.68rem;color:var(--accent);margin-top:4px;
+  font-style:italic;
+}
+.ana-empty{color:var(--muted);font-size:0.72rem;font-style:italic;}
+
+/* ── Range inputs ── */
+.range-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+.range-row label{font-size:0.68rem;color:var(--muted);flex-shrink:0;width:18px;}
+.range-inp{
+  flex:1;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:4px 7px;color:var(--text);
+  font-size:0.75rem;outline:none;transition:border-color .18s;
+}
+.range-inp:focus{border-color:var(--accent);}
+.go-btn{
+  background:var(--accent);color:var(--bg);border:none;
+  border-radius:var(--r-sm);padding:5px 12px;font-size:0.72rem;
+  letter-spacing:0.04em;text-transform:uppercase;transition:opacity .18s;
+  width:100%;margin-top:4px;
+}
+.go-btn:hover{opacity:0.85;}
+.go-btn.sec{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.go-btn.sec:hover{border-color:var(--border-h);}
+
+/* ── Color picker ── */
+.color-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+.color-swatch{
+  width:18px;height:18px;border-radius:50%;border:2px solid transparent;
+  cursor:pointer;transition:transform .15s,border-color .15s;flex-shrink:0;
+}
+.color-swatch:hover{transform:scale(1.2);}
+.color-swatch.sel{border-color:var(--text);}
+
+/* ── Info tooltip overlay (on canvas) ── */
+.info-tip{
+  position:absolute;pointer-events:none;z-index:50;
+  background:var(--surface);border:1px solid var(--border-h);
+  border-radius:var(--r-sm);padding:8px 11px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.3);
+  min-width:140px;max-width:220px;
+  transition:opacity .12s;
+}
+.info-tip-coord{font-size:0.82rem;color:var(--accent);font-family:'Instrument Serif',serif;
+  font-style:italic;margin-bottom:4px;}
+.info-tip-row{font-size:0.7rem;color:var(--muted);line-height:1.7;}
+.info-tip-row strong{color:var(--text);}
+
+/* ── Axis input row ── */
+.axis-row{display:flex;gap:6px;align-items:center;margin-bottom:4px;}
+.axis-lbl{font-size:0.65rem;color:var(--muted);width:36px;flex-shrink:0;}
+
+/* ── Tabs ── */
+.p-tabs{display:flex;border-bottom:1px solid var(--border);}
+.p-tab{
+  flex:1;padding:9px 4px;font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;
+  transition:all .18s;
+}
+.p-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.p-tab:hover:not(.active){color:var(--text);}
+
+/* ── Mode indicator ── */
+.mode-pill{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--border-h);
+  border-radius:50px;padding:5px 14px;
+  font-size:0.68rem;color:var(--muted);letter-spacing:0.06em;
+  text-transform:uppercase;pointer-events:none;z-index:20;
+  opacity:0;transition:opacity .25s;
+}
+.mode-pill.visible{opacity:1;}
+
+/* ── Zoom controls ── */
+.zoom-btns{
+  position:absolute;right:14px;top:14px;
+  display:flex;flex-direction:column;gap:4px;z-index:20;
+}
+.zoom-btn{
+  width:32px;height:32px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  color:var(--text);font-size:1rem;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.zoom-btn:hover{border-color:var(--border-h);background:var(--surface2);}
+
+/* ── Area result ── */
+.area-result{
+  background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);
+  border-radius:var(--r-sm);padding:8px 10px;margin-top:6px;
+  font-size:0.78rem;color:var(--green);
+}
+
+/* ── Intersections / Distances ── */
+.dist-item{
+  background:var(--surface2);border-radius:var(--r-sm);
+  padding:6px 10px;margin-bottom:4px;
+  font-size:0.72rem;color:var(--muted);line-height:1.6;
+}
+.dist-item strong{color:var(--text);}
+
+/* ── Scrollbar global ── */
+body::-webkit-scrollbar{width:0;}
+
+/* ── Mobile ── */
+@media(max-width:640px){
+  .panel{width:100%;position:absolute;bottom:0;left:0;right:0;
+    top:auto;height:52%;border-right:none;border-top:1px solid var(--border);
+    z-index:20;}
+  .canvas-area{bottom:52%;}
+  :root{--panel:100vw;}
+}
+
+/* ── Animations ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.ana-block{animation:fadeIn .2s ease;}
+</style>
+</head>
+<body>
+<!-- Top bar -->
+<div class="topbar">
+  <a href="/" class="topbar-logo">
+    <span class="topbar-logo-name">CogniSwift</span>
+    <span style="color:var(--muted);font-size:0.6rem;margin-left:2px;opacity:0.6;">™</span>
+    <span style="color:var(--border-h);margin:0 6px;font-size:0.7rem;">|</span>
+    <span class="topbar-title">Graphing Calculator</span>
+  </a>
+  <div class="topbar-r">
+    <button class="tb-btn" onclick="exportPNG(1)">Export PNG</button>
+    <button class="tb-btn" onclick="exportPDF()">Export PDF</button>
+    <button class="thm-btn" id="thmBtn" onclick="toggleTheme()" title="Toggle theme">☀</button>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+  <!-- Left panel -->
+  <div class="panel">
+    <!-- Tab bar -->
+    <div class="p-tabs">
+      <button class="p-tab active" onclick="switchTab('functions')" id="tab-functions">Functions</button>
+      <button class="p-tab" onclick="switchTab('analysis')" id="tab-analysis">Analysis</button>
+      <button class="p-tab" onclick="switchTab('tools')" id="tab-tools">Tools</button>
+    </div>
+
+    <!-- FUNCTIONS TAB -->
+    <div id="pane-functions" class="p-scroll">
+      <div class="p-section">
+        <div class="p-label">Add Function  <span style="color:var(--muted2);font-size:0.6rem;font-weight:300;text-transform:none;letter-spacing:0">f(x) =</span></div>
+        <div class="fn-input-wrap">
+          <span>f(x) =</span>
+          <input class="fn-input" id="newFnInput" placeholder="sin(x), x^2, ln(x)…" 
+            onkeydown="if(event.key==='Enter')addFunction()"
+            oninput="previewFn(this.value)"/>
+        </div>
+        <!-- Symbol keyboard -->
+        <div class="sym-kbd" id="symKbd"></div>
+        <!-- Color picker -->
+        <div class="color-row" id="colorPicker"></div>
+        <button class="add-fn-btn" onclick="addFunction()">+ Add to graph</button>
+      </div>
+
+      <!-- Function list -->
+      <div class="p-section" id="fnList" style="padding-top:8px;">
+        <div class="p-label">Functions on graph</div>
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- View range -->
+      <div class="p-section">
+        <div class="p-label">View range</div>
+        <div class="axis-row">
+          <span class="axis-lbl">x from</span>
+          <input class="range-inp" id="xMinInp" value="-10" onchange="applyViewRange()"/>
+          <span class="axis-lbl" style="width:16px;text-align:center;color:var(--muted2)">to</span>
+          <input class="range-inp" id="xMaxInp" value="10" onchange="applyViewRange()"/>
+        </div>
+        <div class="axis-row">
+          <span class="axis-lbl">y from</span>
+          <input class="range-inp" id="yMinInp" value="-8" onchange="applyViewRange()"/>
+          <span class="axis-lbl" style="width:16px;text-align:center;color:var(--muted2)">to</span>
+          <input class="range-inp" id="yMaxInp" value="8" onchange="applyViewRange()"/>
+        </div>
+        <button class="go-btn sec" onclick="resetView()" style="margin-top:6px;">Reset view</button>
+      </div>
+    </div>
+
+    <!-- ANALYSIS TAB -->
+    <div id="pane-analysis" class="p-scroll" style="display:none;">
+      <div class="p-section">
+        <div class="p-label">Selected function</div>
+        <div id="anaFnName" style="font-family:'Instrument Serif',serif;font-style:italic;font-size:0.9rem;color:var(--accent);margin-bottom:10px;">—</div>
+
+        <!-- Roots -->
+        <div class="ana-block" id="anaRootsBlock">
+          <div class="ana-head">
+            <div class="ana-head-dot" style="background:#4ade80"></div>Roots  (f(x) = 0)
+          </div>
+          <div id="anaRoots" class="ana-vals ana-empty">Select a function first</div>
+          <div id="anaRootPattern" class="ana-pattern"></div>
+        </div>
+
+        <!-- Inflections -->
+        <div class="ana-block" id="anaInflBlock">
+          <div class="ana-head">
+            <div class="ana-head-dot" style="background:#c084fc"></div>Inflection points  (f″(x) = 0)
+          </div>
+          <div id="anaInfl" class="ana-vals ana-empty">Select a function first</div>
+          <div id="anaInflPattern" class="ana-pattern"></div>
+        </div>
+
+        <!-- Intersections -->
+        <div class="ana-block" id="anaIsectBlock" style="display:none;">
+          <div class="ana-head">
+            <div class="ana-head-dot" style="background:#60a5fa"></div>Intersections
+          </div>
+          <div id="anaIsect" class="ana-vals ana-empty"></div>
+        </div>
+      </div>
+
+      <!-- Slope / value at x -->
+      <div class="p-section">
+        <div class="p-label">Evaluate at x</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+          <span style="font-size:0.72rem;color:var(--muted);flex-shrink:0;">x =</span>
+          <input class="range-inp" id="evalXInp" value="0" style="flex:1;" onchange="evalAtX()"/>
+        </div>
+        <div id="evalResult" style="font-size:0.75rem;color:var(--muted);line-height:1.8;"></div>
+      </div>
+    </div>
+
+    <!-- TOOLS TAB -->
+    <div id="pane-tools" class="p-scroll" style="display:none;">
+      <!-- Area under curve -->
+      <div class="p-section">
+        <div class="p-label">Area under curve  ∫ f(x) dx</div>
+        <div class="range-row">
+          <label>from</label>
+          <input class="range-inp" id="areaX1" placeholder="x₁" value="-2"/>
+          <label style="width:12px;text-align:center;">to</label>
+          <input class="range-inp" id="areaX2" placeholder="x₂" value="2"/>
+        </div>
+        <button class="go-btn" onclick="computeArea()">Compute & shade area</button>
+        <button class="go-btn sec" onclick="clearArea()" style="margin-top:4px;">Clear shading</button>
+        <div id="areaResult"></div>
+      </div>
+
+      <!-- Region highlight -->
+      <div class="p-section">
+        <div class="p-label">Highlight region</div>
+        <div class="range-row">
+          <label>x₁</label>
+          <input class="range-inp" id="hlX1" placeholder="-3"/>
+          <label>x₂</label>
+          <input class="range-inp" id="hlX2" placeholder="3"/>
+        </div>
+        <button class="go-btn" onclick="applyHighlight()">Highlight</button>
+        <button class="go-btn sec" onclick="clearHighlight()" style="margin-top:4px;">Clear</button>
+      </div>
+
+      <!-- Mark point / distance -->
+      <div class="p-section">
+        <div class="p-label">Mark point</div>
+        <button class="go-btn" id="markModeBtn" onclick="toggleMarkMode()">Click canvas to mark</button>
+        <div id="markedList" style="margin-top:8px;"></div>
+      </div>
+
+      <!-- Export -->
+      <div class="p-section">
+        <div class="p-label">Export graph</div>
+        <button class="go-btn" onclick="exportPNG(1)" style="margin-bottom:4px;">PNG  1×  (screen)</button>
+        <button class="go-btn sec" onclick="exportPNG(2)" style="margin-bottom:4px;">PNG  2×  (high-res)</button>
+        <button class="go-btn sec" onclick="exportPNG(3)" style="margin-bottom:4px;">PNG  3×  (print)</button>
+        <button class="go-btn sec" onclick="exportPDF()">PDF  (A4)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas area -->
+  <div class="canvas-area" id="canvasArea">
+    <canvas id="gridCanvas"></canvas>
+    <canvas id="curveCanvas"></canvas>
+    <canvas id="overlayCanvas" style="cursor:crosshair;"></canvas>
+
+    <!-- Zoom buttons -->
+    <div class="zoom-btns">
+      <button class="zoom-btn" onclick="zoom(1.3)" title="Zoom in">+</button>
+      <button class="zoom-btn" onclick="zoom(1/1.3)" title="Zoom out">−</button>
+      <button class="zoom-btn" style="font-size:0.6rem;" onclick="resetView()" title="Reset">⊙</button>
+    </div>
+
+    <!-- Mode indicator -->
+    <div class="mode-pill" id="modePill">Pan mode</div>
+
+    <!-- Info tooltip -->
+    <div class="info-tip" id="infoTip" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- math.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/13.0.3/math.min.js"></script>
+<!-- KaTeX -->
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+'use strict';
+
+// ──────────────────────────────────────────────────────
+// THEME
+// ──────────────────────────────────────────────────────
+var darkMode = !document.body.classList.contains('light');
+// Inherit from parent if in iframe
+try{var p=new URLSearchParams(window.location.search);if(p.get('theme')==='light'){document.body.classList.add('light');darkMode=false;}}catch(e){}
+
+function toggleTheme(){
+  darkMode=!darkMode;
+  document.body.classList.toggle('light',!darkMode);
+  document.getElementById('thmBtn').textContent=darkMode?'☀':'🌙';
+  drawGrid();drawAllCurves();drawOverlay();
+}
+
+// ──────────────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────────────
+var COLORS=['#e8d5b0','#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#34d399','#f472b6','#a78bfa','#67e8f9'];
+var fnList=[]; // {id,expr,compiled,color,visible}
+var selectedFnId=null;
+var newFnColor=COLORS[0];
+var VIEW={xMin:-10,xMax:10,yMin:-8,yMax:8};
+var areaState=null; // {fnId,x1,x2,result}
+var hlState=null;   // {x1,x2}
+var markedPoints=[]; // {x,y}
+var markMode=false;
+var hoverInfo=null; // {x,y,fn,slope,nearRoot,dist}
+var panState=null;  // {sx,sy,ox,oy}
+var analysisCache={}; // fnId -> {roots,inflections}
+var activeTab='functions';
+
+// ──────────────────────────────────────────────────────
+// CANVAS SETUP
+// ──────────────────────────────────────────────────────
+var gc=document.getElementById('gridCanvas');
+var cc=document.getElementById('curveCanvas');
+var oc=document.getElementById('overlayCanvas');
+var gctx=gc.getContext('2d');
+var cctx=cc.getContext('2d');
+var octx=oc.getContext('2d');
+var W=0,H=0;
+
+function resize(){
+  var area=document.getElementById('canvasArea');
+  W=area.clientWidth;H=area.clientHeight;
+  [gc,cc,oc].forEach(function(cv){cv.width=W;cv.height=H;});
+  drawGrid();drawAllCurves();drawOverlay();
+}
+
+window.addEventListener('resize',function(){clearTimeout(window._rt);window._rt=setTimeout(resize,80);});
+window.addEventListener('load',function(){
+  resize();
+  buildSymKbd();
+  buildColorPicker();
+  renderFnList();
+});
+
+// ──────────────────────────────────────────────────────
+// COORDINATE TRANSFORMS
+// ──────────────────────────────────────────────────────
+function xToP(x){return (x-VIEW.xMin)/(VIEW.xMax-VIEW.xMin)*W;}
+function yToP(y){return H-(y-VIEW.yMin)/(VIEW.yMax-VIEW.yMin)*H;}
+function pToX(px){return VIEW.xMin+(px/W)*(VIEW.xMax-VIEW.xMin);}
+function pToY(py){return VIEW.yMin+((H-py)/H)*(VIEW.yMax-VIEW.yMin);}
+
+// ──────────────────────────────────────────────────────
+// GRID DRAWING
+// ──────────────────────────────────────────────────────
+function niceStep(range,targetDivs){
+  var rough=range/targetDivs;
+  var mag=Math.pow(10,Math.floor(Math.log10(rough)));
+  var f=rough/mag;
+  if(f<1.5)return mag;
+  if(f<3.5)return 2*mag;
+  if(f<7.5)return 5*mag;
+  return 10*mag;
+}
+
+function drawGrid(){
+  var light=document.body.classList.contains('light');
+  var bg=light?'#f4f1eb':'#22203a';
+  var gridCol=light?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.05)';
+  var axisCol=light?'rgba(0,0,0,0.35)':'rgba(255,255,255,0.35)';
+  var lblCol=light?'rgba(0,0,0,0.35)':'rgba(255,255,255,0.28)';
+
+  gctx.clearRect(0,0,W,H);
+  gctx.fillStyle=bg;gctx.fillRect(0,0,W,H);
+
+  var xStep=niceStep(VIEW.xMax-VIEW.xMin,10);
+  var yStep=niceStep(VIEW.yMax-VIEW.yMin,8);
+
+  gctx.beginPath();gctx.strokeStyle=gridCol;gctx.lineWidth=1;
+  for(var x=Math.ceil(VIEW.xMin/xStep)*xStep;x<=VIEW.xMax+xStep*0.01;x+=xStep){
+    var px=Math.round(xToP(x));gctx.moveTo(px,0);gctx.lineTo(px,H);
+  }
+  for(var y=Math.ceil(VIEW.yMin/yStep)*yStep;y<=VIEW.yMax+yStep*0.01;y+=yStep){
+    var py=Math.round(yToP(y));gctx.moveTo(0,py);gctx.lineTo(W,py);
+  }
+  gctx.stroke();
+
+  // Axes
+  gctx.beginPath();gctx.strokeStyle=axisCol;gctx.lineWidth=1.5;
+  var ox=Math.round(xToP(0)),oy=Math.round(yToP(0));
+  gctx.moveTo(ox,0);gctx.lineTo(ox,H);
+  gctx.moveTo(0,oy);gctx.lineTo(W,oy);
+  gctx.stroke();
+
+  // Axis arrows
+  gctx.fillStyle=axisCol;
+  gctx.beginPath();gctx.moveTo(W-2,oy);gctx.lineTo(W-10,oy-4);gctx.lineTo(W-10,oy+4);gctx.closePath();gctx.fill();
+  gctx.beginPath();gctx.moveTo(ox,2);gctx.lineTo(ox-4,10);gctx.lineTo(ox+4,10);gctx.closePath();gctx.fill();
+
+  // Labels
+  gctx.fillStyle=lblCol;gctx.font='10px Geist,system-ui,sans-serif';gctx.textAlign='center';
+  for(var x=Math.ceil(VIEW.xMin/xStep)*xStep;x<=VIEW.xMax;x+=xStep){
+    if(Math.abs(x)<xStep*0.01)continue;
+    var px=xToP(x);var lbl=formatNum(x);
+    gctx.fillText(lbl,px,Math.min(Math.max(oy+14,12),H-4));
+  }
+  gctx.textAlign='right';
+  for(var y=Math.ceil(VIEW.yMin/yStep)*yStep;y<=VIEW.yMax;y+=yStep){
+    if(Math.abs(y)<yStep*0.01)continue;
+    var py=yToP(y);var lbl=formatNum(y);
+    gctx.fillText(lbl,Math.max(ox-6,30),Math.min(Math.max(py+4,12),H-4));
+  }
+  // Axis labels
+  gctx.textAlign='left';gctx.font='11px Instrument Serif,serif';gctx.fillStyle=axisCol;
+  gctx.fillText('x',W-10,oy-8);
+  gctx.fillText('y',ox+8,12);
+}
+
+function formatNum(v){
+  if(Math.abs(v)<1e-10)return '0';
+  var s=parseFloat(v.toPrecision(4));
+  // Check for pi multiples
+  var r=v/Math.PI;
+  if(Math.abs(Math.round(r)-r)<0.002){
+    var n=Math.round(r);
+    if(n===1)return 'π';if(n===-1)return '-π';if(n===0)return '0';
+    return n+'π';
+  }
+  return s.toString();
+}
+
+// ──────────────────────────────────────────────────────
+// EXPRESSION PARSING + EVAL
+// ──────────────────────────────────────────────────────
+function preprocess(expr){
+  return expr
+    .replace(/\bpi\b/gi,'pi').replace(/π/g,'pi')
+    .replace(/\be\b/g,'e')
+    .replace(/\barcsin\b/gi,'asin').replace(/\barccos\b/gi,'acos')
+    .replace(/\barctan\b/gi,'atan')
+    .replace(/\bsin\^(-1)\b/gi,'asin').replace(/\bcos\^(-1)\b/gi,'acos').replace(/\btan\^(-1)\b/gi,'atan')
+    .replace(/\bln\b/gi,'log').replace(/\blog10\b/gi,'log10')
+    .replace(/\bsqrt\b/gi,'sqrt').replace(/\babs\b/gi,'abs')
+    .replace(/\bfloor\b/gi,'floor').replace(/\bceil\b/gi,'ceil')
+    .replace(/(\d)([a-zA-Z])/g,'$1*$2') // implicit multiply: 2x → 2*x
+    .replace(/\)(\()/g,')*('); // )(→ )*(
+}
+
+function compileExpr(expr){
+  try{
+    var p=preprocess(expr);
+    var compiled=math.compile(p);
+    // test
+    compiled.evaluate({x:1});
+    return compiled;
+  }catch(e){return null;}
+}
+
+function evalFn(compiled,x){
+  try{
+    var v=compiled.evaluate({x:x});
+    if(typeof v!=='number'||isNaN(v)||!isFinite(v))return NaN;
+    return v;
+  }catch(e){return NaN;}
+}
+
+// ──────────────────────────────────────────────────────
+// NUMERICAL DIFF / INTEGRATION
+// ──────────────────────────────────────────────────────
+function derivative(fn,x){
+  var h=Math.max(1e-7,Math.abs(x)*1e-5);
+  return (evalFn(fn,x+h)-evalFn(fn,x-h))/(2*h);
+}
+function derivative2(fn,x){
+  var h=Math.max(1e-6,Math.abs(x)*1e-4);
+  return (evalFn(fn,x+h)-2*evalFn(fn,x)+evalFn(fn,x-h))/(h*h);
+}
+
+function adaptiveSimpson(fn,a,b,depth){
+  var N=Math.min(1000,Math.max(100,Math.round(Math.abs(b-a)*50)));
+  if(N%2!==0)N++;
+  var h=(b-a)/N,s=evalFn(fn,a)+evalFn(fn,b),x=a;
+  for(var i=1;i<N;i++){x+=h;s+=(i%2===0?2:4)*evalFn(fn,x);}
+  return s*h/3;
+}
+
+// ──────────────────────────────────────────────────────
+// ROOT FINDING
+// ──────────────────────────────────────────────────────
+function findRoots(fn,xMin,xMax){
+  var N=2000;
+  var dx=(xMax-xMin)/N;
+  var roots=[];
+  var prev=evalFn(fn,xMin);
+  for(var i=1;i<=N;i++){
+    var xr=xMin+i*dx;
+    var cur=evalFn(fn,xr);
+    if(isNaN(prev)||isNaN(cur)){prev=cur;continue;}
+    if(prev*cur<0){
+      // bisection
+      var a=xr-dx,b=xr,fa=prev,fb=cur;
+      for(var j=0;j<48;j++){
+        var m=(a+b)/2,fm=evalFn(fn,m);
+        if(isNaN(fm))break;
+        if(fa*fm<=0){b=m;fb=fm;}else{a=m;fa=fm;}
+        if(b-a<1e-10)break;
+      }
+      var r=(a+b)/2;
+      // avoid duplicates
+      if(!roots.some(function(v){return Math.abs(v-r)<1e-6;}))roots.push(r);
+    }
+    // near-zero single touch
+    if(Math.abs(cur)<1e-9&&Math.abs(prev)>1e-9){
+      if(!roots.some(function(v){return Math.abs(v-xr)<1e-6;}))roots.push(xr);
+    }
+    prev=cur;
+  }
+  roots.sort(function(a,b){return a-b;});
+  return roots;
+}
+
+function detectPeriodicity(roots){
+  if(roots.length<3)return null;
+  var gaps=[];
+  for(var i=1;i<roots.length;i++)gaps.push(roots[i]-roots[i-1]);
+  var mean=gaps.reduce(function(a,b){return a+b;})/gaps.length;
+  var variance=gaps.reduce(function(a,v){return a+(v-mean)*(v-mean);},0)/gaps.length;
+  if(Math.sqrt(variance)<mean*0.03){
+    // Check for pi multiples
+    var r=mean/Math.PI;
+    if(Math.abs(Math.round(r)-r)<0.02){
+      var n=Math.round(r);
+      return 'Period: '+(n===1?'π':n===2?'2π':n+'π')+' · Pattern: nπ'+(roots[0]!==0?' + '+formatNum(roots[0]):'');
+    }
+    return 'Period ≈ '+formatNum(mean)+' · Evenly spaced';
+  }
+  return null;
+}
+
+// ──────────────────────────────────────────────────────
+// INFLECTION POINTS
+// ──────────────────────────────────────────────────────
+function findInflections(fn,xMin,xMax){
+  var N=2000;var dx=(xMax-xMin)/N;
+  var infl=[];
+  var prev=derivative2(fn,xMin);
+  for(var i=1;i<=N;i++){
+    var xr=xMin+i*dx;var cur=derivative2(fn,xr);
+    if(isNaN(prev)||isNaN(cur)){prev=cur;continue;}
+    if(prev*cur<0){
+      var a=xr-dx,b=xr,fa=prev,fb=cur;
+      for(var j=0;j<40;j++){
+        var m=(a+b)/2,fm=derivative2(fn,m);
+        if(isNaN(fm))break;
+        if(fa*fm<=0){b=m;fb=fm;}else{a=m;fa=fm;}
+        if(b-a<1e-9)break;
+      }
+      var x=(a+b)/2;
+      if(!infl.some(function(v){return Math.abs(v-x)<1e-5;}))infl.push(x);
+    }
+    prev=cur;
+  }
+  infl.sort(function(a,b){return a-b;});
+  return infl;
+}
+
+// ──────────────────────────────────────────────────────
+// INTERSECTIONS
+// ──────────────────────────────────────────────────────
+function findIntersections(fn1,fn2,xMin,xMax){
+  var diff={evaluate:function(scope){return evalFn(fn1,scope.x)-evalFn(fn2,scope.x);}};
+  return findRoots(diff,xMin,xMax);
+}
+
+// ──────────────────────────────────────────────────────
+// CLOSEST POINT ON CURVE (true perpendicular distance)
+// ──────────────────────────────────────────────────────
+function closestPointOnCurve(fn,px,py){
+  var xMin=VIEW.xMin,xMax=VIEW.xMax;
+  var N=500;var dx=(xMax-xMin)/N;
+  var bestDist=Infinity,bestX=xMin;
+  // Sample pass
+  for(var i=0;i<=N;i++){
+    var cx=xMin+i*dx;var cy=evalFn(fn,cx);
+    if(isNaN(cy))continue;
+    var d=dist2(cx,cy,px,py);
+    if(d<bestDist){bestDist=d;bestX=cx;}
+  }
+  // Ternary search refinement
+  var lo=bestX-dx*2,hi=bestX+dx*2;
+  for(var iter=0;iter<60;iter++){
+    var m1=lo+(hi-lo)/3,m2=hi-(hi-lo)/3;
+    var d1=ptToCurveDist(fn,m1,px,py),d2=ptToCurveDist(fn,m2,px,py);
+    if(d1<d2)hi=m2;else lo=m1;
+    if(hi-lo<1e-9)break;
+  }
+  var bx=(lo+hi)/2;var by=evalFn(fn,bx);
+  return {x:bx,y:by,dist:Math.sqrt(dist2(bx,by,px,py))};
+}
+function dist2(ax,ay,bx,by){return (ax-bx)*(ax-bx)+(ay-by)*(ay-by);}
+function ptToCurveDist(fn,cx,px,py){var cy=evalFn(fn,cx);if(isNaN(cy))return Infinity;return dist2(cx,cy,px,py);}
+
+// ──────────────────────────────────────────────────────
+// FUNCTION MANAGEMENT
+// ──────────────────────────────────────────────────────
+var fnIdCounter=0;
+function addFunction(){
+  var inp=document.getElementById('newFnInput');
+  var expr=inp.value.trim();
+  if(!expr)return;
+  var compiled=compileExpr(expr);
+  if(!compiled){showMsg('Cannot parse: '+expr);return;}
+  var id='fn'+(++fnIdCounter);
+  var color=newFnColor||COLORS[fnList.length%COLORS.length];
+  fnList.push({id:id,expr:expr,compiled:compiled,color:color,visible:true});
+  selectedFnId=id;
+  inp.value='';
+  renderFnList();
+  drawAllCurves();
+  runAnalysis();
+  switchTab('analysis');
+  // Shift next color
+  newFnColor=COLORS[fnList.length%COLORS.length];
+  buildColorPicker();
+}
+
+function removeFn(id){
+  fnList=fnList.filter(function(f){return f.id!==id;});
+  delete analysisCache[id];
+  if(selectedFnId===id)selectedFnId=fnList.length?fnList[fnList.length-1].id:null;
+  if(areaState&&areaState.fnId===id)areaState=null;
+  renderFnList();drawAllCurves();drawOverlay();runAnalysis();
+}
+
+function toggleFnVis(id){
+  var f=fnList.find(function(f){return f.id===id;});
+  if(f)f.visible=!f.visible;
+  renderFnList();drawAllCurves();
+}
+
+function selectFn(id){
+  selectedFnId=id;
+  renderFnList();
+  drawAllCurves();
+  runAnalysis();
+  if(activeTab!=='analysis')switchTab('analysis');
+}
+
+function renderFnList(){
+  var el=document.getElementById('fnList');
+  var html='<div class="p-label">Functions on graph</div>';
+  if(!fnList.length){html+='<div style="color:var(--muted);font-size:0.72rem;font-style:italic;padding:4px 0;">No functions yet</div>';}
+  fnList.forEach(function(f){
+    var isActive=f.id===selectedFnId;
+    html+='<div class="fn-row'+(isActive?' active':'')+'" onclick="selectFn(\''+f.id+'\')">';
+    html+='<div class="fn-dot" style="background:'+f.color+';opacity:'+(f.visible?1:0.3)+';"></div>';
+    html+='<div class="fn-expr" style="opacity:'+(f.visible?1:0.45)+';" title="'+escHtml(f.expr)+'">f(x) = '+escHtml(f.expr)+'</div>';
+    html+='<button class="fn-vis-btn" onclick="event.stopPropagation();toggleFnVis(\''+f.id+'\')" title="Toggle visibility">'+(f.visible?'👁':'👁‍🗨')+'</button>';
+    html+='<button class="fn-del-btn" onclick="event.stopPropagation();removeFn(\''+f.id+'\')" title="Delete">✕</button>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ──────────────────────────────────────────────────────
+// CURVE DRAWING
+// ──────────────────────────────────────────────────────
+function drawAllCurves(){
+  cctx.clearRect(0,0,W,H);
+  if(!fnList.length)return;
+
+  // Area shading
+  if(areaState){
+    var af=fnList.find(function(f){return f.id===areaState.fnId;});
+    if(af&&af.visible){
+      drawAreaShade(cctx,af,areaState.x1,areaState.x2);
+    }
+  }
+
+  // Region highlight
+  if(hlState){
+    var px1=xToP(hlState.x1),px2=xToP(hlState.x2);
+    cctx.fillStyle=document.body.classList.contains('light')?'rgba(154,124,63,0.08)':'rgba(232,213,176,0.06)';
+    cctx.fillRect(Math.min(px1,px2),0,Math.abs(px2-px1),H);
+    cctx.strokeStyle=document.body.classList.contains('light')?'rgba(154,124,63,0.25)':'rgba(232,213,176,0.2)';
+    cctx.lineWidth=1;cctx.setLineDash([4,3]);
+    cctx.beginPath();cctx.moveTo(Math.min(px1,px2),0);cctx.lineTo(Math.min(px1,px2),H);cctx.stroke();
+    cctx.beginPath();cctx.moveTo(Math.max(px1,px2),0);cctx.lineTo(Math.max(px1,px2),H);cctx.stroke();
+    cctx.setLineDash([]);
+  }
+
+  // Curves
+  fnList.forEach(function(f){
+    if(!f.visible)return;
+    var isSel=f.id===selectedFnId;
+    drawCurve(cctx,f,isSel);
+  });
+}
+
+function drawCurve(ctx,fn,selected){
+  var N=Math.max(W*2,800);
+  var dx=(VIEW.xMax-VIEW.xMin)/N;
+  var pts=[];
+  var segments=[[]];
+  for(var i=0;i<=N;i++){
+    var x=VIEW.xMin+i*dx;
+    var y=evalFn(fn.compiled,x);
+    if(!isNaN(y)&&isFinite(y)){
+      var py=yToP(y);
+      if(py>-H*2&&py<H*3){
+        segments[segments.length-1].push({px:xToP(x),py:py});
+      }else{segments.push([]);}
+    }else{segments.push([]);}
+  }
+
+  if(selected){
+    // Glow layer
+    ctx.save();
+    ctx.strokeStyle=fn.color;
+    ctx.lineWidth=8;
+    ctx.globalAlpha=0.12;
+    ctx.lineCap='round';ctx.lineJoin='round';
+    segments.forEach(function(seg){
+      if(seg.length<2)return;
+      ctx.beginPath();ctx.moveTo(seg[0].px,seg[0].py);
+      for(var i=1;i<seg.length;i++)ctx.lineTo(seg[i].px,seg[i].py);
+      ctx.stroke();
+    });
+    ctx.globalAlpha=1;ctx.lineWidth=3;ctx.globalAlpha=0.3;
+    segments.forEach(function(seg){
+      if(seg.length<2)return;
+      ctx.beginPath();ctx.moveTo(seg[0].px,seg[0].py);
+      for(var i=1;i<seg.length;i++)ctx.lineTo(seg[i].px,seg[i].py);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.strokeStyle=fn.color;
+  ctx.lineWidth=selected?2.2:1.6;
+  ctx.globalAlpha=selected?1:0.75;
+  ctx.lineCap='round';ctx.lineJoin='round';
+  segments.forEach(function(seg){
+    if(seg.length<2)return;
+    ctx.beginPath();ctx.moveTo(seg[0].px,seg[0].py);
+    for(var i=1;i<seg.length;i++)ctx.lineTo(seg[i].px,seg[i].py);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function drawAreaShade(ctx,fn,x1,x2){
+  var N=400;var dx=(x2-x1)/N;
+  ctx.save();
+  ctx.fillStyle=fn.color;ctx.globalAlpha=0.12;
+  ctx.beginPath();
+  ctx.moveTo(xToP(x1),yToP(0));
+  for(var i=0;i<=N;i++){
+    var x=x1+i*dx;var y=evalFn(fn.compiled,x);
+    if(isNaN(y)||!isFinite(y))y=0;
+    ctx.lineTo(xToP(x),yToP(y));
+  }
+  ctx.lineTo(xToP(x2),yToP(0));
+  ctx.closePath();ctx.fill();
+  ctx.globalAlpha=0.35;ctx.strokeStyle=fn.color;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(xToP(x1),0);ctx.lineTo(xToP(x1),H);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(xToP(x2),0);ctx.lineTo(xToP(x2),H);ctx.stroke();
+  ctx.setLineDash([]);ctx.restore();
+}
+
+// ──────────────────────────────────────────────────────
+// OVERLAY (hover, markers, intersections)
+// ──────────────────────────────────────────────────────
+function drawOverlay(){
+  octx.clearRect(0,0,W,H);
+  var selFn=fnList.find(function(f){return f.id===selectedFnId;});
+
+  // Roots markers (for selected fn)
+  if(selFn&&analysisCache[selectedFnId]){
+    var roots=analysisCache[selectedFnId].roots||[];
+    roots.forEach(function(rx){
+      var rpx=xToP(rx);
+      if(rpx<0||rpx>W)return;
+      octx.beginPath();
+      octx.arc(rpx,yToP(0),4,0,Math.PI*2);
+      octx.fillStyle=selFn.color;octx.globalAlpha=0.6;octx.fill();
+      octx.globalAlpha=1;octx.strokeStyle='rgba(255,255,255,0.4)';octx.lineWidth=1;octx.stroke();
+    });
+    // Inflection markers
+    var infls=analysisCache[selectedFnId].inflections||[];
+    infls.forEach(function(ix){
+      var ipx=xToP(ix);var iy=evalFn(selFn.compiled,ix);
+      if(ipx<0||ipx>W||isNaN(iy))return;
+      var ipy=yToP(iy);
+      octx.save();
+      octx.translate(ipx,ipy);octx.rotate(Math.PI/4);
+      octx.fillStyle='#c084fc';octx.globalAlpha=0.55;
+      octx.fillRect(-3,-3,6,6);
+      octx.restore();
+      octx.globalAlpha=1;
+    });
+  }
+
+  // Intersection dots (between all pairs)
+  if(fnList.length>=2){
+    for(var i=0;i<fnList.length-1;i++){
+      for(var j=i+1;j<fnList.length;j++){
+        var fi=fnList[i],fj=fnList[j];
+        if(!fi.visible||!fj.visible)continue;
+        var ixs=findIntersections(fi.compiled,fj.compiled,VIEW.xMin,VIEW.xMax);
+        ixs.slice(0,12).forEach(function(ix){
+          var iy=evalFn(fi.compiled,ix);
+          if(isNaN(iy))return;
+          var ipx=xToP(ix),ipy=yToP(iy);
+          if(ipx<0||ipx>W)return;
+          octx.beginPath();octx.arc(ipx,ipy,5,0,Math.PI*2);
+          octx.strokeStyle='#60a5fa';octx.lineWidth=2;octx.globalAlpha=0.7;octx.stroke();
+          octx.fillStyle='rgba(96,165,250,0.25)';octx.fill();
+          octx.globalAlpha=1;
+        });
+      }
+    }
+  }
+
+  // Marked points
+  markedPoints.forEach(function(mp){
+    var mpx=xToP(mp.x),mpy=yToP(mp.y);
+    octx.beginPath();octx.arc(mpx,mpy,5,0,Math.PI*2);
+    octx.fillStyle='#f87171';octx.globalAlpha=0.8;octx.fill();octx.globalAlpha=1;
+    octx.strokeStyle='rgba(255,255,255,0.5)';octx.lineWidth=1.5;octx.stroke();
+    // Label
+    octx.font='10px Geist,system-ui,sans-serif';
+    octx.fillStyle=document.body.classList.contains('light')?'rgba(0,0,0,0.5)':'rgba(255,255,255,0.5)';
+    octx.fillText('('+formatNum(mp.x)+', '+formatNum(mp.y)+')',mpx+8,mpy-6);
+  });
+
+  // Hover crosshair
+  if(hoverInfo&&!markMode){
+    var hx=xToP(hoverInfo.x),hy=yToP(hoverInfo.gy||0);
+    // Vertical line
+    octx.beginPath();
+    octx.strokeStyle=document.body.classList.contains('light')?'rgba(0,0,0,0.15)':'rgba(255,255,255,0.12)';
+    octx.lineWidth=1;octx.setLineDash([4,4]);
+    octx.moveTo(hx,0);octx.lineTo(hx,H);octx.stroke();
+    octx.setLineDash([]);
+    // Dot on curve
+    if(hoverInfo.gy!==null&&!isNaN(hoverInfo.gy)){
+      octx.beginPath();octx.arc(hx,yToP(hoverInfo.gy),4,0,Math.PI*2);
+      var hfn=fnList.find(function(f){return f.id===hoverInfo.fnId;});
+      octx.fillStyle=hfn?hfn.color:'var(--accent)';octx.globalAlpha=0.85;octx.fill();octx.globalAlpha=1;
+      octx.strokeStyle='rgba(255,255,255,0.5)';octx.lineWidth=1.5;octx.stroke();
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────
+// POINTER EVENTS
+// ──────────────────────────────────────────────────────
+oc.addEventListener('mousedown',onPointerDown);
+oc.addEventListener('mousemove',onPointerMove);
+oc.addEventListener('mouseup',onPointerUp);
+oc.addEventListener('mouseleave',function(){
+  hoverInfo=null;document.getElementById('infoTip').style.display='none';
+  drawOverlay();
+});
+oc.addEventListener('dblclick',function(ev){
+  var rect=oc.getBoundingClientRect();
+  var x=pToX(ev.clientX-rect.left);
+  var y=pToY(ev.clientY-rect.top);
+  if(markMode){
+    markedPoints.push({x:x,y:y});
+    renderMarkedList();drawOverlay();
+  }
+});
+oc.addEventListener('wheel',function(ev){
+  ev.preventDefault();
+  var rect=oc.getBoundingClientRect();
+  var mx=pToX(ev.clientX-rect.left);
+  var my=pToY(ev.clientY-rect.top);
+  var factor=ev.deltaY>0?1.12:1/1.12;
+  zoomAt(mx,my,factor);
+},{passive:false});
+
+var lastPanPt=null;
+function onPointerDown(ev){
+  if(markMode){return;}
+  lastPanPt={x:ev.clientX,y:ev.clientY,vx:VIEW.xMin,vxm:VIEW.xMax,vy:VIEW.yMin,vym:VIEW.yMax};
+  oc.style.cursor='grabbing';
+}
+function onPointerMove(ev){
+  var rect=oc.getBoundingClientRect();
+  var px=ev.clientX-rect.left,py=ev.clientY-rect.top;
+  var wx=pToX(px),wy=pToY(py);
+
+  if(lastPanPt&&!markMode){
+    var ddx=(ev.clientX-lastPanPt.x)/W*(VIEW.xMax-VIEW.xMin);
+    var ddy=(ev.clientY-lastPanPt.y)/H*(VIEW.yMax-VIEW.yMin);
+    VIEW.xMin=lastPanPt.vx-ddx;VIEW.xMax=lastPanPt.vxm-ddx;
+    VIEW.yMin=lastPanPt.vy+ddy;VIEW.yMax=lastPanPt.vym+ddy;
+    drawGrid();drawAllCurves();drawOverlay();
+    return;
+  }
+
+  // Hover analysis
+  if(fnList.length===0)return;
+  // Find closest function at this x
+  var selFn=fnList.find(function(f){return f.id===selectedFnId&&f.visible;})||fnList.find(function(f){return f.visible;});
+  if(!selFn)return;
+  var gy=evalFn(selFn.compiled,wx);
+  var slope=derivative(selFn.compiled,wx);
+  // Nearest root
+  var roots=(analysisCache[selectedFnId||selFn.id]||{}).roots||[];
+  var nearRoot=roots.reduce(function(best,r){return Math.abs(r-wx)<Math.abs(best-wx)?r:best;},roots[0]||NaN);
+
+  hoverInfo={x:wx,y:wy,gy:gy,slope:slope,nearRoot:nearRoot,fnId:selFn.id};
+  drawOverlay();
+  updateInfoTip(ev.clientX-rect.left,ev.clientY-rect.top,wx,gy,slope,nearRoot,selFn);
+}
+function onPointerUp(ev){
+  lastPanPt=null;
+  oc.style.cursor=markMode?'crosshair':'crosshair';
+}
+
+function updateInfoTip(px,py,x,y,slope,nearRoot,fn){
+  var tip=document.getElementById('infoTip');
+  if(isNaN(y)){tip.style.display='none';return;}
+  var html='<div class="info-tip-coord">x = '+formatNum(x)+'&ensp;y = '+formatNum(y)+'</div>';
+  html+='<div class="info-tip-row"><strong>Slope</strong> = '+formatNum4(slope)+'</div>';
+  if(!isNaN(nearRoot))html+='<div class="info-tip-row"><strong>Nearest root</strong> at x = '+formatNum(nearRoot)+'</div>';
+  // Distance from cursor point to each curve
+  if(fnList.length>=2){
+    fnList.forEach(function(f){
+      if(!f.visible||f.id===fn.id)return;
+      var closest=closestPointOnCurve(f.compiled,x,y);
+      html+='<div class="info-tip-row"><span style="color:'+f.color+'">●</span> Distance to f(x)='+escHtml(f.expr)+'</div>';
+      html+='<div class="info-tip-row" style="padding-left:10px;">≈ '+formatNum4(closest.dist)+'</div>';
+    });
+  }
+  tip.innerHTML=html;
+  // Position tip
+  var tx=px+16,ty=py+8;
+  if(tx+230>W)tx=px-230;
+  if(ty+120>H)ty=py-120;
+  tip.style.left=tx+'px';tip.style.top=ty+'px';
+  tip.style.display='block';
+}
+
+function formatNum4(v){
+  if(isNaN(v)||!isFinite(v))return '—';
+  return parseFloat(v.toPrecision(4)).toString();
+}
+
+// ──────────────────────────────────────────────────────
+// ZOOM / PAN
+// ──────────────────────────────────────────────────────
+function zoom(factor){zoomAt((VIEW.xMin+VIEW.xMax)/2,(VIEW.yMin+VIEW.yMax)/2,factor);}
+function zoomAt(cx,cy,factor){
+  var dxL=cx-VIEW.xMin,dxR=VIEW.xMax-cx;
+  var dyB=cy-VIEW.yMin,dyT=VIEW.yMax-cy;
+  VIEW.xMin=cx-dxL*factor;VIEW.xMax=cx+dxR*factor;
+  VIEW.yMin=cy-dyB*factor;VIEW.yMax=cy+dyT*factor;
+  drawGrid();drawAllCurves();drawOverlay();
+}
+function resetView(){
+  VIEW={xMin:-10,xMax:10,yMin:-8,yMax:8};
+  document.getElementById('xMinInp').value='-10';document.getElementById('xMaxInp').value='10';
+  document.getElementById('yMinInp').value='-8';document.getElementById('yMaxInp').value='8';
+  drawGrid();drawAllCurves();drawOverlay();
+}
+function applyViewRange(){
+  VIEW.xMin=parseFloat(document.getElementById('xMinInp').value)||VIEW.xMin;
+  VIEW.xMax=parseFloat(document.getElementById('xMaxInp').value)||VIEW.xMax;
+  VIEW.yMin=parseFloat(document.getElementById('yMinInp').value)||VIEW.yMin;
+  VIEW.yMax=parseFloat(document.getElementById('yMaxInp').value)||VIEW.yMax;
+  drawGrid();drawAllCurves();drawOverlay();
+}
+
+// ──────────────────────────────────────────────────────
+// ANALYSIS
+// ──────────────────────────────────────────────────────
+function runAnalysis(){
+  var el=document.getElementById('anaFnName');
+  if(!selectedFnId||!fnList.find(function(f){return f.id===selectedFnId;})){
+    el.textContent='—';
+    document.getElementById('anaRoots').innerHTML='<span class="ana-empty">Select a function first</span>';
+    document.getElementById('anaInfl').innerHTML='<span class="ana-empty">Select a function first</span>';
+    document.getElementById('anaRootPattern').textContent='';
+    document.getElementById('anaInflPattern').textContent='';
+    document.getElementById('evalResult').textContent='';
+    return;
+  }
+  var fn=fnList.find(function(f){return f.id===selectedFnId;});
+  el.textContent='f(x) = '+fn.expr;
+  el.style.color=fn.color;
+
+  // Cache check
+  if(!analysisCache[selectedFnId]){
+    var roots=findRoots(fn.compiled,VIEW.xMin,VIEW.xMax);
+    var infls=findInflections(fn.compiled,VIEW.xMin,VIEW.xMax);
+    analysisCache[selectedFnId]={roots:roots,inflections:infls};
+  }
+  var cache=analysisCache[selectedFnId];
+  var roots=cache.roots;var infls=cache.inflections;
+
+  // Roots
+  var rEl=document.getElementById('anaRoots');
+  if(!roots.length){rEl.innerHTML='<span class="ana-empty">No roots in current view</span>';}
+  else{
+    var rootStrs=roots.slice(0,8).map(function(r){return formatNum(r);});
+    if(roots.length>8)rootStrs.push('…+'+(roots.length-8)+' more');
+    rEl.innerHTML='x = '+rootStrs.join(',&ensp;');
+  }
+  var pat=detectPeriodicity(roots);
+  document.getElementById('anaRootPattern').textContent=pat||'';
+
+  // Inflections
+  var iEl=document.getElementById('anaInfl');
+  if(!infls.length){iEl.innerHTML='<span class="ana-empty">No inflections in current view</span>';}
+  else{
+    var iStrs=infls.slice(0,8).map(function(ix){
+      var iy=evalFn(fn.compiled,ix);
+      return '('+formatNum(ix)+', '+formatNum(iy)+')';
+    });
+    if(infls.length>8)iStrs.push('… +'+(infls.length-8)+' more');
+    iEl.innerHTML=iStrs.join('<br/>');
+  }
+  var ipat=detectPeriodicity(infls);
+  document.getElementById('anaInflPattern').textContent=ipat||'';
+
+  // Intersections
+  var isectBlock=document.getElementById('anaIsectBlock');
+  if(fnList.length>=2){
+    isectBlock.style.display='';
+    var iEl2=document.getElementById('anaIsect');
+    var allIsect=[];
+    fnList.forEach(function(f){
+      if(f.id===selectedFnId||!f.visible)return;
+      var ixs=findIntersections(fn.compiled,f.compiled,VIEW.xMin,VIEW.xMax);
+      ixs.slice(0,5).forEach(function(ix){
+        var iy=evalFn(fn.compiled,ix);
+        allIsect.push({x:ix,y:iy,withExpr:f.expr,color:f.color});
+      });
+    });
+    if(!allIsect.length){iEl2.innerHTML='<span class="ana-empty">No intersections in view</span>';}
+    else{
+      iEl2.innerHTML=allIsect.map(function(pt){
+        return '<span style="color:'+pt.color+'">●</span> with <em>'+escHtml(pt.withExpr)+'</em><br/>('+formatNum(pt.x)+', '+formatNum(pt.y)+')';
+      }).join('<br/>');
+    }
+  }else{isectBlock.style.display='none';}
+
+  evalAtX();
+  drawOverlay();
+}
+
+function evalAtX(){
+  var fn=fnList.find(function(f){return f.id===selectedFnId;});
+  if(!fn){document.getElementById('evalResult').textContent='';return;}
+  var x=parseFloat(document.getElementById('evalXInp').value);
+  if(isNaN(x))return;
+  var y=evalFn(fn.compiled,x);
+  var s=derivative(fn.compiled,x);
+  var s2=derivative2(fn.compiled,x);
+  var el=document.getElementById('evalResult');
+  if(isNaN(y)){el.innerHTML='<span style="color:var(--muted)">undefined at x = '+formatNum4(x)+'</span>';return;}
+  el.innerHTML='<strong>f('+formatNum4(x)+')</strong> = '+formatNum4(y)+'<br/>'
+    +'<strong>f′('+formatNum4(x)+')</strong> = '+formatNum4(s)+'&ensp;<span style="color:var(--muted);font-size:0.68rem;">(slope)</span><br/>'
+    +'<strong>f″('+formatNum4(x)+')</strong> = '+formatNum4(s2)+'&ensp;<span style="color:var(--muted);font-size:0.68rem;">(concavity)</span>';
+}
+
+// ──────────────────────────────────────────────────────
+// AREA
+// ──────────────────────────────────────────────────────
+function computeArea(){
+  var fn=fnList.find(function(f){return f.id===selectedFnId&&f.visible;});
+  if(!fn){showMsg('Select a function first');return;}
+  var x1=parseFloat(document.getElementById('areaX1').value);
+  var x2=parseFloat(document.getElementById('areaX2').value);
+  if(isNaN(x1)||isNaN(x2)||x1>=x2){showMsg('Enter valid x₁ < x₂');return;}
+  var area=adaptiveSimpson(fn.compiled,x1,x2);
+  areaState={fnId:selectedFnId,x1:x1,x2:x2,result:area};
+  document.getElementById('areaResult').innerHTML='<div class="area-result">∫ from '+formatNum4(x1)+' to '+formatNum4(x2)+' = <strong>'+formatNum4(area)+'</strong></div>';
+  drawAllCurves();
+}
+function clearArea(){areaState=null;document.getElementById('areaResult').innerHTML='';drawAllCurves();}
+
+// ──────────────────────────────────────────────────────
+// HIGHLIGHT REGION
+// ──────────────────────────────────────────────────────
+function applyHighlight(){
+  var x1=parseFloat(document.getElementById('hlX1').value);
+  var x2=parseFloat(document.getElementById('hlX2').value);
+  if(isNaN(x1)||isNaN(x2)||x1>=x2){showMsg('Enter valid x₁ < x₂');return;}
+  hlState={x1:x1,x2:x2};drawAllCurves();
+}
+function clearHighlight(){hlState=null;drawAllCurves();}
+
+// ──────────────────────────────────────────────────────
+// MARK POINTS
+// ──────────────────────────────────────────────────────
+function toggleMarkMode(){
+  markMode=!markMode;
+  var btn=document.getElementById('markModeBtn');
+  btn.textContent=markMode?'✓ Click canvas to mark (active)':'Click canvas to mark';
+  btn.style.background=markMode?'var(--accent)':'';
+  btn.style.color=markMode?'var(--bg)':'';
+  oc.style.cursor=markMode?'crosshair':'crosshair';
+  var pill=document.getElementById('modePill');
+  pill.textContent=markMode?'Mark point mode — double-click to place':'';
+  pill.classList.toggle('visible',markMode);
+}
+
+oc.addEventListener('click',function(ev){
+  if(!markMode)return;
+  var rect=oc.getBoundingClientRect();
+  var x=pToX(ev.clientX-rect.left),y=pToY(ev.clientY-rect.top);
+  markedPoints.push({x:x,y:y});
+  renderMarkedList();drawOverlay();
+});
+
+function renderMarkedList(){
+  var el=document.getElementById('markedList');
+  if(!markedPoints.length){el.innerHTML='';return;}
+  var html='';
+  markedPoints.forEach(function(mp,i){
+    html+='<div class="dist-item">';
+    html+='<strong>P'+(i+1)+'</strong> ('+formatNum4(mp.x)+', '+formatNum4(mp.y)+')<br/>';
+    fnList.forEach(function(fn){
+      if(!fn.visible)return;
+      var cp=closestPointOnCurve(fn.compiled,mp.x,mp.y);
+      html+='<span style="color:'+fn.color+'">→ '+escHtml(fn.expr)+'</span>: closest dist = '+formatNum4(cp.dist)+'<br/>';
+    });
+    html+='<button onclick="removeMarker('+i+')" style="font-size:0.65rem;color:var(--red);background:none;border:none;cursor:pointer;margin-top:2px;">✕ Remove</button>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+function removeMarker(i){markedPoints.splice(i,1);renderMarkedList();drawOverlay();}
+
+// ──────────────────────────────────────────────────────
+// SYMBOL KEYBOARD
+// ──────────────────────────────────────────────────────
+var SYMBOLS=[
+  {label:'π',ins:'pi',grp:true},{label:'e',ins:'e',grp:true},{label:'√',ins:'sqrt(',grp:true},
+  {label:'sin',ins:'sin('},{label:'cos',ins:'cos('},{label:'tan',ins:'tan('},
+  {label:'asin',ins:'asin('},{label:'acos',ins:'acos('},{label:'atan',ins:'atan('},
+  {label:'ln',ins:'log('},{label:'log₁₀',ins:'log10('},{label:'|x|',ins:'abs('},
+  {label:'x²',ins:'^2'},{label:'xⁿ',ins:'^'},{label:'1/x',ins:'1/('},
+  {label:'⌊x⌋',ins:'floor('},{label:'⌈x⌉',ins:'ceil('},
+  {label:'(',ins:'('},{label:')',ins:')'},
+];
+function buildSymKbd(){
+  var el=document.getElementById('symKbd');
+  el.innerHTML=SYMBOLS.map(function(s){
+    return '<button class="sym-btn'+(s.grp?' grp':'')+'" onclick="insertSym(\''+s.ins+'\')" title="'+s.ins+'">'+s.label+'</button>';
+  }).join('');
+}
+function insertSym(sym){
+  var inp=document.getElementById('newFnInput');
+  var start=inp.selectionStart,end=inp.selectionEnd;
+  var val=inp.value;
+  inp.value=val.slice(0,start)+sym+val.slice(end);
+  inp.focus();inp.setSelectionRange(start+sym.length,start+sym.length);
+}
+
+// ──────────────────────────────────────────────────────
+// COLOR PICKER
+// ──────────────────────────────────────────────────────
+function buildColorPicker(){
+  var el=document.getElementById('colorPicker');
+  el.innerHTML=COLORS.map(function(c){
+    return '<div class="color-swatch'+(c===newFnColor?' sel':'')+'" style="background:'+c+'" onclick="pickColor(\''+c+'\')" title="'+c+'"></div>';
+  }).join('');
+}
+function pickColor(c){
+  newFnColor=c;buildColorPicker();
+}
+
+// ──────────────────────────────────────────────────────
+// TABS
+// ──────────────────────────────────────────────────────
+function switchTab(tab){
+  activeTab=tab;
+  ['functions','analysis','tools'].forEach(function(t){
+    document.getElementById('pane-'+t).style.display=t===tab?'flex':'none';
+    if(t===tab)document.getElementById('pane-'+t).style.flexDirection='column';
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='analysis')runAnalysis();
+  if(tab==='tools')renderMarkedList();
+}
+
+// ──────────────────────────────────────────────────────
+// EXPORT
+// ──────────────────────────────────────────────────────
+function compositeCanvas(scale){
+  var out=document.createElement('canvas');
+  out.width=W*scale;out.height=H*scale;
+  var ctx=out.getContext('2d');
+  ctx.scale(scale,scale);
+  ctx.drawImage(gc,0,0);
+  ctx.drawImage(cc,0,0);
+  ctx.drawImage(oc,0,0);
+  return out;
+}
+function exportPNG(scale){
+  var cv=compositeCanvas(scale||1);
+  var a=document.createElement('a');
+  a.href=cv.toDataURL('image/png');
+  a.download='cogniswift-graph-'+scale+'x.png';
+  a.click();
+}
+function exportPDF(){
+  var cv=compositeCanvas(2);
+  var dataUrl=cv.toDataURL('image/png');
+  var pdf=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  pdf.addImage(dataUrl,'PNG',10,10,277,155);
+  pdf.setFontSize(9);pdf.setTextColor(150);
+  pdf.text('CogniSwift Graphing Calculator — cogniswift.in',10,200);
+  pdf.save('cogniswift-graph.pdf');
+}
+
+// ──────────────────────────────────────────────────────
+// UTILITY
+// ──────────────────────────────────────────────────────
+function showMsg(m){
+  var pill=document.getElementById('modePill');
+  pill.textContent=m;pill.classList.add('visible');
+  clearTimeout(window._msgT);window._msgT=setTimeout(function(){
+    if(!markMode)pill.classList.remove('visible');
+  },2200);
+}
+
+function previewFn(v){/* could add live preview color-coded status */}
+
+// init display
+switchTab('functions');
+document.getElementById('thmBtn').textContent=darkMode?'☀':'🌙';
+</script>
+</body>
+</html>
