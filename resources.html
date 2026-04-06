@@ -1989,6 +1989,7 @@ function ToolPageTools(){
 // MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 var TOOLS=[
+  {id:'graph',    icon:'📈', title:'Graphing Calculator',desc:'Plot any function, find roots and inflection points, compute areas, mark points and measure distances — all offline in your browser.',external:'/graphing-calculator.html'},
   {id:'annotate', icon:'✏️', title:'Annotate PDF',      desc:'Draw, highlight, add text, arrows and images directly on any PDF page.',  Comp:ToolAnnotate},
   {id:'imgres',   icon:'⬛', title:'Image Resizer',     desc:'Resize any image by pixels or inches@DPI, with quality and size control.', Comp:ToolImgResize},
   {id:'merge',    icon:'📑', title:'Merge PDFs',        desc:'Combine multiple PDFs into one document in any order.',                    Comp:ToolMerge},
@@ -2012,13 +2013,18 @@ function App(){
           el.style.setProperty('--my',((ev.clientY-b.top)/b.height*100)+'%');
         }
       },
-        e('button',{className:'tool-hdr',onClick:function(){setOpen(isOpen?null:tool.id);}},
+        e('button',{className:'tool-hdr',onClick:function(){
+            if(tool.external){
+              var theme=document.documentElement.classList.contains('light-theme')?'light':'dark';
+              window.open(tool.external+'?theme='+theme,'_blank');
+            }else{setOpen(isOpen?null:tool.id);}
+          }},
           e('span',{className:'tool-ico'},tool.icon),
           e('div',{className:'tool-info'},
             e('div',{className:'tool-title'},tool.title),
             e('div',{className:'tool-desc'},tool.desc)
           ),
-          e('span',{className:'tool-chev'+(isOpen?' open':'')},'▼')
+          e('span',{className:'tool-chev'+(isOpen?' open':'')},tool.external?'↗':'▼')
         ),
         isOpen&&e('div',{className:'tool-body'},e(tool.Comp))
       );
