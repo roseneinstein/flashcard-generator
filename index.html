@@ -661,14 +661,14 @@ input[type=file]{display:none}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(14px);z-index:500;display:flex;align-items:flex-end;justify-content:center;animation:fi2 .2s ease}
 @media(min-width:580px){.ov{align-items:center}}
 @keyframes fi2{from{opacity:0}to{opacity:1}}
-.mo{background:var(--surface);border:1px solid var(--border-h);border-radius:var(--r) var(--r) 0 0;padding:32px 26px 38px;max-width:440px;width:100%;animation:su .32s cubic-bezier(.34,1.56,.64,1)}
-@media(min-width:580px){.mo{border-radius:var(--r)}}
+.mo{background:var(--surface);border:1px solid var(--border-h);border-radius:var(--r) var(--r) 0 0;padding:22px 20px 26px;max-width:440px;width:100%;max-height:92vh;overflow-y:auto;animation:su .32s cubic-bezier(.34,1.56,.64,1)}
+@media(min-width:580px){.mo{border-radius:var(--r);max-height:88vh}}
 @keyframes su{from{transform:translateY(28px);opacity:0}to{transform:translateY(0);opacity:1}}
 .mo-ey{font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-.mo h2{font-family:'Instrument Serif',serif;font-size:1.7rem;margin-bottom:9px;letter-spacing:-0.02em}
-.mo-s{font-size:0.8rem;color:var(--muted);margin-bottom:24px;line-height:1.72;font-weight:300}
-.mo-plans{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:18px}
-.mp{border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 14px;cursor:none;transition:all .15s}
+.mo h2{font-family:'Instrument Serif',serif;font-size:1.45rem;margin-bottom:7px;letter-spacing:-0.02em}
+.mo-s{font-size:0.76rem;color:var(--muted);margin-bottom:16px;line-height:1.65;font-weight:300}
+.mo-plans{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.mp{border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 11px;cursor:none;transition:all .15s}
 .mp:hover,.mp.sel{border-color:var(--accent);background:rgba(232,213,176,0.04)}
 .mp-n{font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
 .mp-p{font-family:'Instrument Serif',serif;font-size:1.6rem;color:var(--accent);margin-bottom:3px;letter-spacing:-0.02em}
@@ -676,11 +676,11 @@ input[type=file]{display:none}
 .mp-s{font-size:0.7rem;color:var(--muted);margin-bottom:8px}
 .mo-wide{max-width:520px}
 .mp-feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;margin-top:10px;text-align:left}
-.mp-feat-row{font-size:0.69rem;color:var(--muted);padding:3px 0;display:flex;align-items:baseline;gap:5px;line-height:1.4}
+.mp-feat-row{font-size:0.67rem;color:var(--muted);padding:2px 0;display:flex;align-items:baseline;gap:5px;line-height:1.35}
 .mp-feat-head{grid-column:1/-1;font-size:0.72rem;color:var(--text);font-weight:500;padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:2px}
 .mp-feat-check{color:var(--accent);font-size:0.6rem;flex-shrink:0;margin-top:1px}
 .mp-pk{font-size:0.72rem;color:var(--muted);line-height:1.65;font-weight:300}
-.pb{width:100%;padding:13px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--r-sm);font-family:'Geist',sans-serif;font-size:0.85rem;font-weight:500;cursor:none;letter-spacing:0.02em;transition:opacity .2s;margin-bottom:9px}
+.pb{width:100%;padding:11px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--r-sm);font-family:'Geist',sans-serif;font-size:0.85rem;font-weight:500;cursor:none;letter-spacing:0.02em;transition:opacity .2s;margin-bottom:9px}
 .pb:hover{opacity:0.84}
 .md{width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--muted);font-family:'Geist',sans-serif;font-size:0.8rem;cursor:none;transition:all .15s}
 .md:hover{border-color:var(--border-h);color:var(--text)}
@@ -1211,7 +1211,9 @@ var HI_MAP={
   'PDF upload & export':'PDF अपलोड और निर्यात',
   'PDF upload & export desc':'अपना PDF अपलोड करें। कार्ड्स और सारांश PDF में एक्सपोर्ट करें या सीधे शेयर करें।',
   'Mobile first (PWA)':'मोबाइल फर्स्ट (PWA)',
-  'Mobile first (PWA) desc':'Android या iOS पर इंस्टॉल करें और ऑफलाइन भी पढ़ें — एक बार साइन इन, प्रोफ़ाइल में हमेशा उपलब्ध।',
+  'Mobile first (PWA) desc':'Android या iOS पर इंस्टॉल करें और ऑफलाइन भी कार्ड्स और सारांश पढ़ें — साइन-अप की ज़रूरत नहीं।',
+  'Free Resources':'मुफ़्त संसाधन',
+  'Free Resources desc':'PDF और इमेज टूल्स का पूरा सेट — PDF पर लिखें, हाइलाइट करें, मर्ज/स्प्लिट/कम्प्रेस करें, इमेज रिसाइज़ करें और PDF से इमेज निकालें। कोई अकाउंट नहीं चाहिए, सब कुछ आपके ब्राउज़र में।',
   'No sign-in needed':'साइन-इन की ज़रूरत नहीं',
   'No sign-in needed desc':'फ्री टियर के लिए अकाउंट की ज़रूरत नहीं। कार्ड्स, सारांश और क्विज़ ब्राउज़र में सुरक्षित।',
   'Paste. ':'पेस्ट करें। ','Generate.':'जनरेट करें।',' Revise.':' रिवाइज़ करें।',
@@ -3367,7 +3369,8 @@ function App(){
         e(HFeat,{icon:'📋',title:t('Instant structured summary'),desc:window._lang==='hi'?t('Instant structured summary desc'):'Turn any topic or chapter into a logical, hierarchical summary with a Key Concepts First policy.'}),
         e(HFeat,{icon:'📝',title:t('Self-test quiz'),desc:window._lang==='hi'?t('Self-test quiz desc'):'Identify knowledge gaps immediately with automated grading.'}),
         e(HFeat,{icon:'📄',title:t('PDF upload & export'),desc:window._lang==='hi'?t('PDF upload & export desc'):'Upload your content as PDF. Export cards and summary as PDF. Cards can also be shared directly.'}),
-        e(HFeat,{icon:'📱',title:t('Mobile first (PWA)'),desc:window._lang==='hi'?t('Mobile first (PWA) desc'):'Install on Android or iOS and review cards and summaries even off the grid — just a sign-up away, visible in your profile.'}),
+        e(HFeat,{icon:'📱',title:t('Mobile first (PWA)'),desc:window._lang==='hi'?t('Mobile first (PWA) desc'):'Install on Android or iOS and review cards and summaries even off the grid — no signup required.'}),
+        e(HFeat,{icon:'🛠',title:t('Free Resources'),desc:window._lang==='hi'?t('Free Resources desc'):'A full suite of free PDF and image tools — annotate PDFs with text, highlights and drawings; merge, split, compress and reorder PDFs; resize images; extract PDF pages as images; and combine images into a PDF. No account required, all processing done locally in your browser.'}),
         e(HFeat,{icon:'🔒',title:t('No sign-in needed'),desc:window._lang==='hi'?t('No sign-in needed desc'):'No account needed for the free tier. Cards, summary and quiz remain safe in your browser.'})
       )
     ),
@@ -3600,6 +3603,7 @@ function App(){
           'Self-test quiz with explanations',
           'PDF export of your cards',
           'Short link sharing',
+          'Free PDF & image tools — annotate, merge, split, compress, resize & more',
         ],onSel:scrollApp}),
         e(PCard,{name:'Pro',price:'99',period:t('per month'),bill:bill,pop:true,
           priceAnnual:'899',perMonth:'75',strikeAnnual:'1,188',saveAmt:'289',
@@ -4747,7 +4751,7 @@ function App(){
               },
               revise:{
                 title:'\uD83D\uDD01 Revise Today',tiers:'Pro & Elite',cta:'Pro or Elite',
-                desc:'A science-backed revision engine powered by FSRS-4.5 — one of the most accurate spaced repetition algorithms in existence. The algorithm computes a unique review schedule for every card based on your personal stability, difficulty, and current retrievability. Pro users get FSRS at a calibrated 85% retention target. Elite users can customise their target from 80% to 98% and additionally sync their schedule to an exam date — the algorithm automatically adjusts intervals as the exam approaches so your retention peaks exactly when it matters most.',
+                desc:'A science-backed revision engine powered by FSRS (Free Spaced Repetition Scheduler) — the world\'s most advanced and accurate spaced repetition algorithm, developed from computational memory science and validated across hundreds of millions of real study sessions. Unlike fixed-interval schedulers, FSRS builds a personalised memory model for every individual — it learns how quickly you forget each topic, how deeply each review reinforces your memory, and how your recall ability changes over time. The result is a fully adaptive schedule unique to you: no two users see the same revision timetable. The algorithm computes a unique review schedule for every card based on your personal stability, difficulty, and current retrievability. Pro users get FSRS at a calibrated 85% retention target. Elite users can customise their target from 80% to 98% and additionally sync their schedule to an exam date — the algorithm automatically adjusts intervals as the exam approaches so your retention peaks exactly when it matters most.',
               },
               confidence:{
                 title:'\uD83D\uDCC8 Confidence Score',tiers:'Elite only',cta:'Elite',
@@ -4755,7 +4759,7 @@ function App(){
               },
               sets:{
                 title:'\uD83D\uDCDA Saved Sets',tiers:'Pro & Elite',cta:'Pro or Elite',
-                desc:'Save any generated card set to your account and access it from any device. Saved sets are the foundation of all other features — FSRS scheduling, quiz history, mistake tracking, and confidence scores all operate on your saved sets.',
+                desc:'Save any generated card set to your account and access it from any device. Saved sets are the foundation of all other features — FSRS (Free Spaced Repetition Scheduler) scheduling, quiz history, mistake tracking, and confidence scores all operate on your saved sets.',
               },
               favs:{
                 title:'\u2665 Favourites',tiers:'Elite only',cta:'Elite',
