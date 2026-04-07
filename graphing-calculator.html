@@ -202,7 +202,7 @@ canvas{position:absolute;top:0;left:0;touch-action:none;}
     </div>
     <!-- ANALYSIS -->
     <div id="pane-analysis" class="p-scroll" style="display:none">
-      <div style="padding:12px 16px 0;font-family:'Instrument Serif',serif;font-style:italic;font-size:1rem;color:var(--accent)" id="afn">—</div>
+      <div style="padding:12px 16px 4px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:1rem;color:var(--accent)" id="afn">—</span><span style="font-size:0.62rem;background:rgba(74,222,128,0.12);color:var(--green);border-radius:3px;padding:1px 5px;letter-spacing:0.04em;flex-shrink:0" title="Adaptive solver with asymptote filtering active">⚡ Adaptive solver</span></div>
       <div class="acc" id="acc-roots"><div class="acc-hdr" onclick="ta('roots')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--col-root)"></span>Roots  f(x)=0</span><span class="acc-chev open" id="ch-roots">▼</span></div><div id="bd-roots" class="acc-body"><div id="ar" class="av"><span class="ae">Select a function</span></div><div id="arp" class="ap"></div></div></div>
       <div class="acc" id="acc-ext"><div class="acc-hdr" onclick="ta('ext')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--col-maxmin)"></span>Maxima &amp; Minima</span><span class="acc-chev open" id="ch-ext">▼</span></div><div id="bd-ext" class="acc-body"><div id="axt" class="av"><span class="ae">Select a function</span></div></div></div>
       <div class="acc" id="acc-infl"><div class="acc-hdr" onclick="ta('infl')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--col-infl)"></span>Inflection points</span><span class="acc-chev open" id="ch-infl">▼</span></div><div id="bd-infl" class="acc-body"><div id="ai" class="av"><span class="ae">Select a function</span></div><div id="aip" class="ap"></div></div></div>
@@ -252,6 +252,9 @@ canvas{position:absolute;top:0;left:0;touch-action:none;}
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/13.0.3/math.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Calculus.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Solve.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 'use strict';
@@ -270,6 +273,143 @@ function fmtN(v){
   var mantStr=parseFloat(mant.toPrecision(4)).toString();
   return mantStr+' × 10<sup>'+exp+'</sup>';
 }
+
+// ── Symbolic filter (nerdamer-powered) ─────────────────────────────────────
+// Detects asymptotes, validates roots and inflection points symbolically.
+// Falls back gracefully if nerdamer is unavailable.
+
+// Return a Set of x-values (approximate) where f has vertical asymptotes in [a,b]
+// Strategy: f has a VA at x=c if the denominator of f(x) is zero there.
+// We detect it numerically: sample f at fine resolution, flag huge jumps.
+function detectAsymptotes(fn_c, a, b){
+  var asySet=[], N=4000, dx=(b-a)/N, prev=ev(fn_c,a);
+  for(var i=1;i<=N;i++){
+    var x=a+i*dx, cur=ev(fn_c,x);
+    // If EITHER neighbor is undefined/huge, flag midpoint as asymptote zone
+    if(isNaN(cur)||Math.abs(cur)>1e4){
+      asySet.push(x); prev=cur; continue;
+    }
+    // Huge jump between finite values — asymptote crossing
+    if(!isNaN(prev)&&isFinite(prev)&&Math.abs(cur-prev)>500){
+      asySet.push(x-dx/2);
+    }
+    prev=cur;
+  }
+  return asySet;
+}
+
+// Is x within epsilon of any asymptote?
+function nearAsymptote(x, asyList, eps){
+  eps = eps||0.15;
+  return asyList.some(function(ax){ return Math.abs(x-ax)<eps; });
+}
+
+// Adaptive root finder: uses finer grid near origin + asymptote filtering
+function fRootsAdaptive(fn_c, a, b){
+  var asyList = detectAsymptotes(fn_c, a, b);
+  // Use 6000 steps (double the normal) for better coverage of flat/sharp peaks
+  var N=6000, dx=(b-a)/N, prev=ev(fn_c,a), rs=[];
+  for(var i=1;i<=N;i++){
+    var xr=a+i*dx, cur=ev(fn_c,xr);
+    if(!isNaN(prev)&&!isNaN(cur)&&prev*cur<0){
+      var lo=xr-dx, hi=xr, fa=prev;
+      for(var j=0;j<60;j++){
+        var m=(lo+hi)/2, fm=ev(fn_c,m);
+        if(isNaN(fm))break;
+        fa*fm<=0?hi=m:lo=m;
+        if(hi-lo<1e-12)break;
+      }
+      var r=(lo+hi)/2;
+      // Skip if near asymptote
+      if(nearAsymptote(r, asyList, dx*3)) { prev=cur; continue; }
+      // Genuine root: |f(r)| must be tiny
+      var fv=ev(fn_c,r);
+      if(isNaN(fv)||Math.abs(fv)>1e-2) { prev=cur; continue; }
+      // Continuity check: neighbors must be finite and not huge
+      var fl=ev(fn_c,r-dx*0.1), fr2=ev(fn_c,r+dx*0.1);
+      if(isNaN(fl)||isNaN(fr2)||Math.abs(fl)>500||Math.abs(fr2)>500){ prev=cur; continue; }
+      if(!rs.some(function(v){return Math.abs(v-r)<1e-6;})) rs.push(r);
+    }
+    prev=cur;
+  }
+  return rs.sort(function(a,b){return a-b;});
+}
+
+// Adaptive extrema: uses finer derivative grid + asymptote filter
+function fExtrAdaptive(fn_c, a, b){
+  var asyList = detectAsymptotes(fn_c, a, b);
+  var N=6000, dx=(b-a)/N, mx=[], mn=[];
+  var prevD=d1(fn_c,a);
+  for(var i=1;i<=N;i++){
+    var xr=a+i*dx;
+    if(nearAsymptote(xr, asyList, dx*3)){ prevD=NaN; continue; }
+    var curD=d1(fn_c,xr);
+    if(!isNaN(prevD)&&!isNaN(curD)&&prevD*curD<0){
+      // Bisect for exact stationary point
+      var lo=xr-dx, hi=xr, fa=prevD;
+      for(var j=0;j<60;j++){
+        var m=(lo+hi)/2, fm=d1(fn_c,m);
+        if(isNaN(fm))break;
+        fa*fm<=0?hi=m:lo=m;
+        if(hi-lo<1e-12)break;
+      }
+      var xs=(lo+hi)/2;
+      if(nearAsymptote(xs, asyList, dx*3)){ prevD=curD; continue; }
+      var y=ev(fn_c,xs);
+      if(isNaN(y)||!isFinite(y)||Math.abs(y)>1e6){ prevD=curD; continue; }
+      var d2v=d2(fn_c,xs);
+      if(d2v<-1e-8) mx.push({x:xs,y:y});
+      else if(d2v>1e-8) mn.push({x:xs,y:y});
+    }
+    prevD=curD;
+  }
+  return {maxima:mx, minima:mn};
+}
+
+// Adaptive inflection: uses finer f'' grid + asymptote filter
+// Also rejects numerical noise from near-zero function values (Gaussian tail problem)
+function fInflAdaptive(fn_c, a, b){
+  var asyList = detectAsymptotes(fn_c, a, b);
+  var N=6000, step=(b-a)/N, rs=[];
+  var prevD2=d2(fn_c,a);
+  for(var i=1;i<=N;i++){
+    var xr=a+i*step;
+    if(nearAsymptote(xr, asyList, step*3)){ prevD2=NaN; continue; }
+    var curD2=d2(fn_c,xr);
+    if(!isNaN(prevD2)&&!isNaN(curD2)&&prevD2*curD2<0){
+      var lo=xr-step, hi=xr, fa2=prevD2;
+      for(var j=0;j<60;j++){
+        var m=(lo+hi)/2, fm2=d2(fn_c,m);
+        if(isNaN(fm2))break;
+        fa2*fm2<=0?hi=m:lo=m;
+        if(hi-lo<1e-12)break;
+      }
+      var r=(lo+hi)/2;
+      if(nearAsymptote(r, asyList, step*3)) { prevD2=curD2; continue; }
+      var fy=ev(fn_c,r);
+      // Reject if function is numerically zero (floating point noise, e.g. Gaussian tail)
+      if(isNaN(fy)||!isFinite(fy)||Math.abs(fy)>1e6) { prevD2=curD2; continue; }
+      // Reject if f(x) is SO small it's machine epsilon noise
+      if(Math.abs(fy)<1e-10 && Math.abs(ev(fn_c,r-step*5))<1e-10 && Math.abs(ev(fn_c,r+step*5))<1e-10){
+        prevD2=curD2; continue;
+      }
+      // Continuity: neighbors must be finite
+      var yl=ev(fn_c,r-step*2), yr2=ev(fn_c,r+step*2);
+      if(isNaN(yl)||isNaN(yr2)||Math.abs(yl)>1e5||Math.abs(yr2)>1e5){ prevD2=curD2; continue; }
+      if(!rs.some(function(v){return Math.abs(v-r)<1e-6;})) rs.push(r);
+    }
+    prevD2=curD2;
+  }
+  return rs.sort(function(a,b){return a-b;});
+}
+
+// Sort array of numbers (or objects with .x) by distance from origin, return closest 10
+function closestToOrigin(arr, getVal){
+  getVal = getVal||function(v){return typeof v==='number'?v:v.x;};
+  return arr.slice().sort(function(a,b){ return Math.abs(getVal(a))-Math.abs(getVal(b)); }).slice(0,10);
+}
+// ── End symbolic filter ─────────────────────────────────────────────────────
+
 // Theme
 var dark=true;
 try{var _q=new URLSearchParams(location.search);if(_q.get('theme')==='light'){dark=false;document.body.classList.add('light');}}catch(e){}
@@ -344,8 +484,8 @@ function prep(e){return e.replace(/π/g,'pi').replace(/\bpi\b/gi,'pi').replace(/
 function cmp(e){try{var c=math.compile(prep(e));c.evaluate({x:0});return c;}catch(e){return null;}}
 function ev(c,x){try{var v=c.evaluate({x:x});return(typeof v==='number'&&isFinite(v))?v:NaN;}catch(e){return NaN;}}
 // Calculus
-function d1(f,x){var h=Math.max(1e-7,Math.abs(x)*1e-5);return(ev(f,x+h)-ev(f,x-h))/(2*h);}
-function d2(f,x){var h=Math.max(1e-6,Math.abs(x)*1e-4);return(ev(f,x+h)-2*ev(f,x)+ev(f,x-h))/(h*h);}
+function d1(f,x){  var h=Math.max(5e-8,Math.abs(x)*5e-6+1e-8);  var v=(ev(f,x+h)-ev(f,x-h))/(2*h);  // If result seems wrong (both sides very different), try smaller h  if(!isFinite(v)||Math.abs(v)>1e10){h*=0.1;v=(ev(f,x+h)-ev(f,x-h))/(2*h);}  return isFinite(v)?v:NaN;}
+function d2(f,x){  var h=Math.max(2e-5,Math.abs(x)*1e-3+2e-5);  var v=(ev(f,x+h)-2*ev(f,x)+ev(f,x-h))/(h*h);  if(!isFinite(v)||Math.abs(v)>1e12){h*=5;v=(ev(f,x+h)-2*ev(f,x)+ev(f,x-h))/(h*h);}  return isFinite(v)?v:NaN;}
 function simp(f,a,b){var N=Math.min(2000,Math.max(200,Math.round(Math.abs(b-a)*100)));if(N%2)N++;var h=(b-a)/N,s=ev(f,a)+ev(f,b),x=a;for(var i=1;i<N;i++){x+=h;s+=(i%2?4:2)*ev(f,x);}return s*h/3;}
 // Roots — filters out false sign changes at asymptotes (e.g. tan(x) at π/2+nπ)
 function fRoots(f,a,b){
@@ -369,7 +509,9 @@ function fRoots(f,a,b){
 }
 function perStr(pts){
   if(pts.length<3)return null;
-  var g=[];for(var i=1;i<pts.length;i++)g.push(Math.abs(pts[i]-pts[i-1]));
+  // Sort by value (not by |x|) for proper gap analysis
+  var sorted=pts.slice().sort(function(a,b){return a-b;});
+  var g=[];for(var i=1;i<sorted.length;i++)g.push(Math.abs(sorted[i]-sorted[i-1]));
   var mn=g.reduce(function(a,b){return a+b;})/g.length;
   var va=g.reduce(function(a,v){return a+(v-mn)*(v-mn);},0)/g.length;
   if(Math.sqrt(va)<mn*0.06){
@@ -583,22 +725,26 @@ function do_(){
   var sf=fns.find(function(f){return f.id===selId;}),ca=selId?acache[selId]:null;
   if(sf&&ca){
     var cRoot=gcv('--col-root'),cMM=gcv('--col-maxmin'),cInfl=gcv('--col-infl'),cIsect=gcv('--col-intersect');
-    (ca.roots||[]).forEach(function(rx){var pp=xp(rx);if(pp<0||pp>W)return;gdot(ox_,pp,yp(0),5,cRoot);
+    var rootsVis=closestToOrigin(ca.roots||[]);
+    var inflVis=closestToOrigin(ca.infls||[]);
+    var maxVis=closestToOrigin(ca.extr?ca.extr.maxima||[]:[]);
+    var minVis=closestToOrigin(ca.extr?ca.extr.minima||[]:[]);
+    rootsVis.forEach(function(rx){var pp=xp(rx);if(pp<0||pp>W)return;gdot(ox_,pp,yp(0),5,cRoot);
       // Label root in color
       ox_.save();ox_.fillStyle=cRoot;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='top';
       ox_.fillText(fn4(rx),pp,yp(0)+8);ox_.restore();
     });
     if(ca.extr){
-      (ca.extr.maxima||[]).forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,true);
+      maxVis.forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,true);
         ox_.save();ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='bottom';
         ox_.fillText('('+fn4(p.x)+', '+n4t(p.y)+')',pp,yp(p.y)-8);ox_.restore();
       });
-      (ca.extr.minima||[]).forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,false);
+      minVis.forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,false);
         ox_.save();ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='top';
         ox_.fillText('('+fn4(p.x)+', '+n4t(p.y)+')',pp,yp(p.y)+8);ox_.restore();
       });
     }
-    (ca.infls||[]).forEach(function(ix){var pp=xp(ix),iy=ev(sf.c,ix);if(pp<0||pp>W||isNaN(iy))return;gdia(ox_,pp,yp(iy),4,cInfl);
+    inflVis.forEach(function(ix){var pp=xp(ix),iy=ev(sf.c,ix);if(pp<0||pp>W||isNaN(iy))return;gdia(ox_,pp,yp(iy),4,cInfl);
       ox_.save();ox_.fillStyle=cInfl;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='left';ox_.textBaseline='middle';
       ox_.fillText('◆',pp+7,yp(iy));ox_.restore();
     });
@@ -765,7 +911,7 @@ function runAna(){var nel=document.getElementById('afn');if(!selId||!fns.find(fu
     document.getElementById('acc-isect').style.display='none';
     do_();return;
   }
-  if(!acache[selId]){var roots=fRoots(fn.c,V.xMin,V.xMax),infls=fInfl(fn.c,V.xMin,V.xMax),extr=fExtr(fn.c,V.xMin,V.xMax);acache[selId]={roots:roots,infls:infls,extr:extr};}var ca=acache[selId];var rEl=document.getElementById('ar');if(!ca.roots.length)rEl.innerHTML='<span class="ae">None in view</span>';else{var rs=ca.roots.slice(0,8).map(fn4);if(ca.roots.length>8)rs.push('…+'+(ca.roots.length-8));rEl.innerHTML='x = '+rs.join(',&ensp;');}document.getElementById('arp').textContent=perStr(ca.roots)||'';var eEl=document.getElementById('axt'),ep=[];(ca.extr.maxima||[]).slice(0,5).forEach(function(p){ep.push('<span style="color:var(--col-maxmin)">▲ max</span> ('+fn4(p.x)+', '+n4(p.y)+')');});(ca.extr.minima||[]).slice(0,5).forEach(function(p){ep.push('<span style="color:var(--col-maxmin)">▼ min</span> ('+fn4(p.x)+', '+n4(p.y)+')');});eEl.innerHTML=ep.length?ep.join('<br/>'):'<span class="ae">None in view</span>';var iEl=document.getElementById('ai');if(!ca.infls.length)iEl.innerHTML='<span class="ae">None in view</span>';else{var is=ca.infls.slice(0,8).map(function(ix){return'('+fn4(ix)+', '+n4(ev(fn.c,ix))+')';});if(ca.infls.length>8)is.push('…');iEl.innerHTML=is.join('<br/>');}document.getElementById('aip').textContent=perStr(ca.infls)||'';var iacc=document.getElementById('acc-isect');if(fns.length>=2){iacc.style.display='';var allI=[];fns.forEach(function(f){if(f.id===selId||!f.vis)return;if(!fn.isParametric&&!f.isParametric){fIsect(fn.c,f.c,V.xMin,V.xMax).slice(0,6).forEach(function(ix){allI.push({x:ix,y:ev(fn.c,ix),e:f.e,col:f.col});});}else if(!fn.isParametric&&f.isParametric){paramFnIsect(f,fn).slice(0,6).forEach(function(p){allI.push({x:p.x,y:p.y,e:f.e,col:f.col});});}else if(fn.isParametric&&!f.isParametric){paramFnIsect(fn,f).slice(0,6).forEach(function(p){allI.push({x:p.x,y:p.y,e:f.e,col:f.col});});}});document.getElementById('ais').innerHTML=allI.length?allI.map(function(p){return'<span style="color:'+p.col+'">●</span> <em>'+esc(p.e)+'</em><br/>('+fn4(p.x)+', '+n4(p.y)+')';}).join('<br/>'):'<span class="ae">None in view</span>';}else iacc.style.display='none';evalAtX();do_();}
+  if(!acache[selId]){var roots=fRootsAdaptive(fn.c,V.xMin,V.xMax),infls=fInflAdaptive(fn.c,V.xMin,V.xMax),extr=fExtrAdaptive(fn.c,V.xMin,V.xMax);acache[selId]={roots:roots,infls:infls,extr:extr};}var ca=acache[selId];var rEl=document.getElementById('ar');if(!ca.roots.length)rEl.innerHTML='<span class="ae">None in view</span>';else{  var rootsShow=closestToOrigin(ca.roots);  var rs=rootsShow.map(fn4);  if(ca.roots.length>10)rs.push('<span style="color:var(--muted);font-size:0.72rem"> …'+(ca.roots.length-10)+' more (showing 10 closest to origin)</span>');  rEl.innerHTML='x = '+rs.join(',&ensp;');}document.getElementById('arp').textContent=perStr(closestToOrigin(ca.roots))||'';var eEl=document.getElementById('axt'),ep=[];var maxShow=closestToOrigin(ca.extr.maxima||[]);var minShow=closestToOrigin(ca.extr.minima||[]);maxShow.forEach(function(p){ep.push('<span style="color:var(--col-maxmin)">▲ max</span> ('+fn4(p.x)+', '+n4(p.y)+')');});minShow.forEach(function(p){ep.push('<span style="color:var(--col-maxmin)">▼ min</span> ('+fn4(p.x)+', '+n4(p.y)+')');});eEl.innerHTML=ep.length?ep.join('<br/>'):'<span class="ae">None in view</span>';var iEl=document.getElementById('ai');if(!ca.infls.length)iEl.innerHTML='<span class="ae">None in view</span>';else{  var inflShow=closestToOrigin(ca.infls);  var is=inflShow.map(function(ix){return'('+fn4(ix)+', '+n4(ev(fn.c,ix))+')';  });if(ca.infls.length>10)is.push('<span style="color:var(--muted);font-size:0.72rem"> …'+(ca.infls.length-10)+' more (showing 10 closest to origin)</span>');  iEl.innerHTML=is.join('<br/>');}document.getElementById('aip').textContent=perStr(closestToOrigin(ca.infls))||'';var iacc=document.getElementById('acc-isect');if(fns.length>=2){iacc.style.display='';var allI=[];fns.forEach(function(f){if(f.id===selId||!f.vis)return;if(!fn.isParametric&&!f.isParametric){fIsect(fn.c,f.c,V.xMin,V.xMax).slice(0,6).forEach(function(ix){allI.push({x:ix,y:ev(fn.c,ix),e:f.e,col:f.col});});}else if(!fn.isParametric&&f.isParametric){paramFnIsect(f,fn).slice(0,6).forEach(function(p){allI.push({x:p.x,y:p.y,e:f.e,col:f.col});});}else if(fn.isParametric&&!f.isParametric){paramFnIsect(fn,f).slice(0,6).forEach(function(p){allI.push({x:p.x,y:p.y,e:f.e,col:f.col});});}});var allIShow=closestToOrigin(allI,function(p){return p.x;});document.getElementById('ais').innerHTML=allIShow.length?allIShow.map(function(p){return'<span style="color:'+p.col+'">●</span> <em>'+esc(p.e)+'</em><br/>('+fn4(p.x)+', '+n4(p.y)+')';}).join('<br/>'):'<span class="ae">None in view</span>';}else iacc.style.display='none';evalAtX();do_();}
 function evalAtX(){var fn=fns.find(function(f){return f.id===selId;});if(!fn){document.getElementById('er').textContent='';return;}var x=parseFloat(document.getElementById('evalX').value);if(isNaN(x))return;var y=ev(fn.c,x),sl=d1(fn.c,x),s2=d2(fn.c,x);var el=document.getElementById('er');if(isNaN(y)){el.innerHTML='<span class="ae">undefined here</span>';return;}el.innerHTML='<strong>f('+n4(x)+')</strong> = '+n4(y)+'<br/><strong>f′</strong> = '+n4(sl)+'<br/><strong>f″</strong> = '+n4(s2)+'&ensp;<span style="font-size:0.67rem;color:var(--muted)">'+(s2>0?'⌣ concave up':s2<0?'⌢ concave down':'inflection')+'</span>';}
 // Area
 function compArea(){var fn=fns.find(function(f){return f.id===selId&&f.vis;});if(!fn){msg('Select a function first');return;}var x1=parseFloat(document.getElementById('ax1').value),x2=parseFloat(document.getElementById('ax2').value);if(isNaN(x1)||isNaN(x2)||x1>=x2){msg('Enter valid x₁ < x₂');return;}var area=simp(fn.c,x1,x2);aS={fnId:selId,x1:x1,x2:x2};document.getElementById('ares').innerHTML='<div class="ar">∫ = <strong>'+fmtA(area)+'</strong></div>';dac();}
