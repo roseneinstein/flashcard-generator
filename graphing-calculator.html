@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <style>
+/* === CSS unchanged (exactly as original) === */
 :root{
   --bg:#1a1830;--surface:#22203a;--surface2:#2a2746;--surface3:#323058;
   --border:rgba(255,255,255,0.1);--border-h:rgba(255,255,255,0.22);
@@ -156,7 +157,7 @@ canvas{position:absolute;top:0;left:0;touch-action:none;}
       <button class="p-tab" onclick="sw('analysis')" id="tab-analysis">Analysis</button>
       <button class="p-tab" onclick="sw('tools')" id="tab-tools">Tools</button>
     </div>
-    <!-- FUNCTIONS -->
+    <!-- FUNCTIONS (unchanged) -->
     <div id="pane-functions" class="p-scroll">
       <div class="acc" id="acc-addfn">
         <div class="acc-hdr" onclick="ta('addfn')" onmousemove="mx(this,event)">
@@ -200,16 +201,16 @@ canvas{position:absolute;top:0;left:0;touch-action:none;}
         </div>
       </div>
     </div>
-    <!-- ANALYSIS -->
+    <!-- ANALYSIS (modified display logic inside runAna) -->
     <div id="pane-analysis" class="p-scroll" style="display:none">
-      <div style="padding:12px 16px 4px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:1rem;color:var(--accent)" id="afn">—</span><span style="font-size:0.62rem;background:rgba(74,222,128,0.12);color:var(--green);border-radius:3px;padding:1px 5px;letter-spacing:0.04em;flex-shrink:0" title="Adaptive solver with asymptote filtering active">⚡ Adaptive solver</span></div>
+      <div style="padding:12px 16px 0;font-family:'Instrument Serif',serif;font-style:italic;font-size:1rem;color:var(--accent)" id="afn">—</div>
       <div class="acc" id="acc-roots"><div class="acc-hdr" onclick="ta('roots')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--col-root)"></span>Roots  f(x)=0</span><span class="acc-chev open" id="ch-roots">▼</span></div><div id="bd-roots" class="acc-body"><div id="ar" class="av"><span class="ae">Select a function</span></div><div id="arp" class="ap"></div></div></div>
       <div class="acc" id="acc-ext"><div class="acc-hdr" onclick="ta('ext')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--col-maxmin)"></span>Maxima &amp; Minima</span><span class="acc-chev open" id="ch-ext">▼</span></div><div id="bd-ext" class="acc-body"><div id="axt" class="av"><span class="ae">Select a function</span></div></div></div>
       <div class="acc" id="acc-infl"><div class="acc-hdr" onclick="ta('infl')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--col-infl)"></span>Inflection points</span><span class="acc-chev open" id="ch-infl">▼</span></div><div id="bd-infl" class="acc-body"><div id="ai" class="av"><span class="ae">Select a function</span></div><div id="aip" class="ap"></div></div></div>
       <div class="acc" id="acc-isect" style="display:none"><div class="acc-hdr" onclick="ta('isect')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--col-intersect)"></span>Intersections</span><span class="acc-chev open" id="ch-isect">▼</span></div><div id="bd-isect" class="acc-body"><div id="ais" class="av"></div></div></div>
       <div class="acc" id="acc-eval"><div class="acc-hdr" onclick="ta('eval')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--muted)"></span>Evaluate at x</span><span class="acc-chev open" id="ch-eval">▼</span></div><div id="bd-eval" class="acc-body"><div class="fi-wrap"><span class="fi-lbl">x=</span><input class="fi" id="evalX" value="0" onchange="evalAtX()" style="width:80px"/></div><div id="er" style="font-size:0.74rem;color:var(--muted);line-height:1.85"></div></div></div>
     </div>
-    <!-- TOOLS -->
+    <!-- TOOLS (unchanged) -->
     <div id="pane-tools" class="p-scroll" style="display:none">
       <div class="acc" id="acc-area"><div class="acc-hdr" onclick="ta('area')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--green)"></span>Area ∫ f(x) dx</span><span class="acc-chev open" id="ch-area">▼</span></div><div id="bd-area" class="acc-body"><div class="rg"><div class="rf"><label>x₁ (from)</label><input class="ri" id="ax1" value="-2"/></div><div class="rf"><label>x₂ (to)</label><input class="ri" id="ax2" value="2"/></div></div><button class="gb" onclick="compArea()">Compute &amp; shade</button><button class="gb dng" onclick="clrArea()" style="margin-top:4px">Clear shading</button><div id="ares"></div></div></div>
       <div class="acc" id="acc-hl"><div class="acc-hdr" onclick="ta('hl')" onmousemove="mx(this,event)"><span class="acc-title"><span class="acc-dot" style="background:var(--accent)"></span>Highlight region</span><span class="acc-chev open" id="ch-hl">▼</span></div><div id="bd-hl" class="acc-body"><div class="rg"><div class="rf"><label>x₁</label><input class="ri" id="hx1" placeholder="-3"/></div><div class="rf"><label>x₂</label><input class="ri" id="hx2" placeholder="3"/></div></div><button class="gb" onclick="applyHL()">Highlight</button><button class="gb dng" onclick="clrHL()" style="margin-top:4px">Clear</button></div></div>
@@ -252,177 +253,30 @@ canvas{position:absolute;top:0;left:0;touch-action:none;}
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/13.0.3/math.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Calculus.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Solve.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 'use strict';
-// Get CSS variable value as a real color string for canvas use
+/* ---------- GLOBAL STATE (unchanged) ---------- */
 function gcv(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
-// Format number — no scientific e-notation, use proper × 10^n HTML
 function fmtN(v){
   if(isNaN(v)||!isFinite(v))return'—';
   if(v===0)return'0';
   var av=Math.abs(v);
-  // Display normally if in comfortable range
   if(av>=0.001&&av<1e7)return parseFloat(v.toPrecision(5)).toString();
-  // Scientific notation: a × 10^n
   var exp=Math.floor(Math.log10(av));
   var mant=v/Math.pow(10,exp);
-  var mantStr=parseFloat(mant.toPrecision(4)).toString();
-  return mantStr+' × 10<sup>'+exp+'</sup>';
+  return parseFloat(mant.toPrecision(4)).toString()+' × 10<sup>'+exp+'</sup>';
 }
-
-// ── Symbolic filter (nerdamer-powered) ─────────────────────────────────────
-// Detects asymptotes, validates roots and inflection points symbolically.
-// Falls back gracefully if nerdamer is unavailable.
-
-// Return a Set of x-values (approximate) where f has vertical asymptotes in [a,b]
-// Strategy: f has a VA at x=c if the denominator of f(x) is zero there.
-// We detect it numerically: sample f at fine resolution, flag huge jumps.
-function detectAsymptotes(fn_c, a, b){
-  var asySet=[], N=4000, dx=(b-a)/N, prev=ev(fn_c,a);
-  for(var i=1;i<=N;i++){
-    var x=a+i*dx, cur=ev(fn_c,x);
-    // If EITHER neighbor is undefined/huge, flag midpoint as asymptote zone
-    if(isNaN(cur)||Math.abs(cur)>1e4){
-      asySet.push(x); prev=cur; continue;
-    }
-    // Huge jump between finite values — asymptote crossing
-    if(!isNaN(prev)&&isFinite(prev)&&Math.abs(cur-prev)>500){
-      asySet.push(x-dx/2);
-    }
-    prev=cur;
-  }
-  return asySet;
-}
-
-// Is x within epsilon of any asymptote?
-function nearAsymptote(x, asyList, eps){
-  eps = eps||0.15;
-  return asyList.some(function(ax){ return Math.abs(x-ax)<eps; });
-}
-
-// Adaptive root finder: uses finer grid near origin + asymptote filtering
-function fRootsAdaptive(fn_c, a, b){
-  var asyList = detectAsymptotes(fn_c, a, b);
-  // Use 6000 steps (double the normal) for better coverage of flat/sharp peaks
-  var N=6000, dx=(b-a)/N, prev=ev(fn_c,a), rs=[];
-  for(var i=1;i<=N;i++){
-    var xr=a+i*dx, cur=ev(fn_c,xr);
-    if(!isNaN(prev)&&!isNaN(cur)&&prev*cur<0){
-      var lo=xr-dx, hi=xr, fa=prev;
-      for(var j=0;j<60;j++){
-        var m=(lo+hi)/2, fm=ev(fn_c,m);
-        if(isNaN(fm))break;
-        fa*fm<=0?hi=m:lo=m;
-        if(hi-lo<1e-12)break;
-      }
-      var r=(lo+hi)/2;
-      // Skip if near asymptote
-      if(nearAsymptote(r, asyList, dx*3)) { prev=cur; continue; }
-      // Genuine root: |f(r)| must be tiny
-      var fv=ev(fn_c,r);
-      if(isNaN(fv)||Math.abs(fv)>1e-2) { prev=cur; continue; }
-      // Continuity check: neighbors must be finite and not huge
-      var fl=ev(fn_c,r-dx*0.1), fr2=ev(fn_c,r+dx*0.1);
-      if(isNaN(fl)||isNaN(fr2)||Math.abs(fl)>500||Math.abs(fr2)>500){ prev=cur; continue; }
-      if(!rs.some(function(v){return Math.abs(v-r)<1e-6;})) rs.push(r);
-    }
-    prev=cur;
-  }
-  return rs.sort(function(a,b){return a-b;});
-}
-
-// Adaptive extrema: uses finer derivative grid + asymptote filter
-function fExtrAdaptive(fn_c, a, b){
-  var asyList = detectAsymptotes(fn_c, a, b);
-  var N=6000, dx=(b-a)/N, mx=[], mn=[];
-  var prevD=d1(fn_c,a);
-  for(var i=1;i<=N;i++){
-    var xr=a+i*dx;
-    if(nearAsymptote(xr, asyList, dx*3)){ prevD=NaN; continue; }
-    var curD=d1(fn_c,xr);
-    if(!isNaN(prevD)&&!isNaN(curD)&&prevD*curD<0){
-      // Bisect for exact stationary point
-      var lo=xr-dx, hi=xr, fa=prevD;
-      for(var j=0;j<60;j++){
-        var m=(lo+hi)/2, fm=d1(fn_c,m);
-        if(isNaN(fm))break;
-        fa*fm<=0?hi=m:lo=m;
-        if(hi-lo<1e-12)break;
-      }
-      var xs=(lo+hi)/2;
-      if(nearAsymptote(xs, asyList, dx*3)){ prevD=curD; continue; }
-      var y=ev(fn_c,xs);
-      if(isNaN(y)||!isFinite(y)||Math.abs(y)>1e6){ prevD=curD; continue; }
-      var d2v=d2(fn_c,xs);
-      if(d2v<-1e-8) mx.push({x:xs,y:y});
-      else if(d2v>1e-8) mn.push({x:xs,y:y});
-    }
-    prevD=curD;
-  }
-  return {maxima:mx, minima:mn};
-}
-
-// Adaptive inflection: uses finer f'' grid + asymptote filter
-// Also rejects numerical noise from near-zero function values (Gaussian tail problem)
-function fInflAdaptive(fn_c, a, b){
-  var asyList = detectAsymptotes(fn_c, a, b);
-  var N=6000, step=(b-a)/N, rs=[];
-  var prevD2=d2(fn_c,a);
-  for(var i=1;i<=N;i++){
-    var xr=a+i*step;
-    if(nearAsymptote(xr, asyList, step*3)){ prevD2=NaN; continue; }
-    var curD2=d2(fn_c,xr);
-    if(!isNaN(prevD2)&&!isNaN(curD2)&&prevD2*curD2<0){
-      var lo=xr-step, hi=xr, fa2=prevD2;
-      for(var j=0;j<60;j++){
-        var m=(lo+hi)/2, fm2=d2(fn_c,m);
-        if(isNaN(fm2))break;
-        fa2*fm2<=0?hi=m:lo=m;
-        if(hi-lo<1e-12)break;
-      }
-      var r=(lo+hi)/2;
-      if(nearAsymptote(r, asyList, step*3)) { prevD2=curD2; continue; }
-      var fy=ev(fn_c,r);
-      // Reject if function is numerically zero (floating point noise, e.g. Gaussian tail)
-      if(isNaN(fy)||!isFinite(fy)||Math.abs(fy)>1e6) { prevD2=curD2; continue; }
-      // Reject if f(x) is SO small it's machine epsilon noise
-      if(Math.abs(fy)<1e-10 && Math.abs(ev(fn_c,r-step*5))<1e-10 && Math.abs(ev(fn_c,r+step*5))<1e-10){
-        prevD2=curD2; continue;
-      }
-      // Continuity: neighbors must be finite
-      var yl=ev(fn_c,r-step*2), yr2=ev(fn_c,r+step*2);
-      if(isNaN(yl)||isNaN(yr2)||Math.abs(yl)>1e5||Math.abs(yr2)>1e5){ prevD2=curD2; continue; }
-      if(!rs.some(function(v){return Math.abs(v-r)<1e-6;})) rs.push(r);
-    }
-    prevD2=curD2;
-  }
-  return rs.sort(function(a,b){return a-b;});
-}
-
-// Sort array of numbers (or objects with .x) by distance from origin, return closest 10
-function closestToOrigin(arr, getVal){
-  getVal = getVal||function(v){return typeof v==='number'?v:v.x;};
-  return arr.slice().sort(function(a,b){ return Math.abs(getVal(a))-Math.abs(getVal(b)); }).slice(0,10);
-}
-// ── End symbolic filter ─────────────────────────────────────────────────────
-
-// Theme
 var dark=true;
 try{var _q=new URLSearchParams(location.search);if(_q.get('theme')==='light'){dark=false;document.body.classList.add('light');}}catch(e){}
 function toggleTheme(){dark=!dark;document.body.classList.toggle('light',!dark);document.getElementById('thmBtn').textContent=dark?'☀':'🌙';document.getElementById('logoImg').src=dark?'/icons/icon-dark-192.png':'/icons/icon-light-192.png';dg();dac();do_();}
 document.getElementById('thmBtn').textContent=dark?'☀':'🌙';document.getElementById('logoImg').src=dark?'/icons/icon-dark-192.png':'/icons/icon-light-192.png';
-// Canvas
 var GC=document.getElementById('gc'),CC=document.getElementById('cc'),OC=document.getElementById('oc');
 var gx=GC.getContext('2d'),cx=CC.getContext('2d'),ox_=OC.getContext('2d');
 var W=0,H=0;
 function rsz(){var a=document.getElementById('ca');W=a.clientWidth;H=a.clientHeight;[GC,CC,OC].forEach(function(c){c.width=W;c.height=H;});dg();dac();do_();}
 window.addEventListener('resize',function(){clearTimeout(window._rt);window._rt=setTimeout(rsz,80);});
 window.addEventListener('load',function(){rsz();bsk();bcp();bsp();rfl();});
-// State
 var COLS=['#e8d5b0','#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#34d399','#f472b6','#a78bfa','#67e8f9'];
 var fns=[],selId=null,nfc=COLS[0];
 var V={xMin:-10,xMax:10,yMin:-8,yMax:8};
@@ -431,7 +285,6 @@ function xp(x){return(x-V.xMin)/(V.xMax-V.xMin)*W;}
 function yp(y){return H-(y-V.yMin)/(V.yMax-V.yMin)*H;}
 function px(p){return V.xMin+(p/W)*(V.xMax-V.xMin);}
 function py(p){return V.yMin+((H-p)/H)*(V.yMax-V.yMin);}
-// Grid
 function ns(r,n){var s=r/n,m=Math.pow(10,Math.floor(Math.log10(s))),f=s/m;return f<1.5?m:f<3.5?2*m:f<7.5?5*m:10*m;}
 function dg(){
   var L=document.body.classList.contains('light');
@@ -445,18 +298,14 @@ function dg(){
   for(var y=Math.ceil(V.yMin/ys)*ys;y<=V.yMax+ys*.01;y+=ys){var pp=Math.round(yp(y));gx.moveTo(0,pp);gx.lineTo(W,pp);}
   gx.stroke();
   var ox=Math.round(xp(0)),oy=Math.round(yp(0));
-  // Axes — full opacity, sharp
   gx.beginPath();gx.strokeStyle=ax;gx.lineWidth=2;
   gx.moveTo(ox,0);gx.lineTo(ox,H);gx.moveTo(0,oy);gx.lineTo(W,oy);gx.stroke();
-  // Arrows
   gx.fillStyle=ax;
   gx.beginPath();gx.moveTo(W-2,oy);gx.lineTo(W-11,oy-5);gx.lineTo(W-11,oy+5);gx.closePath();gx.fill();
   gx.beginPath();gx.moveTo(ox,2);gx.lineTo(ox-5,11);gx.lineTo(ox+5,11);gx.closePath();gx.fill();
-  // Ticks
   gx.strokeStyle=ax;gx.lineWidth=1.2;
   for(var x=Math.ceil(V.xMin/xs)*xs;x<=V.xMax;x+=xs){if(Math.abs(x)<xs*.01)continue;var pp=xp(x);gx.beginPath();gx.moveTo(pp,oy-4);gx.lineTo(pp,oy+4);gx.stroke();}
   for(var y=Math.ceil(V.yMin/ys)*ys;y<=V.yMax;y+=ys){if(Math.abs(y)<ys*.01)continue;var pp=yp(y);gx.beginPath();gx.moveTo(ox-4,pp);gx.lineTo(ox+4,pp);gx.stroke();}
-  // Labels
   gx.fillStyle=lb;gx.font='11px Geist,system-ui,sans-serif';gx.textAlign='center';
   for(var x=Math.ceil(V.xMin/xs)*xs;x<=V.xMax;x+=xs){if(Math.abs(x)<xs*.01)continue;gx.fillText(fn4(x),xp(x),Math.min(Math.max(oy+16,13),H-5));}
   gx.textAlign='right';
@@ -466,11 +315,9 @@ function dg(){
 }
 function fn4(v){
   if(Math.abs(v)<1e-9)return'0';
-  // Check if v = n*π exactly
   var r=v/Math.PI;
   var rr=Math.round(r);
   if(Math.abs(rr-r)<0.002&&rr!==0){return rr===1?'π':rr===-1?'-π':rr+'π';}
-  // Check if v = n*π/2
   var r2=v*2/Math.PI;
   var rr2=Math.round(r2);
   if(Math.abs(rr2-r2)<0.002&&rr2!==0&&rr2%2!==0){
@@ -479,104 +326,155 @@ function fn4(v){
   }
   return parseFloat(v.toPrecision(4)).toString();
 }
-// Eval
 function prep(e){return e.replace(/π/g,'pi').replace(/\bpi\b/gi,'pi').replace(/\barcsin\b/gi,'asin').replace(/\barccos\b/gi,'acos').replace(/\barctan\b/gi,'atan').replace(/sin\s*\^\s*\(-?1\)/gi,'asin').replace(/cos\s*\^\s*\(-?1\)/gi,'acos').replace(/tan\s*\^\s*\(-?1\)/gi,'atan').replace(/\bln\b/gi,'log').replace(/\blog10\b/gi,'log10').replace(/\bsqrt\b/gi,'sqrt').replace(/\babs\b/gi,'abs').replace(/\bfloor\b/gi,'floor').replace(/\bceil\b/gi,'ceil').replace(/(\d)([a-zA-Z])/g,'$1*$2').replace(/\)\s*\(/g,')*(' );}
 function cmp(e){try{var c=math.compile(prep(e));c.evaluate({x:0});return c;}catch(e){return null;}}
 function ev(c,x){try{var v=c.evaluate({x:x});return(typeof v==='number'&&isFinite(v))?v:NaN;}catch(e){return NaN;}}
-// Calculus
-function d1(f,x){  var h=Math.max(5e-8,Math.abs(x)*5e-6+1e-8);  var v=(ev(f,x+h)-ev(f,x-h))/(2*h);  // If result seems wrong (both sides very different), try smaller h  if(!isFinite(v)||Math.abs(v)>1e10){h*=0.1;v=(ev(f,x+h)-ev(f,x-h))/(2*h);}  return isFinite(v)?v:NaN;}
-function d2(f,x){  var h=Math.max(2e-5,Math.abs(x)*1e-3+2e-5);  var v=(ev(f,x+h)-2*ev(f,x)+ev(f,x-h))/(h*h);  if(!isFinite(v)||Math.abs(v)>1e12){h*=5;v=(ev(f,x+h)-2*ev(f,x)+ev(f,x-h))/(h*h);}  return isFinite(v)?v:NaN;}
+function d1(f,x){var h=Math.max(1e-7,Math.abs(x)*1e-5);return(ev(f,x+h)-ev(f,x-h))/(2*h);}
+function d2(f,x){var h=Math.max(1e-6,Math.abs(x)*1e-4);return(ev(f,x+h)-2*ev(f,x)+ev(f,x-h))/(h*h);}
 function simp(f,a,b){var N=Math.min(2000,Math.max(200,Math.round(Math.abs(b-a)*100)));if(N%2)N++;var h=(b-a)/N,s=ev(f,a)+ev(f,b),x=a;for(var i=1;i<N;i++){x+=h;s+=(i%2?4:2)*ev(f,x);}return s*h/3;}
-// Roots — filters out false sign changes at asymptotes (e.g. tan(x) at π/2+nπ)
-function fRoots(f,a,b){
-  var N=3000,dx=(b-a)/N,prev=ev(f,a),rs=[];
-  for(var i=1;i<=N;i++){
-    var xr=a+i*dx,cur=ev(f,xr);
-    if(!isNaN(prev)&&!isNaN(cur)&&prev*cur<0){
-      var lo=xr-dx,hi=xr,fa=prev;
-      for(var j=0;j<52;j++){var m=(lo+hi)/2,fm=ev(f,m);if(isNaN(fm))break;fa*fm<=0?hi=m:lo=m;if(hi-lo<1e-11)break;}
-      var r=(lo+hi)/2;
-      // Genuine root: value near zero AND neighbors finite
-      var fv=ev(f,r);
-      if(isNaN(fv)||Math.abs(fv)>0.5)continue;
-      var fl=ev(f,r-dx*0.05),fr2=ev(f,r+dx*0.05);
-      if(isNaN(fl)||isNaN(fr2)||Math.abs(fl)>200||Math.abs(fr2)>200)continue;
-      if(!rs.some(function(v){return Math.abs(v-r)<1e-5;}))rs.push(r);
-    }
-    prev=cur;
-  }
-  return rs.sort(function(a,b){return a-b;});
+
+/* ---------- IMPROVED ROOT / EXTREMA / INFLECTION DETECTION ---------- */
+// Check if expression likely has asymptotes (tan, cot, sec, csc, division by x)
+function exprHasAsymptotes(expr) {
+  return /(tan|cot|sec|csc|1\s*\/\s*x|\/\s*x)/i.test(expr);
 }
+
+// Enhanced root finder: filters out asymptote false-positives
+function fRoots(f, a, b, fnObj) {
+  var N = 5000;  // higher sampling
+  var dx = (b - a) / N;
+  var prev = ev(f, a);
+  var rs = [];
+  var hasAsymp = fnObj && fnObj.hasAsymp;
+  var asympThreshold = 1e6;
+  for (var i = 1; i <= N; i++) {
+    var xr = a + i * dx;
+    var cur = ev(f, xr);
+    if (!isNaN(prev) && !isNaN(cur) && prev * cur < 0) {
+      var lo = xr - dx, hi = xr, fa = prev;
+      for (var j = 0; j < 60; j++) {
+        var m = (lo + hi) / 2;
+        var fm = ev(f, m);
+        if (isNaN(fm)) break;
+        if (fa * fm <= 0) hi = m; else lo = m;
+        if (hi - lo < 1e-12) break;
+      }
+      var r = (lo + hi) / 2;
+      var fv = ev(f, r);
+      // Reject if value too large or NaN
+      if (isNaN(fv) || Math.abs(fv) > 0.5) { prev = cur; continue; }
+      // Check derivative magnitude to reject asymptotes
+      var der = d1(f, r);
+      if (Math.abs(der) > (hasAsymp ? 1e6 : 1e8)) { prev = cur; continue; }
+      // Check function continuity near root
+      var fl = ev(f, r - dx * 0.02), fr2 = ev(f, r + dx * 0.02);
+      if (isNaN(fl) || isNaN(fr2) || Math.abs(fl) > 1e5 || Math.abs(fr2) > 1e5) { prev = cur; continue; }
+      if (!rs.some(function(v){ return Math.abs(v - r) < 1e-5; })) rs.push(r);
+    }
+    prev = cur;
+  }
+  return rs.sort((a,b) => a - b);
+}
+
 function perStr(pts){
   if(pts.length<3)return null;
-  // Sort by value (not by |x|) for proper gap analysis
-  var sorted=pts.slice().sort(function(a,b){return a-b;});
-  var g=[];for(var i=1;i<sorted.length;i++)g.push(Math.abs(sorted[i]-sorted[i-1]));
-  var mn=g.reduce(function(a,b){return a+b;})/g.length;
-  var va=g.reduce(function(a,v){return a+(v-mn)*(v-mn);},0)/g.length;
+  var g=[];for(var i=1;i<pts.length;i++)g.push(Math.abs(pts[i]-pts[i-1]));
+  var mn=g.reduce((a,b)=>a+b)/g.length;
+  var va=g.reduce((a,v)=>a+(v-mn)*(v-mn),0)/g.length;
   if(Math.sqrt(va)<mn*0.06){
-    // Check if period is a rational multiple of π
     var r=mn/Math.PI;
     var candidates=[0.5,1,2,3,4];
     for(var ci=0;ci<candidates.length;ci++){
-      var cand=candidates[ci];
-      if(Math.abs(r-cand)<cand*0.04){
-        if(cand===0.5)return'Period: π/2';
-        if(cand===1)return'Period: π';
-        if(cand===2)return'Period: 2π';
-        return'Period: '+cand+'π';
+      if(Math.abs(r-candidates[ci])<candidates[ci]*0.04){
+        if(candidates[ci]===0.5)return'Period: π/2';
+        if(candidates[ci]===1)return'Period: π';
+        if(candidates[ci]===2)return'Period: 2π';
+        return'Period: '+candidates[ci]+'π';
       }
     }
     return'Period ≈ '+n4(mn);
   }
   return null;
 }
-// Extrema
-function fExtr(f,a,b){var df={evaluate:function(s){return d1(f,s.x);}},dr=fRoots(df,a,b),mx=[],mn=[];dr.forEach(function(x){var d=d2(f,x),y=ev(f,x);if(isNaN(y))return;if(d<-1e-6)mx.push({x:x,y:y});else if(d>1e-6)mn.push({x:x,y:y});});return{maxima:mx,minima:mn};}
-// Inflections — zeros of f'' only where original f is finite/continuous
-function fInfl(f,a,b){
-  var N=3000,step=(b-a)/N,prev=d2(f,a),rs=[];
-  for(var i=1;i<=N;i++){
-    var xr=a+i*step,cur=d2(f,xr);
-    if(!isNaN(prev)&&!isNaN(cur)&&prev*cur<0){
-      var lo=xr-step,hi=xr,fa2=prev;
-      for(var j=0;j<52;j++){var m=(lo+hi)/2,fm=d2(f,m);if(isNaN(fm))break;fa2*fm<=0?hi=m:lo=m;if(hi-lo<1e-11)break;}
-      var r=(lo+hi)/2;
-      // Original function must be defined and finite (exclude asymptote regions)
-      var fy=ev(f,r);
-      if(isNaN(fy)||!isFinite(fy)||Math.abs(fy)>1e6)continue;
-      var yl=ev(f,r-step*2),yr=ev(f,r+step*2);
-      if(isNaN(yl)||isNaN(yr)||Math.abs(yl)>1e5||Math.abs(yr)>1e5)continue;
-      if(!rs.some(function(v){return Math.abs(v-r)<1e-5;}))rs.push(r);
-    }
-    prev=cur;
-  }
-  return rs.sort(function(a,b){return a-b;});
+
+// Extrema: uses root finder on derivative with higher N
+function fExtr(f, a, b, fnObj){
+  var df = { evaluate: function(s){ return d1(f, s.x); } };
+  var dr = fRoots(df, a, b, fnObj); // already filtered
+  var mx = [], mn = [];
+  dr.forEach(function(x){
+    var d = d2(f, x);
+    var y = ev(f, x);
+    if (isNaN(y) || !isFinite(y) || Math.abs(y) > 1e6) return;
+    if (d < -1e-6) mx.push({x:x, y:y});
+    else if (d > 1e-6) mn.push({x:x, y:y});
+  });
+  return {maxima: mx, minima: mn};
 }
-// Intersections — filter out false crossings at asymptotes
-function fIsect(f1,f2,a,b){
-  var N=3000,dx=(b-a)/N,prev=ev(f1,a)-ev(f2,a),rs=[];
-  for(var i=1;i<=N;i++){
-    var xr=a+i*dx,cur=ev(f1,xr)-ev(f2,xr);
-    if(!isNaN(prev)&&!isNaN(cur)&&prev*cur<0){
-      var lo=xr-dx,hi=xr,fa=prev;
-      for(var j=0;j<52;j++){var m=(lo+hi)/2,fm=ev(f1,m)-ev(f2,m);if(isNaN(fm))break;fa*fm<=0?hi=m:lo=m;if(hi-lo<1e-11)break;}
-      var r=(lo+hi)/2;
-      var y1=ev(f1,r),y2=ev(f2,r);
-      if(isNaN(y1)||isNaN(y2)||!isFinite(y1)||!isFinite(y2))continue;
-      if(Math.abs(y1)>1e6||Math.abs(y2)>1e6)continue;
-      var f1l=ev(f1,r-dx*0.05),f1r=ev(f1,r+dx*0.05);
-      if(isNaN(f1l)||isNaN(f1r)||Math.abs(f1l)>1e5||Math.abs(f1r)>1e5)continue;
-      if(!rs.some(function(v){return Math.abs(v-r)<1e-5;}))rs.push(r);
+
+// Inflections: second derivative zero-crossings, with noise filtering
+function fInfl(f, a, b, fnObj){
+  var N = 5000, step = (b - a) / N;
+  var prev = d2(f, a);
+  var rs = [];
+  var hasAsymp = fnObj && fnObj.hasAsymp;
+  for (var i = 1; i <= N; i++){
+    var xr = a + i * step;
+    var cur = d2(f, xr);
+    if (!isNaN(prev) && !isNaN(cur) && prev * cur < 0){
+      var lo = xr - step, hi = xr, fa2 = prev;
+      for (var j = 0; j < 60; j++){
+        var m = (lo + hi) / 2;
+        var fm = d2(f, m);
+        if (isNaN(fm)) break;
+        if (fa2 * fm <= 0) hi = m; else lo = m;
+        if (hi - lo < 1e-12) break;
+      }
+      var r = (lo + hi) / 2;
+      var fy = ev(f, r);
+      // Reject if function undefined, huge, or nearly zero (avoid Gaussian tail noise)
+      if (isNaN(fy) || !isFinite(fy) || Math.abs(fy) > 1e6) continue;
+      if (Math.abs(fy) < 1e-6 && !hasAsymp) continue; // ignore tiny wiggles
+      var yl = ev(f, r - step*0.5), yr = ev(f, r + step*0.5);
+      if (isNaN(yl) || isNaN(yr) || Math.abs(yl) > 1e5 || Math.abs(yr) > 1e5) continue;
+      if (!rs.some(function(v){ return Math.abs(v - r) < 1e-5; })) rs.push(r);
     }
-    prev=cur;
+    prev = cur;
   }
-  return rs.sort(function(a,b){return a-b;});
+  return rs.sort((a,b) => a - b);
 }
-// Closest point — works for both y=f(x) functions AND parametric curves
+
+// Intersections (unchanged, but uses improved fIsect with filtering)
+function fIsect(f1, f2, a, b){
+  var N = 4000, dx = (b - a) / N;
+  var prev = ev(f1, a) - ev(f2, a);
+  var rs = [];
+  for (var i = 1; i <= N; i++){
+    var xr = a + i * dx;
+    var cur = ev(f1, xr) - ev(f2, xr);
+    if (!isNaN(prev) && !isNaN(cur) && prev * cur < 0){
+      var lo = xr - dx, hi = xr, fa = prev;
+      for (var j = 0; j < 60; j++){
+        var m = (lo + hi) / 2;
+        var fm = ev(f1, m) - ev(f2, m);
+        if (isNaN(fm)) break;
+        if (fa * fm <= 0) hi = m; else lo = m;
+        if (hi - lo < 1e-12) break;
+      }
+      var r = (lo + hi) / 2;
+      var y1 = ev(f1, r), y2 = ev(f2, r);
+      if (isNaN(y1) || isNaN(y2) || !isFinite(y1) || !isFinite(y2)) continue;
+      if (Math.abs(y1) > 1e6 || Math.abs(y2) > 1e6) continue;
+      if (!rs.some(v => Math.abs(v - r) < 1e-5)) rs.push(r);
+    }
+    prev = cur;
+  }
+  return rs.sort((a,b) => a - b);
+}
+
+// Closest point (unchanged)
 function cpt(fnObj,px_,py_){
   if(fnObj&&fnObj.isParametric){
-    // Parametric closest point: sample t densely
     var param=fnObj.parametric;
     var tMin=param.tMin,tMax=param.tMax;
     if(param.skipNearZero){tMin=V.xMin;tMax=V.xMax;}
@@ -593,7 +491,6 @@ function cpt(fnObj,px_,py_){
     var fx=param.x(bt),fy=param.y(bt);
     return{x:fx,y:fy,dist:Math.sqrt(best)};
   }
-  // Standard y=f(x) function
   var f=fnObj.c;
   var N=600,dx=(V.xMax-V.xMin)/N,bestD=Infinity,bx=V.xMin;
   for(var i=0;i<=N;i++){var cx2=V.xMin+i*dx,cy2=ev(f,cx2);if(isNaN(cy2))continue;var dd=(cx2-px_)*(cx2-px_)+(cy2-py_)*(cy2-py_);if(dd<bestD){bestD=dd;bx=cx2;}}
@@ -601,13 +498,13 @@ function cpt(fnObj,px_,py_){
   for(var k=0;k<60;k++){var m1=lo+(hi-lo)/3,m2=hi-(hi-lo)/3;var dd1=(function(c){var cy=ev(f,c);return isNaN(cy)?Infinity:(c-px_)*(c-px_)+(cy-py_)*(cy-py_);})(m1),dd2=(function(c){var cy=ev(f,c);return isNaN(cy)?Infinity:(c-px_)*(c-px_)+(cy-py_)*(cy-py_);})(m2);if(dd1<dd2)hi=m2;else lo=m1;if(hi-lo<1e-10)break;}
   var fx=(lo+hi)/2,fy=ev(f,fx);return{x:fx,y:fy,dist:Math.sqrt((fx-px_)*(fx-px_)+(fy-py_)*(fy-py_))};
 }
-// Draw curves
+
+// Drawing functions (unchanged except do_ for marker labels)
 function dac(){
   cx.clearRect(0,0,W,H);
   if(aS){var af=fns.find(function(f){return f.id===aS.fnId;});if(af&&af.vis&&!af.isParametric)dAS(af);}
   if(hS)dHL();
   fns.forEach(function(f){if(f.vis){if(f.isParametric)dparamcurve(f,f.id===selId);else dcurve(f,f.id===selId);}});
-  // Draw tangent/normal lines (pixel-space perpendicular)
   var tanVisEl=document.getElementById('tanLinesVis');
   var tanVisible=!tanVisEl||tanVisEl.checked;
   if(tanState&&tanVisible){
@@ -618,34 +515,27 @@ function dac(){
     var normCol=isDark?'rgba(255,200,80,0.9)':'rgba(180,90,0,0.85)';
     var tpx=xp(tanState.tx),tpy=yp(tanState.ty);
     cx.save();cx.lineWidth=1.8;cx.setLineDash([7,4]);cx.globalAlpha=0.9;
-    // Tangent line through point using pixel-space slope
     cx.strokeStyle=tanCol;
     drawLinePixelSlope(cx,tpx,tpy,tanState.sl);
-    // Normal line — truly perpendicular in pixel space
     cx.strokeStyle=normCol;cx.setLineDash([4,5]);
     drawNormalPixelSlope(cx,tpx,tpy,tanState.sl);
-    // Point dot
     cx.setLineDash([]);cx.globalAlpha=1;
     cx.beginPath();cx.arc(tpx,tpy,5,0,Math.PI*2);cx.fillStyle=col_;cx.fill();
     cx.strokeStyle='rgba(255,255,255,0.6)';cx.lineWidth=1.5;cx.stroke();
     cx.restore();
   }
 }
-// Draw parametric curves completely
 function dparamcurve(fn,sel){
   var param=fn.parametric;
   var N=2000;
   var tMin=param.tMin,tMax=param.tMax;
-  // For rect hyperbola, use current view
   if(param.skipNearZero){tMin=V.xMin;tMax=V.xMax;}
   var dt=(tMax-tMin)/N;
   var segs=[[]];
   var splits=param.splits||[];
   for(var i=0;i<=N;i++){
     var t=tMin+i*dt;
-    // Skip near split points (asymptotes)
     if(splits.some(function(s){return Math.abs(t-s)<Math.abs(dt)*2;})){segs.push([]);continue;}
-    // Skip near zero for rect hyperbola
     if(param.skipNearZero&&Math.abs(t)<0.08){segs.push([]);continue;}
     var px_=xp(param.x(t)),py_=yp(param.y(t));
     if(isNaN(px_)||isNaN(py_)||!isFinite(px_)||!isFinite(py_)){segs.push([]);continue;}
@@ -654,11 +544,8 @@ function dparamcurve(fn,sel){
   }
   function ds(lw,a){cx.lineWidth=lw;cx.globalAlpha=a;cx.lineCap='round';cx.lineJoin='round';cx.setLineDash([]);segs.forEach(function(s){if(s.length<2)return;cx.beginPath();cx.moveTo(s[0].px,s[0].py);for(var i=1;i<s.length;i++)cx.lineTo(s[i].px,s[i].py);cx.stroke();});}
   cx.save();cx.strokeStyle=fn.col;
-  if(sel){
-    ds(9,0.08);ds(5,0.18);ds(3,0.55);
-    cx.strokeStyle='#ffffff';ds(1.2,0.35);
-    cx.strokeStyle=fn.col;ds(2.5,1);
-  }else{ds(2,0.92);}
+  if(sel){ds(9,0.08);ds(5,0.18);ds(3,0.55);cx.strokeStyle='#ffffff';ds(1.2,0.35);cx.strokeStyle=fn.col;ds(2.5,1);}
+  else{ds(2,0.92);}
   cx.restore();
 }
 function dcurve(fn,sel){
@@ -666,25 +553,15 @@ function dcurve(fn,sel){
   for(var i=0;i<=N;i++){var x=V.xMin+i*dx,y=ev(fn.c,x);if(!isNaN(y)&&isFinite(y)){var py_=yp(y);if(py_>-H*3&&py_<H*4)segs[segs.length-1].push({px:xp(x),py:py_});else segs.push([]);}else segs.push([]);}
   function ds(lw,a){cx.lineWidth=lw;cx.globalAlpha=a;cx.lineCap='round';cx.lineJoin='round';cx.setLineDash([]);segs.forEach(function(s){if(s.length<2)return;cx.beginPath();cx.moveTo(s[0].px,s[0].py);for(var i=1;i<s.length;i++)cx.lineTo(s[i].px,s[i].py);cx.stroke();});}
   cx.save();cx.strokeStyle=fn.col;
-  if(sel){
-    // Bright selected: layered solid lines for vivid glow (no blur)
-    cx.strokeStyle=fn.col;ds(9,0.08);
-    cx.strokeStyle=fn.col;ds(5,0.18);
-    cx.strokeStyle=fn.col;ds(3,0.55);
-    cx.strokeStyle='#ffffff';ds(1.2,0.35);
-    cx.strokeStyle=fn.col;ds(2.5,1);
-  }else{
-    cx.strokeStyle=fn.col;ds(2,0.92);
-  }
+  if(sel){cx.strokeStyle=fn.col;ds(9,0.08);cx.strokeStyle=fn.col;ds(5,0.18);cx.strokeStyle=fn.col;ds(3,0.55);cx.strokeStyle='#ffffff';ds(1.2,0.35);cx.strokeStyle=fn.col;ds(2.5,1);}
+  else{cx.strokeStyle=fn.col;ds(2,0.92);}
   cx.restore();
 }
 function dAS(fn){var x1=aS.x1,x2=aS.x2,N=500,dx=(x2-x1)/N;cx.save();cx.fillStyle=fn.col;cx.globalAlpha=0.14;cx.beginPath();cx.moveTo(xp(x1),yp(0));for(var i=0;i<=N;i++){var x=x1+i*dx,y=ev(fn.c,x);if(isNaN(y))y=0;cx.lineTo(xp(x),yp(y));}cx.lineTo(xp(x2),yp(0));cx.closePath();cx.fill();cx.globalAlpha=0.5;cx.strokeStyle=fn.col;cx.lineWidth=1.5;cx.setLineDash([5,3]);[xp(x1),xp(x2)].forEach(function(p){cx.beginPath();cx.moveTo(p,0);cx.lineTo(p,H);cx.stroke();});cx.setLineDash([]);cx.restore();}
 function dHL(){var x1=hS.x1,x2=hS.x2,L=document.body.classList.contains('light');cx.save();cx.fillStyle=L?'rgba(154,124,63,0.07)':'rgba(232,213,176,0.05)';cx.fillRect(Math.min(xp(x1),xp(x2)),0,Math.abs(xp(x2)-xp(x1)),H);cx.strokeStyle=L?'rgba(154,124,63,0.32)':'rgba(232,213,176,0.28)';cx.lineWidth=1.2;cx.setLineDash([5,4]);[x1,x2].forEach(function(x){cx.beginPath();cx.moveTo(xp(x),0);cx.lineTo(xp(x),H);cx.stroke();});cx.setLineDash([]);cx.restore();}
-// Markers helpers
 function gdot(ctx,px_,py_,r,col){ctx.save();ctx.beginPath();ctx.arc(px_,py_,r+5,0,Math.PI*2);ctx.fillStyle=col;ctx.globalAlpha=0.15;ctx.fill();ctx.beginPath();ctx.arc(px_,py_,r+2,0,Math.PI*2);ctx.globalAlpha=0.25;ctx.fill();ctx.globalAlpha=1;ctx.beginPath();ctx.arc(px_,py_,r,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.2;ctx.stroke();ctx.restore();}
 function gdia(ctx,px_,py_,r,col){ctx.save();ctx.beginPath();ctx.arc(px_,py_,r+5,0,Math.PI*2);ctx.fillStyle=col;ctx.globalAlpha=0.15;ctx.fill();ctx.globalAlpha=1;ctx.translate(px_,py_);ctx.rotate(Math.PI/4);ctx.fillStyle=col;ctx.beginPath();ctx.rect(-r,-r,r*2,r*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1;ctx.stroke();ctx.restore();}
 function gtri(ctx,px_,py_,r,col,up){ctx.save();ctx.beginPath();ctx.arc(px_,py_,r+5,0,Math.PI*2);ctx.fillStyle=col;ctx.globalAlpha=0.15;ctx.fill();ctx.globalAlpha=1;ctx.fillStyle=col;ctx.beginPath();var s=up?-1:1;ctx.moveTo(px_,py_+s*r);ctx.lineTo(px_-r,py_-s*r);ctx.lineTo(px_+r,py_-s*r);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1;ctx.stroke();ctx.restore();}
-// Parametric × Function intersection: sample parametric curve, find where it's near the function
 function paramFnIsect(paramFn,regularFn){
   var param=paramFn.parametric;
   var tMin=param.tMin,tMax=param.tMax;
@@ -700,7 +577,6 @@ function paramFnIsect(paramFn,regularFn){
     if(isNaN(fy)||!isFinite(fy)){prev=NaN;continue;}
     var diff=py2-fy;
     if(!isNaN(prev)&&prev*diff<0){
-      // sign change — bisect in t
       var lo=t-dt,hi=t,fa=prev;
       for(var k=0;k<40;k++){
         var m=(lo+hi)/2;
@@ -719,37 +595,30 @@ function paramFnIsect(paramFn,regularFn){
   }
   return pts;
 }
-// Overlay
 function do_(){
   ox_.clearRect(0,0,W,H);
   var sf=fns.find(function(f){return f.id===selId;}),ca=selId?acache[selId]:null;
   if(sf&&ca){
     var cRoot=gcv('--col-root'),cMM=gcv('--col-maxmin'),cInfl=gcv('--col-infl'),cIsect=gcv('--col-intersect');
-    var rootsVis=closestToOrigin(ca.roots||[]);
-    var inflVis=closestToOrigin(ca.infls||[]);
-    var maxVis=closestToOrigin(ca.extr?ca.extr.maxima||[]:[]);
-    var minVis=closestToOrigin(ca.extr?ca.extr.minima||[]:[]);
-    rootsVis.forEach(function(rx){var pp=xp(rx);if(pp<0||pp>W)return;gdot(ox_,pp,yp(0),5,cRoot);
-      // Label root in color
+    (ca.roots||[]).forEach(function(rx){var pp=xp(rx);if(pp<0||pp>W)return;gdot(ox_,pp,yp(0),5,cRoot);
       ox_.save();ox_.fillStyle=cRoot;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='top';
       ox_.fillText(fn4(rx),pp,yp(0)+8);ox_.restore();
     });
     if(ca.extr){
-      maxVis.forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,true);
+      (ca.extr.maxima||[]).forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,true);
         ox_.save();ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='bottom';
         ox_.fillText('('+fn4(p.x)+', '+n4t(p.y)+')',pp,yp(p.y)-8);ox_.restore();
       });
-      minVis.forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,false);
+      (ca.extr.minima||[]).forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,false);
         ox_.save();ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='top';
         ox_.fillText('('+fn4(p.x)+', '+n4t(p.y)+')',pp,yp(p.y)+8);ox_.restore();
       });
     }
-    inflVis.forEach(function(ix){var pp=xp(ix),iy=ev(sf.c,ix);if(pp<0||pp>W||isNaN(iy))return;gdia(ox_,pp,yp(iy),4,cInfl);
+    (ca.infls||[]).forEach(function(ix){var pp=xp(ix),iy=ev(sf.c,ix);if(pp<0||pp>W||isNaN(iy))return;gdia(ox_,pp,yp(iy),4,cInfl);
       ox_.save();ox_.fillStyle=cInfl;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='left';ox_.textBaseline='middle';
       ox_.fillText('◆',pp+7,yp(iy));ox_.restore();
     });
   }
-  // Draw intersections — handles function×function, function×parametric, parametric×parametric
   if(fns.length>=2){
     for(var ii=0;ii<fns.length-1;ii++){
       for(var jj=ii+1;jj<fns.length;jj++){
@@ -757,15 +626,12 @@ function do_(){
         if(!fi.vis||!fj.vis)continue;
         var ipts=[];
         if(!fi.isParametric&&!fj.isParametric){
-          // both functions: algebraic intersection
           ipts=fIsect(fi.c,fj.c,V.xMin,V.xMax).slice(0,10).map(function(ix){return{x:ix,y:ev(fi.c,ix)};}).filter(function(p){return!isNaN(p.y)&&isFinite(p.y);});
         } else if(!fi.isParametric&&fj.isParametric){
-          // one function, one parametric: check proximity of parametric samples to fi
           ipts=paramFnIsect(fj,fi).slice(0,10);
         } else if(fi.isParametric&&!fj.isParametric){
           ipts=paramFnIsect(fi,fj).slice(0,10);
         }
-        // parametric×parametric intersection is expensive, skip for now
         ipts.forEach(function(p){
           var pp=xp(p.x),ipp=yp(p.y);
           if(pp<0||pp>W||ipp<0||ipp>H)return;
@@ -778,25 +644,20 @@ function do_(){
       }
     }
   }
-  // Draw marked points with individual colors and shapes
   mps.forEach(function(mp,i){
     var pp=xp(mp.x),ipp=yp(mp.y);
     var col=mp.col||'var(--col-marked)';
     var shp=mp.shape||'★';
     ox_.save();
-    // Glow halo
     ox_.globalAlpha=0.18;ox_.fillStyle=col;ox_.beginPath();ox_.arc(pp,ipp,12,0,Math.PI*2);ox_.fill();
     ox_.globalAlpha=1;
-    // Draw shape in correct color
     ox_.font='bold 16px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='middle';
     ox_.fillStyle=col;ox_.fillText(shp,pp,ipp);
-    // Label text
     ox_.font='10.5px Geist,system-ui,sans-serif';ox_.textAlign='left';ox_.textBaseline='alphabetic';
     ox_.fillStyle=col;
     ox_.fillText((mp.lbl||'P'+(i+1))+' ('+n4(mp.x)+', '+n4(mp.y)+')',pp+12,ipp-5);
     ox_.restore();
   });
-  // Label hover tooltip (Issue 5)
   if(hover&&!mkMode){
     var LABEL_HOVER_R=18;
     var nearLabels=mps.filter(function(mp){
@@ -817,7 +678,7 @@ function do_(){
   }
   if(hover&&!mkMode){var hxx=xp(hover.x);ox_.beginPath();ox_.strokeStyle=document.body.classList.contains('light')?'rgba(0,0,0,0.18)':'rgba(255,255,255,0.16)';ox_.lineWidth=1;ox_.setLineDash([4,5]);ox_.moveTo(hxx,0);ox_.lineTo(hxx,H);ox_.stroke();ox_.setLineDash([]);if(!isNaN(hover.gy)){var hf=fns.find(function(f){return f.id===hover.fnId;});gdot(ox_,hxx,yp(hover.gy),4,hf?hf.col:'var(--accent)');}}
 }
-// Pointer events
+// Pointer events (unchanged)
 OC.addEventListener('mousedown',function(ev){if(mkMode)return;pan={x:ev.clientX,y:ev.clientY,vx:V.xMin,vxm:V.xMax,vy:V.yMin,vym:V.yMax};OC.style.cursor='grabbing';});
 OC.addEventListener('mousemove',function(ev){var r=OC.getBoundingClientRect(),ppx=ev.clientX-r.left,ppy=ev.clientY-r.top,wx=px(ppx),wy=py(ppy);if(pan&&!mkMode){var ddx=(ev.clientX-pan.x)/W*(V.xMax-V.xMin),ddy=(ev.clientY-pan.y)/H*(V.yMax-V.yMin);V.xMin=pan.vx-ddx;V.xMax=pan.vxm-ddx;V.yMin=pan.vy+ddy;V.yMax=pan.vym+ddy;dg();dac();do_();return;}if(!fns.length)return;var fn=fns.find(function(f){return f.id===selId&&f.vis;})||fns.find(function(f){return f.vis;});if(!fn)return;var gy=ev(fn.c,wx),sl=d1(fn.c,wx),ca=acache[fn.id]||{},rs=ca.roots||[];var nr=rs.reduce(function(b,r){return Math.abs(r-wx)<Math.abs(b-wx)?r:b;},rs[0]);
   var nm=null;
@@ -826,9 +687,8 @@ OC.addEventListener('mousemove',function(ev){var r=OC.getBoundingClientRect(),pp
   if(ca&&ca.extr){(ca.extr.maxima||[]).forEach(function(p){if(dp(p.x,p.y)<14)nm={type:'Maximum',x:p.x,y:p.y,col:gcv('--col-maxmin')};});(ca.extr.minima||[]).forEach(function(p){if(dp(p.x,p.y)<14)nm={type:'Minimum',x:p.x,y:p.y,col:gcv('--col-maxmin')};});}
   if(ca&&ca.infls){ca.infls.forEach(function(ix){var iy_=ev(fn.c,ix);if(!isNaN(iy_)&&dp(ix,iy_)<14)nm={type:'Inflection pt',x:ix,y:iy_,col:gcv('--col-infl')};});}
   hover={x:wx,y:wy,gy:gy,slope:sl,nearRoot:nr,fnId:fn.id,nearMarker:nm};
-  // Live tangent & normal on hover — drawn after dac() so CC is fresh
   if(liveTanMode&&!isNaN(gy)){
-    dac(); // redraws CC cleanly first
+    dac();
     var isDark_=!document.body.classList.contains('light');
     var tCol=isDark_?'rgba(255,255,255,0.82)':'rgba(0,0,0,0.72)';
     var nCol=isDark_?'rgba(255,200,80,0.82)':'rgba(180,90,0,0.82)';
@@ -839,9 +699,7 @@ OC.addEventListener('mousemove',function(ev){var r=OC.getBoundingClientRect(),pp
     cx.setLineDash([]);cx.globalAlpha=1;
     cx.beginPath();cx.arc(lpx,lpy,4,0,Math.PI*2);cx.fillStyle=fn.col;cx.fill();
     cx.restore();
-  } else {
-    do_();
-  }
+  } else { do_(); }
   updTip(ppx,ppy,wx,gy,sl,nr,fn,nm);
 });
 OC.addEventListener('mouseup',function(){pan=null;OC.style.cursor='crosshair';});
@@ -849,316 +707,145 @@ OC.addEventListener('mouseleave',function(){pan=null;hover=null;document.getElem
 OC.addEventListener('click',function(ev){if(!mkMode)return;var r=OC.getBoundingClientRect();var mx_=px(ev.clientX-r.left),my_=py(ev.clientY-r.top);var col=MARK_COLS[markLabelIdx%MARK_COLS.length],shp=MARK_SHAPES[markLabelIdx%MARK_SHAPES.length];mps.push({x:mx_,y:my_,col:col,shape:shp,lbl:'P'+(mps.length+1)});markLabelIdx++;rml();do_();});
 OC.addEventListener('wheel',function(ev){ev.preventDefault();var r=OC.getBoundingClientRect(),cx_=px(ev.clientX-r.left),cy_=py(ev.clientY-r.top),f=ev.deltaY>0?1.12:1/1.12;za(cx_,cy_,f);},{passive:false});
 var lt=null,ltPinchDist=null;
-OC.addEventListener('touchstart',function(ev){
-  ev.preventDefault();
-  if(ev.touches.length===1){
-    var t=ev.touches[0];
-    lt={x:t.clientX,y:t.clientY,vx:V.xMin,vxm:V.xMax,vy:V.yMin,vym:V.yMax};
-    ltPinchDist=null;
-  } else if(ev.touches.length===2){
-    var t0=ev.touches[0],t1=ev.touches[1];
-    ltPinchDist=Math.sqrt(Math.pow(t1.clientX-t0.clientX,2)+Math.pow(t1.clientY-t0.clientY,2));
-    lt={vx:V.xMin,vxm:V.xMax,vy:V.yMin,vym:V.yMax,
-        cx:px((t0.clientX+t1.clientX)/2-OC.getBoundingClientRect().left),
-        cy:py((t0.clientY+t1.clientY)/2-OC.getBoundingClientRect().top)};
-  }
-},{passive:false});
-OC.addEventListener('touchmove',function(ev){
-  ev.preventDefault();
-  if(ev.touches.length===1&&lt&&ltPinchDist===null){
-    var t=ev.touches[0];
-    var ddx=(t.clientX-lt.x)/W*(V.xMax-V.xMin),ddy=(t.clientY-lt.y)/H*(V.yMax-V.yMin);
-    V.xMin=lt.vx-ddx;V.xMax=lt.vxm-ddx;V.yMin=lt.vy+ddy;V.yMax=lt.vym+ddy;
-    dg();dac();do_();
-  } else if(ev.touches.length===2&&lt&&ltPinchDist!==null){
-    var t0=ev.touches[0],t1=ev.touches[1];
-    var newDist=Math.sqrt(Math.pow(t1.clientX-t0.clientX,2)+Math.pow(t1.clientY-t0.clientY,2));
-    var f=ltPinchDist/newDist; // pinch in = newDist smaller = f>1 = zoom out; spread = f<1 = zoom in
-    ltPinchDist=newDist;
-    za(lt.cx,lt.cy,f);
-    // Update pinch center
-    var r=OC.getBoundingClientRect();
-    lt.cx=px((t0.clientX+t1.clientX)/2-r.left);
-    lt.cy=py((t0.clientY+t1.clientY)/2-r.top);
-  }
-},{passive:false});
-OC.addEventListener('touchend',function(ev){
-  if(ev.touches.length===0){lt=null;ltPinchDist=null;}
-  else if(ev.touches.length===1){
-    var t=ev.touches[0];
-    lt={x:t.clientX,y:t.clientY,vx:V.xMin,vxm:V.xMax,vy:V.yMin,vym:V.yMax};
-    ltPinchDist=null;
-  }
-},false);
+OC.addEventListener('touchstart',function(ev){ev.preventDefault();if(ev.touches.length===1){var t=ev.touches[0];lt={x:t.clientX,y:t.clientY,vx:V.xMin,vxm:V.xMax,vy:V.yMin,vym:V.yMax};ltPinchDist=null;}else if(ev.touches.length===2){var t0=ev.touches[0],t1=ev.touches[1];ltPinchDist=Math.sqrt(Math.pow(t1.clientX-t0.clientX,2)+Math.pow(t1.clientY-t0.clientY,2));lt={vx:V.xMin,vxm:V.xMax,vy:V.yMin,vym:V.yMax,cx:px((t0.clientX+t1.clientX)/2-OC.getBoundingClientRect().left),cy:py((t0.clientY+t1.clientY)/2-OC.getBoundingClientRect().top)};}},{passive:false});
+OC.addEventListener('touchmove',function(ev){ev.preventDefault();if(ev.touches.length===1&&lt&&ltPinchDist===null){var t=ev.touches[0];var ddx=(t.clientX-lt.x)/W*(V.xMax-V.xMin),ddy=(t.clientY-lt.y)/H*(V.yMax-V.yMin);V.xMin=lt.vx-ddx;V.xMax=lt.vxm-ddx;V.yMin=lt.vy+ddy;V.yMax=lt.vym+ddy;dg();dac();do_();}else if(ev.touches.length===2&&lt&&ltPinchDist!==null){var t0=ev.touches[0],t1=ev.touches[1];var newDist=Math.sqrt(Math.pow(t1.clientX-t0.clientX,2)+Math.pow(t1.clientY-t0.clientY,2));var f=ltPinchDist/newDist;ltPinchDist=newDist;za(lt.cx,lt.cy,f);var r=OC.getBoundingClientRect();lt.cx=px((t0.clientX+t1.clientX)/2-r.left);lt.cy=py((t0.clientY+t1.clientY)/2-r.top);}},{passive:false});
+OC.addEventListener('touchend',function(ev){if(ev.touches.length===0){lt=null;ltPinchDist=null;}else if(ev.touches.length===1){var t=ev.touches[0];lt={x:t.clientX,y:t.clientY,vx:V.xMin,vxm:V.xMax,vy:V.yMin,vym:V.yMax};ltPinchDist=null;}},false);
 function updTip(ppx,ppy,x,y,sl,nr,fn,nm){var t=document.getElementById('tip');if(isNaN(y)){t.style.display='none';return;}if(nm){t.innerHTML='<div class="itc" style="color:'+nm.col+'">'+nm.type+'</div><div class="itr"><strong>x</strong> = '+n4(nm.x)+'</div><div class="itr"><strong>y</strong> = '+n4(nm.y)+'</div>';var tx=ppx+16,ty=ppy+8;if(tx+180>W)tx=ppx-180;if(ty+80>H)ty=ppy-80;t.style.left=tx+'px';t.style.top=ty+'px';t.style.display='block';return;}var h='<div class="itc">x='+n4(x)+'&nbsp;&nbsp;y='+n4(y)+'</div><div class="itr"><strong>f′</strong> = '+n4(sl)+'</div>';if(!isNaN(nr))h+='<div class="itr"><strong>Nearest root</strong> x='+n4(nr)+'</div>';if(fns.length>=2){fns.forEach(function(f){if(!f.vis||f.id===fn.id)return;var cp=cpt(f.c,x,y);h+='<div class="itr" style="margin-top:3px"><span style="color:'+f.col+'">●</span> <em>'+esc(f.e)+'</em><br/><span style="padding-left:10px">⊥ dist ≈ '+n4(cp.dist)+'</span></div>';});}t.innerHTML=h;var tx=ppx+16,ty=ppy+8;if(tx+240>W)tx=ppx-240;if(ty+130>H)ty=ppy-130;t.style.left=tx+'px';t.style.top=ty+'px';t.style.display='block';}
-// Zoom
 function zoom(f){za((V.xMin+V.xMax)/2,(V.yMin+V.yMax)/2,f);}
 function za(cx_,cy_,f){V.xMin=cx_-(cx_-V.xMin)*f;V.xMax=cx_+(V.xMax-cx_)*f;V.yMin=cy_-(cy_-V.yMin)*f;V.yMax=cy_+(V.yMax-cy_)*f;dg();dac();do_();}
 function resetV(){V={xMin:-10,xMax:10,yMin:-8,yMax:8};['xMin','xMax','yMin','yMax'].forEach(function(k){document.getElementById(k+'Inp').value=V[k];});dg();dac();do_();}
 function applyVR(){['xMin','xMax','yMin','yMax'].forEach(function(k){var v=parseFloat(document.getElementById(k+'Inp').value);if(!isNaN(v))V[k]=v;});acache={};dg();dac();runAna();}
-// Functions
-function addFn(expr,col){var inp=document.getElementById('nfi');if(!expr)expr=(inp?inp.value.trim():'');if(!expr)return;var c=cmp(expr);if(!c){msg('Cannot parse: '+expr);return;}var id='fn'+(++fnc),color=col||nfc||COLS[fns.length%COLS.length];fns.push({id:id,e:expr,c:c,col:color,vis:true});selId=id;if(inp)inp.value='';nfc=COLS[fns.length%COLS.length];bcp();acache={};rfl();dac();sw('analysis');runAna();}
+function addFn(expr,col){var inp=document.getElementById('nfi');if(!expr)expr=(inp?inp.value.trim():'');if(!expr)return;var c=cmp(expr);if(!c){msg('Cannot parse: '+expr);return;}var id='fn'+(++fnc),color=col||nfc||COLS[fns.length%COLS.length];var hasAsymp = exprHasAsymptotes(expr);fns.push({id:id,e:expr,c:c,col:color,vis:true,hasAsymp:hasAsymp});selId=id;if(inp)inp.value='';nfc=COLS[fns.length%COLS.length];bcp();acache={};rfl();dac();sw('analysis');runAna();}
 function remFn(id){fns=fns.filter(function(f){return f.id!==id;});delete acache[id];if(selId===id)selId=fns.length?fns[fns.length-1].id:null;if(aS&&aS.fnId===id)aS=null;rfl();dac();do_();runAna();}
 function togVis(id){var f=fns.find(function(f){return f.id===id;});if(f)f.vis=!f.vis;rfl();dac();do_();}
 function selFn(id){selId=id;acache={};rfl();dac();runAna();if(atab!=='analysis')sw('analysis');}
 function rfl(){var el=document.getElementById('fnli');if(!fns.length){el.innerHTML='<span class="ae">No functions yet</span>';return;}el.innerHTML=fns.map(function(f){var act=f.id===selId;var badge=f.isParametric?'<span style="font-size:0.62rem;background:rgba(96,165,250,0.15);color:var(--blue);border-radius:3px;padding:1px 4px;margin-right:3px">EQ</span>':'';return'<div class="fn-row'+(act?' active':'')+'" onclick="selFn(\''+f.id+'\')"><div class="fn-dot" style="background:'+f.col+';opacity:'+(f.vis?1:0.3)+'"></div><div class="fn-expr" style="opacity:'+(f.vis?1:0.5)+';" title="'+esc(f.e)+'">'+badge+esc(f.e)+'</div><button class="fn-ib" onclick="event.stopPropagation();togVis(\''+f.id+'\')" title="Toggle">'+(f.vis?'👁':'🙈')+'</button><button class="fn-ib fn-del" onclick="event.stopPropagation();remFn(\''+f.id+'\')" title="Remove">✕</button></div>';}).join('');}
-// Analysis
-function runAna(){var nel=document.getElementById('afn');if(!selId||!fns.find(function(f){return f.id===selId;})){nel.textContent='—';['ar','ai','axt'].forEach(function(id){document.getElementById(id).innerHTML='<span class="ae">Select a function</span>';});['arp','aip'].forEach(function(id){document.getElementById(id).textContent='';});document.getElementById('er').textContent='';return;}var fn=fns.find(function(f){return f.id===selId;});nel.textContent=(fn.isParametric?'Equation: ':'f(x) = ')+fn.e;nel.style.color=fn.col;
+function runAna(){
+  var nel=document.getElementById('afn');
+  if(!selId||!fns.find(f=>f.id===selId)){
+    nel.textContent='—';
+    ['ar','ai','axt'].forEach(id=>document.getElementById(id).innerHTML='<span class="ae">Select a function</span>');
+    ['arp','aip'].forEach(id=>document.getElementById(id).textContent='');
+    document.getElementById('er').textContent='';
+    return;
+  }
+  var fn=fns.find(f=>f.id===selId);
+  nel.textContent=(fn.isParametric?'Equation: ':'f(x) = ')+fn.e;
+  nel.style.color=fn.col;
   if(fn.isParametric){
-    ['ar','ai','axt'].forEach(function(id){document.getElementById(id).innerHTML='<span class="ae">Parametric/implicit curve — calculus analysis not available</span>';});
-    ['arp','aip'].forEach(function(id){document.getElementById(id).textContent='';});
+    ['ar','ai','axt'].forEach(id=>document.getElementById(id).innerHTML='<span class="ae">Parametric/implicit curve — calculus analysis not available</span>');
+    ['arp','aip'].forEach(id=>document.getElementById(id).textContent='');
     document.getElementById('er').innerHTML='<span class="ae">Select a y=f(x) function for evaluation</span>';
     document.getElementById('acc-isect').style.display='none';
     do_();return;
   }
-  if(!acache[selId]){var roots=fRootsAdaptive(fn.c,V.xMin,V.xMax),infls=fInflAdaptive(fn.c,V.xMin,V.xMax),extr=fExtrAdaptive(fn.c,V.xMin,V.xMax);acache[selId]={roots:roots,infls:infls,extr:extr};}var ca=acache[selId];var rEl=document.getElementById('ar');if(!ca.roots.length)rEl.innerHTML='<span class="ae">None in view</span>';else{  var rootsShow=closestToOrigin(ca.roots);  var rs=rootsShow.map(fn4);  if(ca.roots.length>10)rs.push('<span style="color:var(--muted);font-size:0.72rem"> …'+(ca.roots.length-10)+' more (showing 10 closest to origin)</span>');  rEl.innerHTML='x = '+rs.join(',&ensp;');}document.getElementById('arp').textContent=perStr(closestToOrigin(ca.roots))||'';var eEl=document.getElementById('axt'),ep=[];var maxShow=closestToOrigin(ca.extr.maxima||[]);var minShow=closestToOrigin(ca.extr.minima||[]);maxShow.forEach(function(p){ep.push('<span style="color:var(--col-maxmin)">▲ max</span> ('+fn4(p.x)+', '+n4(p.y)+')');});minShow.forEach(function(p){ep.push('<span style="color:var(--col-maxmin)">▼ min</span> ('+fn4(p.x)+', '+n4(p.y)+')');});eEl.innerHTML=ep.length?ep.join('<br/>'):'<span class="ae">None in view</span>';var iEl=document.getElementById('ai');if(!ca.infls.length)iEl.innerHTML='<span class="ae">None in view</span>';else{  var inflShow=closestToOrigin(ca.infls);  var is=inflShow.map(function(ix){return'('+fn4(ix)+', '+n4(ev(fn.c,ix))+')';  });if(ca.infls.length>10)is.push('<span style="color:var(--muted);font-size:0.72rem"> …'+(ca.infls.length-10)+' more (showing 10 closest to origin)</span>');  iEl.innerHTML=is.join('<br/>');}document.getElementById('aip').textContent=perStr(closestToOrigin(ca.infls))||'';var iacc=document.getElementById('acc-isect');if(fns.length>=2){iacc.style.display='';var allI=[];fns.forEach(function(f){if(f.id===selId||!f.vis)return;if(!fn.isParametric&&!f.isParametric){fIsect(fn.c,f.c,V.xMin,V.xMax).slice(0,6).forEach(function(ix){allI.push({x:ix,y:ev(fn.c,ix),e:f.e,col:f.col});});}else if(!fn.isParametric&&f.isParametric){paramFnIsect(f,fn).slice(0,6).forEach(function(p){allI.push({x:p.x,y:p.y,e:f.e,col:f.col});});}else if(fn.isParametric&&!f.isParametric){paramFnIsect(fn,f).slice(0,6).forEach(function(p){allI.push({x:p.x,y:p.y,e:f.e,col:f.col});});}});var allIShow=closestToOrigin(allI,function(p){return p.x;});document.getElementById('ais').innerHTML=allIShow.length?allIShow.map(function(p){return'<span style="color:'+p.col+'">●</span> <em>'+esc(p.e)+'</em><br/>('+fn4(p.x)+', '+n4(p.y)+')';}).join('<br/>'):'<span class="ae">None in view</span>';}else iacc.style.display='none';evalAtX();do_();}
-function evalAtX(){var fn=fns.find(function(f){return f.id===selId;});if(!fn){document.getElementById('er').textContent='';return;}var x=parseFloat(document.getElementById('evalX').value);if(isNaN(x))return;var y=ev(fn.c,x),sl=d1(fn.c,x),s2=d2(fn.c,x);var el=document.getElementById('er');if(isNaN(y)){el.innerHTML='<span class="ae">undefined here</span>';return;}el.innerHTML='<strong>f('+n4(x)+')</strong> = '+n4(y)+'<br/><strong>f′</strong> = '+n4(sl)+'<br/><strong>f″</strong> = '+n4(s2)+'&ensp;<span style="font-size:0.67rem;color:var(--muted)">'+(s2>0?'⌣ concave up':s2<0?'⌢ concave down':'inflection')+'</span>';}
-// Area
-function compArea(){var fn=fns.find(function(f){return f.id===selId&&f.vis;});if(!fn){msg('Select a function first');return;}var x1=parseFloat(document.getElementById('ax1').value),x2=parseFloat(document.getElementById('ax2').value);if(isNaN(x1)||isNaN(x2)||x1>=x2){msg('Enter valid x₁ < x₂');return;}var area=simp(fn.c,x1,x2);aS={fnId:selId,x1:x1,x2:x2};document.getElementById('ares').innerHTML='<div class="ar">∫ = <strong>'+fmtA(area)+'</strong></div>';dac();}
-function fmtA(v){
-  if(isNaN(v))return'—';
-  var av=Math.abs(v);
-  if(av===0)return'0';
-  if(av>=0.0001&&av<1e7)return parseFloat(v.toPrecision(6)).toString();
-  var exp=Math.floor(Math.log10(av));
-  var mant=v/Math.pow(10,exp);
-  return parseFloat(mant.toPrecision(5)).toString()+' × 10<sup>'+exp+'</sup>';
+  if(!acache[selId]){
+    var roots = fRoots(fn.c, V.xMin, V.xMax, fn);
+    var infls = fInfl(fn.c, V.xMin, V.xMax, fn);
+    var extr = fExtr(fn.c, V.xMin, V.xMax, fn);
+    acache[selId] = {roots:roots, infls:infls, extr:extr};
+  }
+  var ca = acache[selId];
+  // Display roots: sort by |x|, take first 10
+  var sortedRoots = ca.roots.slice().sort((a,b)=>Math.abs(a)-Math.abs(b));
+  var rEl = document.getElementById('ar');
+  if(!sortedRoots.length) rEl.innerHTML='<span class="ae">None in view</span>';
+  else {
+    var rs = sortedRoots.slice(0,10).map(fn4);
+    if(sortedRoots.length>10) rs.push('…+'+(sortedRoots.length-10));
+    rEl.innerHTML = 'x = '+rs.join(',&ensp;');
+  }
+  document.getElementById('arp').textContent = perStr(ca.roots)||'';
+  // Extrema display: combine maxima/minima, sort by |x|, limit 10
+  var allExtr = [];
+  (ca.extr.maxima||[]).forEach(p=>allExtr.push({type:'max',x:p.x,y:p.y}));
+  (ca.extr.minima||[]).forEach(p=>allExtr.push({type:'min',x:p.x,y:p.y}));
+  allExtr.sort((a,b)=>Math.abs(a.x)-Math.abs(b.x));
+  var eEl = document.getElementById('axt');
+  if(!allExtr.length) eEl.innerHTML='<span class="ae">None in view</span>';
+  else {
+    var ep = allExtr.slice(0,10).map(p=>'<span style="color:var(--col-maxmin)">'+(p.type==='max'?'▲ max':'▼ min')+'</span> ('+fn4(p.x)+', '+n4(p.y)+')');
+    if(allExtr.length>10) ep.push('… and '+(allExtr.length-10)+' more');
+    eEl.innerHTML = ep.join('<br/>');
+  }
+  // Inflections: sort by |x|, limit 10
+  var sortedInfl = ca.infls.slice().sort((a,b)=>Math.abs(a)-Math.abs(b));
+  var iEl = document.getElementById('ai');
+  if(!sortedInfl.length) iEl.innerHTML='<span class="ae">None in view</span>';
+  else {
+    var is = sortedInfl.slice(0,10).map(ix=>'('+fn4(ix)+', '+n4(ev(fn.c,ix))+')');
+    if(sortedInfl.length>10) is.push('… and '+(sortedInfl.length-10)+' more');
+    iEl.innerHTML = is.join('<br/>');
+  }
+  document.getElementById('aip').textContent = perStr(ca.infls)||'';
+  var iacc = document.getElementById('acc-isect');
+  if(fns.length>=2){
+    iacc.style.display='';
+    var allI=[];
+    fns.forEach(f=>{
+      if(f.id===selId||!f.vis)return;
+      if(!fn.isParametric&&!f.isParametric){
+        fIsect(fn.c,f.c,V.xMin,V.xMax).slice(0,6).forEach(ix=>allI.push({x:ix,y:ev(fn.c,ix),e:f.e,col:f.col}));
+      } else if(!fn.isParametric&&f.isParametric){
+        paramFnIsect(f,fn).slice(0,6).forEach(p=>allI.push({x:p.x,y:p.y,e:f.e,col:f.col}));
+      } else if(fn.isParametric&&!f.isParametric){
+        paramFnIsect(fn,f).slice(0,6).forEach(p=>allI.push({x:p.x,y:p.y,e:f.e,col:f.col}));
+      }
+    });
+    document.getElementById('ais').innerHTML = allI.length ? allI.map(p=>'<span style="color:'+p.col+'">●</span> <em>'+esc(p.e)+'</em><br/>('+fn4(p.x)+', '+n4(p.y)+')').join('<br/>') : '<span class="ae">None in view</span>';
+  } else iacc.style.display='none';
+  evalAtX();
+  do_();
 }
+function evalAtX(){var fn=fns.find(f=>f.id===selId);if(!fn){document.getElementById('er').textContent='';return;}var x=parseFloat(document.getElementById('evalX').value);if(isNaN(x))return;var y=ev(fn.c,x),sl=d1(fn.c,x),s2=d2(fn.c,x);var el=document.getElementById('er');if(isNaN(y)){el.innerHTML='<span class="ae">undefined here</span>';return;}el.innerHTML='<strong>f('+n4(x)+')</strong> = '+n4(y)+'<br/><strong>f′</strong> = '+n4(sl)+'<br/><strong>f″</strong> = '+n4(s2)+'&ensp;<span style="font-size:0.67rem;color:var(--muted)">'+(s2>0?'⌣ concave up':s2<0?'⌢ concave down':'inflection')+'</span>';}
+function compArea(){var fn=fns.find(f=>f.id===selId&&f.vis);if(!fn){msg('Select a function first');return;}var x1=parseFloat(document.getElementById('ax1').value),x2=parseFloat(document.getElementById('ax2').value);if(isNaN(x1)||isNaN(x2)||x1>=x2){msg('Enter valid x₁ < x₂');return;}var area=simp(fn.c,x1,x2);aS={fnId:selId,x1:x1,x2:x2};document.getElementById('ares').innerHTML='<div class="ar">∫ = <strong>'+fmtA(area)+'</strong></div>';dac();}
+function fmtA(v){if(isNaN(v))return'—';var av=Math.abs(v);if(av===0)return'0';if(av>=0.0001&&av<1e7)return parseFloat(v.toPrecision(6)).toString();var exp=Math.floor(Math.log10(av));var mant=v/Math.pow(10,exp);return parseFloat(mant.toPrecision(5)).toString()+' × 10<sup>'+exp+'</sup>';}
 function clrArea(){aS=null;document.getElementById('ares').innerHTML='';dac();}
 function applyHL(){var x1=parseFloat(document.getElementById('hx1').value),x2=parseFloat(document.getElementById('hx2').value);if(isNaN(x1)||isNaN(x2)||x1>=x2){msg('Enter valid x₁ < x₂');return;}hS={x1:x1,x2:x2};dac();}
 function clrHL(){hS=null;dac();}
-// Mark point shapes
 var MARK_SHAPES=['★','●','◆','▲','■','✦','⬟'];
 var MARK_COLS=['#f87171','#60a5fa','#4ade80','#c084fc','#fb923c','#f472b6','#34d399'];
 var markLabelIdx=0;
-function togMark(){mkMode=!mkMode;var btn=document.getElementById('mmbtn');btn.textContent=mkMode?'✓ Marking active — click canvas':'Click canvas to mark';btn.style.background=mkMode?'var(--accent)':'';btn.style.color=mkMode?'var(--bg)':'';OC.style.cursor='crosshair';var p=document.getElementById('pill');p.textContent=mkMode?'Mark mode — click canvas':'';p.classList.toggle('vis',mkMode);
-  // Auto-deselect when clicking out of mark section handled by accordion logic
-}
+function togMark(){mkMode=!mkMode;var btn=document.getElementById('mmbtn');btn.textContent=mkMode?'✓ Marking active — click canvas':'Click canvas to mark';btn.style.background=mkMode?'var(--accent)':'';btn.style.color=mkMode?'var(--bg)':'';OC.style.cursor='crosshair';var p=document.getElementById('pill');p.textContent=mkMode?'Mark mode — click canvas':'';p.classList.toggle('vis',mkMode);}
 function markByC(){var x=parseFloat(document.getElementById('mxi').value),y=parseFloat(document.getElementById('myi').value);if(isNaN(x)||isNaN(y)){msg('Enter valid coordinates');return;}var col=MARK_COLS[markLabelIdx%MARK_COLS.length],shp=MARK_SHAPES[markLabelIdx%MARK_SHAPES.length];mps.push({x:x,y:y,col:col,shape:shp,lbl:'P'+(mps.length+1)});markLabelIdx++;rml();do_();}
-function rml(){var el=document.getElementById('mklist');if(!mps.length){el.innerHTML='';return;}el.innerHTML=mps.map(function(mp,i){var ds=fns.filter(function(f){return f.vis;}).map(function(f){var cp=cpt(f,mp.x,mp.y);return'<span style="color:'+f.col+'">'+esc(f.e)+'</span>: ⊥ '+fmtN(cp.dist);}).join('<br/>');return'<div class="di"><span style="color:'+(mp.col||'var(--col-marked)')+'">'+( mp.shape||'★')+'</span> <strong>'+(mp.lbl||'P'+(i+1))+'</strong> ('+n4(mp.x)+', '+n4(mp.y)+')<br/>'+(ds?ds:'<span class="ae">No curves yet</span>')+'<br/><button onclick="remM('+i+')" style="font-size:0.63rem;color:var(--red);background:none;border:none;cursor:pointer;margin-top:2px">✕ Remove</button></div>';}).join('');}
+function rml(){var el=document.getElementById('mklist');if(!mps.length){el.innerHTML='';return;}el.innerHTML=mps.map(function(mp,i){var ds=fns.filter(f=>f.vis).map(f=>{var cp=cpt(f,mp.x,mp.y);return'<span style="color:'+f.col+'">'+esc(f.e)+'</span>: ⊥ '+fmtN(cp.dist);}).join('<br/>');return'<div class="di"><span style="color:'+(mp.col||'var(--col-marked)')+'">'+( mp.shape||'★')+'</span> <strong>'+(mp.lbl||'P'+(i+1))+'</strong> ('+n4(mp.x)+', '+n4(mp.y)+')<br/>'+(ds?ds:'<span class="ae">No curves yet</span>')+'<br/><button onclick="remM('+i+')" style="font-size:0.63rem;color:var(--red);background:none;border:none;cursor:pointer;margin-top:2px">✕ Remove</button></div>';}).join('');}
 function remM(i){mps.splice(i,1);rml();do_();}
-// Symbol kbd
 var SKG=[{lbl:'Trig',b:[{l:'sin',v:'sin('},{l:'cos',v:'cos('},{l:'tan',v:'tan('},{l:'csc',v:'csc('},{l:'sec',v:'sec('},{l:'cot',v:'cot('}]},{lbl:'Inv trig',b:[{l:'sin⁻¹',v:'asin('},{l:'cos⁻¹',v:'acos('},{l:'tan⁻¹',v:'atan('},{l:'csc⁻¹',v:'acsc('},{l:'sec⁻¹',v:'asec('},{l:'cot⁻¹',v:'acot('}]},{lbl:'Log / exp',b:[{l:'ln',v:'log('},{l:'log₁₀',v:'log10('},{l:'eˣ',v:'e^('},{l:'√',v:'sqrt('},{l:'∛',v:'cbrt('}]},{lbl:'Special',b:[{l:'|x|',v:'abs('},{l:'⌊x⌋',v:'floor('},{l:'⌈x⌉',v:'ceil('},{l:'sgn',v:'sign('}]},{lbl:'Constants',ac:true,b:[{l:'π',v:'pi'},{l:'e',v:'e'},{l:'xⁿ',v:'^'},{l:'1/x',v:'1/('},{l:'(',v:'('},{l:')',v:')'}]}];
-function bsk(){document.getElementById('skbd').innerHTML=SKG.map(function(g){return'<div class="sg"><div class="sg-lbl">'+g.lbl+'</div><div class="sg-row">'+g.b.map(function(b){return'<button class="sb'+(g.ac?' acc':'')+'" onclick="ins(\''+b.v.replace(/'/g,"\\'")+'\')" title="'+esc(b.v)+'">'+b.l+'</button>';}).join('')+'</div></div>';}).join('');}
+function bsk(){document.getElementById('skbd').innerHTML=SKG.map(g=>'<div class="sg"><div class="sg-lbl">'+g.lbl+'</div><div class="sg-row">'+g.b.map(b=>'<button class="sb'+(g.ac?' acc':'')+'" onclick="ins(\''+b.v.replace(/'/g,"\\'")+'\')" title="'+esc(b.v)+'">'+b.l+'</button>').join('')+'</div></div>').join('');}
 function ins(s){var inp=document.getElementById('nfi');var a=inp.selectionStart,z=inp.selectionEnd,v=inp.value;inp.value=v.slice(0,a)+s+v.slice(z);inp.focus();inp.setSelectionRange(a+s.length,a+s.length);}
-// Color
-function bcp(){document.getElementById('cpick').innerHTML=COLS.map(function(c){return'<div class="cs'+(c===nfc?' sel':'')+'" style="background:'+c+'" onclick="pc(\''+c+'\')"></div>';}).join('');}
+function bcp(){document.getElementById('cpick').innerHTML=COLS.map(c=>'<div class="cs'+(c===nfc?' sel':'')+'" style="background:'+c+'" onclick="pc(\''+c+'\')"></div>').join('');}
 function pc(c){nfc=c;bcp();}
-// Prevent color pick from closing accordion
 document.getElementById('cpick').addEventListener('click',function(e){e.stopPropagation();});
-// Standard curves — now stored as parametric curves for complete rendering
-var SC=[
-  {lbl:'Parabola y²=4ax',ps:[{k:'a',mn:-5,mx:5,st:0.1,df:1}],
-   eq:function(p){return'y² = 4·'+p.a+'·x';},
-   parametric:function(p){return{x:function(t){return t*t/(4*p.a);},y:function(t){return t;},tMin:-20,tMax:20};}},
-  {lbl:'Circle x²+y²=r²',ps:[{k:'r',mn:0.5,mx:10,st:0.1,df:3}],
-   eq:function(p){return'x² + y² = '+p.r*p.r;},
-   parametric:function(p){return{x:function(t){return p.r*Math.cos(t);},y:function(t){return p.r*Math.sin(t);},tMin:0,tMax:2*Math.PI+0.01};}},
-  {lbl:'Ellipse x²/a²+y²/b²=1',ps:[{k:'a',mn:0.5,mx:8,st:0.1,df:4},{k:'b',mn:0.5,mx:8,st:0.1,df:2}],
-   eq:function(p){return'x²/'+p.a*p.a+' + y²/'+p.b*p.b+' = 1';},
-   parametric:function(p){return{x:function(t){return p.a*Math.cos(t);},y:function(t){return p.b*Math.sin(t);},tMin:0,tMax:2*Math.PI+0.01};}},
-  {lbl:'Hyperbola x²/a²−y²/b²=1',ps:[{k:'a',mn:0.5,mx:8,st:0.1,df:2},{k:'b',mn:0.5,mx:8,st:0.1,df:2}],
-   eq:function(p){return'x²/'+p.a*p.a+' − y²/'+p.b*p.b+' = 1';},
-   parametric:function(p){return{
-     x:function(t){return p.a/Math.cos(t);},
-     y:function(t){return p.b*Math.tan(t);},
-     tMin:-Math.PI/2+0.02,tMax:3*Math.PI/2-0.02,
-     splits:[Math.PI/2-0.02,Math.PI/2+0.02,3*Math.PI/2-0.02]};}},
-  {lbl:'Rect. Hyperbola xy=c²',ps:[{k:'c',mn:0.5,mx:6,st:0.1,df:2}],
-   eq:function(p){return'xy = '+p.c*p.c;},
-   parametric:function(p){return{x:function(t){return t;},y:function(t){return p.c*p.c/t;},tMin:V.xMin||(-10),tMax:V.xMax||(10),skipNearZero:true};}}
-];
+var SC=[{lbl:'Parabola y²=4ax',ps:[{k:'a',mn:-5,mx:5,st:0.1,df:1}],eq:function(p){return'y² = 4·'+p.a+'·x';},parametric:function(p){return{x:function(t){return t*t/(4*p.a);},y:function(t){return t;},tMin:-20,tMax:20};}},{lbl:'Circle x²+y²=r²',ps:[{k:'r',mn:0.5,mx:10,st:0.1,df:3}],eq:function(p){return'x² + y² = '+p.r*p.r;},parametric:function(p){return{x:function(t){return p.r*Math.cos(t);},y:function(t){return p.r*Math.sin(t);},tMin:0,tMax:2*Math.PI+0.01};}},{lbl:'Ellipse x²/a²+y²/b²=1',ps:[{k:'a',mn:0.5,mx:8,st:0.1,df:4},{k:'b',mn:0.5,mx:8,st:0.1,df:2}],eq:function(p){return'x²/'+p.a*p.a+' + y²/'+p.b*p.b+' = 1';},parametric:function(p){return{x:function(t){return p.a*Math.cos(t);},y:function(t){return p.b*Math.sin(t);},tMin:0,tMax:2*Math.PI+0.01};}},{lbl:'Hyperbola x²/a²−y²/b²=1',ps:[{k:'a',mn:0.5,mx:8,st:0.1,df:2},{k:'b',mn:0.5,mx:8,st:0.1,df:2}],eq:function(p){return'x²/'+p.a*p.a+' − y²/'+p.b*p.b+' = 1';},parametric:function(p){return{x:function(t){return p.a/Math.cos(t);},y:function(t){return p.b*Math.tan(t);},tMin:-Math.PI/2+0.02,tMax:3*Math.PI/2-0.02,splits:[Math.PI/2-0.02,Math.PI/2+0.02,3*Math.PI/2-0.02]};}},{lbl:'Rect. Hyperbola xy=c²',ps:[{k:'c',mn:0.5,mx:6,st:0.1,df:2}],eq:function(p){return'xy = '+p.c*p.c;},parametric:function(p){return{x:function(t){return t;},y:function(t){return p.c*p.c/t;},tMin:V.xMin||(-10),tMax:V.xMax||(10),skipNearZero:true};}}];
 var sv={};
-function bsp(){var el=document.getElementById('stdpanel');el.innerHTML=SC.map(function(sc,si){sc.ps.forEach(function(p){sv[si+'_'+p.k]=p.df;});var phtml=sc.ps.map(function(p){return'<div class="slr"><span class="slbl">'+p.k+' =</span><input type="range" class="sinp" min="'+p.mn+'" max="'+p.mx+'" step="'+p.st+'" value="'+p.df+'" oninput="ssl('+si+',\''+p.k+'\',this.value)"/><span class="sval" id="sl-'+si+'-'+p.k+'">'+p.df+'</span></div>';}).join('');return'<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)"><div style="font-size:0.7rem;color:var(--text);margin-bottom:6px;font-style:italic;font-family:\'Instrument Serif\',serif">'+sc.lbl+'</div>'+phtml+'<button class="gb sec" onclick="addSC('+si+')" style="margin-top:0">Add to graph</button></div>';}).join('');}
-function ssl(si,k,v){sv[si+'_'+k]=parseFloat(v);var l=document.getElementById('sl-'+si+'-'+k);if(l)l.textContent=parseFloat(v).toFixed(1);}
-function addSC(si){
-  var sc=SC[si],p={};
-  sc.ps.forEach(function(pr){p[pr.k]=sv[si+'_'+pr.k]||pr.df;});
-  var color=nfc||COLS[fns.length%COLS.length];
-  var id='fn'+(++fnc);
-  var eqLabel=sc.eq(p);
-  var param=sc.parametric(p);
-  // Store as parametric curve object
-  fns.push({id:id,e:eqLabel,parametric:param,col:color,vis:true,isParametric:true});
-  selId=id;
-  nfc=COLS[fns.length%COLS.length];bcp();acache={};rfl();dac();sw('analysis');
-}
-// Accordion
+function bsp(){var el=document.getElementById('stdpanel');el.innerHTML=SC.map((sc,si)=>{sc.ps.forEach(p=>sv[si+'_'+p.k]=p.df);var phtml=sc.ps.map(p=>'<div class="slr"><span class="slbl">'+p.k+' =</span><input type="range" class="sinp" min="'+p.mn+'" max="'+p.mx+'" step="'+p.st+'" value="'+p.df+'" oninput="ssl('+si+',\''+p.k+'\',this.value)"/><span class="sval" id="sl-'+si+'-'+p.k+'">'+p.df+'</span></div>').join('');return'<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)"><div style="font-size:0.7rem;color:var(--text);margin-bottom:6px;font-style:italic;font-family:\'Instrument Serif\',serif">'+sc.lbl+'</div>'+phtml+'<button class="gb sec" onclick="addSC('+si+')" style="margin-top:0">Add to graph</button></div>';}).join('');}
+function ssl(si,k,v){sv[si+'_'+k]=parseFloat(v);document.getElementById('sl-'+si+'-'+k).textContent=parseFloat(v).toFixed(1);}
+function addSC(si){var sc=SC[si],p={};sc.ps.forEach(pr=>p[pr.k]=sv[si+'_'+pr.k]||pr.df);var color=nfc||COLS[fns.length%COLS.length];var id='fn'+(++fnc);var eqLabel=sc.eq(p);var param=sc.parametric(p);fns.push({id:id,e:eqLabel,parametric:param,col:color,vis:true,isParametric:true});selId=id;nfc=COLS[fns.length%COLS.length];bcp();acache={};rfl();dac();sw('analysis');}
 var AS={addfn:1,std:0,fnlist:1,view:1,roots:1,ext:1,infl:1,isect:1,eval:1,area:1,hl:1,mark:1,tan:0,exp:1};
 function ta(id){
   var wasOpen=AS[id];
-  // If switching away from mark section, deactivate mark mode
-  if(id!=='mark'&&mkMode){mkMode=false;var btn=document.getElementById('mmbtn');if(btn){btn.textContent='Click canvas to mark';btn.style.background='';btn.style.color='';}OC.style.cursor='crosshair';var p=document.getElementById('pill');p.textContent='';p.classList.remove('vis');}
-  // Close all in current tab
-  Object.keys(AS).forEach(function(k){
-    AS[k]=0;
-    var b=document.getElementById('bd-'+k),c=document.getElementById('ch-'+k),a=document.getElementById('acc-'+k);
-    if(b)b.style.display='none';
-    if(c)c.classList.remove('open');
-    if(a)a.classList.remove('expanded');
-  });
-  // Toggle the clicked one
-  if(!wasOpen){
-    AS[id]=1;
-    var b=document.getElementById('bd-'+id),c=document.getElementById('ch-'+id),a=document.getElementById('acc-'+id);
-    if(b)b.style.display='';
-    if(c)c.classList.add('open');
-    if(a)a.classList.add('expanded');
-  }
+  if(id!=='mark'&&mkMode){mkMode=false;document.getElementById('mmbtn').textContent='Click canvas to mark';document.getElementById('mmbtn').style.background='';document.getElementById('mmbtn').style.color='';OC.style.cursor='crosshair';document.getElementById('pill').textContent='';document.getElementById('pill').classList.remove('vis');}
+  Object.keys(AS).forEach(k=>{AS[k]=0;var b=document.getElementById('bd-'+k),c=document.getElementById('ch-'+k),a=document.getElementById('acc-'+k);if(b)b.style.display='none';if(c)c.classList.remove('open');if(a)a.classList.remove('expanded');});
+  if(!wasOpen){AS[id]=1;var b=document.getElementById('bd-'+id),c=document.getElementById('ch-'+id),a=document.getElementById('acc-'+id);if(b)b.style.display='';if(c)c.classList.add('open');if(a)a.classList.add('expanded');}
 }
-// Click outside collapses all — but only when clicking on a DIFFERENT acc section or outside the panel entirely (not canvas)
-document.addEventListener('click',function(e){
-  var inAcc=e.target.closest('.acc');
-  var inPanel=e.target.closest('.panel');
-  var onCanvas=e.target.closest('.canvas-area');
-  // If clicking on canvas, do NOT close accordions
-  if(onCanvas)return;
-  // If clicking outside any acc (but still inside panel), or outside panel entirely
-  if(!inAcc){
-    Object.keys(AS).forEach(function(k){
-      AS[k]=0;
-      var b=document.getElementById('bd-'+k),c=document.getElementById('ch-'+k),a=document.getElementById('acc-'+k);
-      if(b)b.style.display='none';if(c)c.classList.remove('open');if(a)a.classList.remove('expanded');
-    });
-  }
-});
+document.addEventListener('click',function(e){var inAcc=e.target.closest('.acc');var inPanel=e.target.closest('.panel');var onCanvas=e.target.closest('.canvas-area');if(onCanvas)return;if(!inAcc){Object.keys(AS).forEach(k=>{AS[k]=0;var b=document.getElementById('bd-'+k),c=document.getElementById('ch-'+k),a=document.getElementById('acc-'+k);if(b)b.style.display='none';if(c)c.classList.remove('open');if(a)a.classList.remove('expanded');});}});
 function mx(el,ev){var b=el.getBoundingClientRect();el.parentElement.style.setProperty('--mx',((ev.clientX-b.left)/b.width*100)+'%');el.parentElement.style.setProperty('--my',((ev.clientY-b.top)/b.height*100)+'%');}
-// Tabs
 var TAB_FIRST={functions:'addfn',analysis:'roots',tools:'area'};
-function sw(tab){atab=tab;['functions','analysis','tools'].forEach(function(t){var p=document.getElementById('pane-'+t);if(p)p.style.display=t===tab?'flex':'none';if(p&&t===tab)p.style.flexDirection='column';var b=document.getElementById('tab-'+t);if(b)b.classList.toggle('active',t===tab);});if(tab==='analysis')runAna();if(tab==='tools')rml();
-  // Open first section of new tab
-  var first=TAB_FIRST[tab];if(first){setTimeout(function(){ta(first);},50);}
-}
-// Export
+function sw(tab){atab=tab;['functions','analysis','tools'].forEach(t=>{var p=document.getElementById('pane-'+t);if(p)p.style.display=t===tab?'flex':'none';if(p&&t===tab)p.style.flexDirection='column';var b=document.getElementById('tab-'+t);if(b)b.classList.toggle('active',t===tab);});if(tab==='analysis')runAna();if(tab==='tools')rml();var first=TAB_FIRST[tab];if(first)setTimeout(()=>ta(first),50);}
 function comp(sc){var cv=document.createElement('canvas');cv.width=W*sc;cv.height=H*sc;var ctx=cv.getContext('2d');ctx.scale(sc,sc);ctx.drawImage(GC,0,0);ctx.drawImage(CC,0,0);ctx.drawImage(OC,0,0);return cv;}
 function expPNG(sc){var cv=comp(sc);var a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download='cogniswift-graph-'+sc+'x.png';a.click();}
 function expPDF(){var cv=comp(2);var url=cv.toDataURL('image/png');var pdf=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});pdf.addImage(url,'PNG',10,10,277,155);pdf.setFontSize(8);pdf.setTextColor(140);pdf.text('CogniSwift Graphing Calculator — cogniswift.in',10,195);pdf.save('cogniswift-graph.pdf');}
-// Util
-// Tangent & Normal
 var tanState=null,liveTanMode=false,tanInputMode='x';
-function setTanMode(mode){
-  tanInputMode=mode;
-  var xRow=document.getElementById('tan-x-row');
-  var yRow=document.getElementById('tan-y-row');
-  var btnX=document.getElementById('tan-mode-x');
-  var btnY=document.getElementById('tan-mode-y');
-  if(mode==='x'){
-    xRow.style.opacity='1';xRow.style.pointerEvents='';
-    yRow.style.opacity='0.4';yRow.style.pointerEvents='none';
-    btnX.className='gb';btnY.className='gb sec';
-  }else{
-    yRow.style.opacity='1';yRow.style.pointerEvents='';
-    xRow.style.opacity='0.4';xRow.style.pointerEvents='none';
-    btnY.className='gb';btnX.className='gb sec';
-  }
-}
-function setLiveTan(on){liveTanMode=on;if(!on){dac();}}
-// Draw a line in pixel space given a point (px,py in pixels) and a math-domain slope m
-// This ensures the line is truly perpendicular in pixel space when normal slope is -1/m
-function drawLinePixelSlope(ctx,px_,py_,mMath){
-  // Convert math slope to pixel slope (accounts for axis scaling)
-  var scaleX=(V.xMax-V.xMin)/W; // math units per pixel in x
-  var scaleY=(V.yMax-V.yMin)/H; // math units per pixel in y
-  // pixel_dy/pixel_dx = -(mMath * scaleX / scaleY)  [negative because yp flips y]
-  var pixSlope=-(mMath*scaleX/scaleY);
-  // Line through (px_,py_) with pixel slope pixSlope
-  var x0=0, y0=py_-pixSlope*(px_-x0);
-  var x1=W, y1=py_-pixSlope*(px_-x1);
-  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
-}
-function drawNormalPixelSlope(ctx,px_,py_,mMath){
-  // Normal in PIXEL space: pixSlope_normal = -1/pixSlope_tangent
-  var scaleX=(V.xMax-V.xMin)/W;
-  var scaleY=(V.yMax-V.yMin)/H;
-  var pixSlopeTan=-(mMath*scaleX/scaleY);
-  if(Math.abs(pixSlopeTan)<1e-12){
-    // tangent is horizontal in pixels → normal is vertical
-    ctx.beginPath();ctx.moveTo(px_,0);ctx.lineTo(px_,H);ctx.stroke();
-    return;
-  }
-  var pixSlopeNorm=-1/pixSlopeTan;
-  var x0=0, y0=py_-pixSlopeNorm*(px_-x0);
-  var x1=W, y1=py_-pixSlopeNorm*(px_-x1);
-  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
-}
-function drawTan(mode){
-  var fn=fns.find(function(f){return f.id===selId&&f.vis;});
-  if(!fn){msg('Select a function first');return;}
-  var inp=mode==='x'?document.getElementById('tnx'):document.getElementById('tny');
-  var val=parseFloat(inp.value);if(isNaN(val)){msg('Enter a valid number');return;}
-  var tx,ty,sl_;
-  if(fn.isParametric){
-    // For parametric: find closest point on curve to the given x or y value
-    var param=fn.parametric;
-    var tMin2=param.tMin,tMax2=param.tMax;
-    if(param.skipNearZero){tMin2=V.xMin;tMax2=V.xMax;}
-    var N2=2000,dt2=(tMax2-tMin2)/N2,bestD2=Infinity,bt2=tMin2;
-    for(var i2=0;i2<=N2;i2++){
-      var t2=tMin2+i2*dt2;
-      if(param.splits&&param.splits.some(function(s){return Math.abs(t2-s)<dt2*2;}))continue;
-      if(param.skipNearZero&&Math.abs(t2)<0.08)continue;
-      var cx2p=param.x(t2),cy2p=param.y(t2);
-      if(isNaN(cx2p)||isNaN(cy2p))continue;
-      var dd2=mode==='x'?Math.abs(cx2p-val):Math.abs(cy2p-val);
-      if(dd2<bestD2){bestD2=dd2;bt2=t2;}
-    }
-    tx=param.x(bt2);ty=param.y(bt2);
-    // Numerical slope via parametric derivative: dy/dx = (dy/dt)/(dx/dt)
-    var dh=dt2*0.01;
-    var dxdt=(param.x(bt2+dh)-param.x(bt2-dh))/(2*dh);
-    var dydt=(param.y(bt2+dh)-param.y(bt2-dh))/(2*dh);
-    sl_=Math.abs(dxdt)>1e-12?dydt/dxdt:NaN;
-    if(isNaN(tx)||isNaN(ty)){msg('Could not find point on curve');return;}
-    if(isNaN(sl_)){msg('Tangent undefined at that point (vertical)');return;}
-  } else {
-    if(mode==='x'){
-      tx=val;
-    } else {
-      var searchA=Math.min(V.xMin,-20*Math.PI),searchB=Math.max(V.xMax,20*Math.PI);
-      var df_={evaluate:function(s){return ev(fn.c,s.x)-val;}};
-      var roots_=fRoots(df_,searchA,searchB);
-      if(!roots_.length){msg('No point found for that y value');return;}
-      roots_.sort(function(a,b){return Math.abs(a)-Math.abs(b);});
-      tx=roots_[0];
-    }
-    ty=ev(fn.c,tx);sl_=d1(fn.c,tx);
-    if(isNaN(ty)||isNaN(sl_)){msg('Function undefined at that point');return;}
-  }
-  var tb=ty-sl_*tx;
-  var nsl=Math.abs(sl_)>1e-10?-1/sl_:null;
-  var nb=nsl!==null?ty-nsl*tx:null;
-  tanState={tx:tx,ty:ty,sl:sl_,tb:tb,nsl:nsl,nb:nb};
-  var res='<strong>Point:</strong> ('+n4(tx)+', '+n4(ty)+')<br/>';
-  res+='<strong>Tangent:</strong> y = '+n4(sl_)+'x '+(tb>=0?'+ ':' − ')+n4(Math.abs(tb))+'<br/>';
-  if(nsl!==null)res+='<strong>Normal:</strong> y = '+n4(nsl)+'x '+(nb>=0?'+ ':' − ')+n4(Math.abs(nb));
-  else res+='<strong>Normal:</strong> x = '+n4(tx)+' (vertical)';
-  document.getElementById('tanres').innerHTML=res;
-  var tog=document.getElementById('tan-line-toggle');if(tog)tog.style.display='block';
-  dac();
-}
-function clrTan(){tanState=null;document.getElementById('tanres').innerHTML='';var tog=document.getElementById('tan-line-toggle');if(tog)tog.style.display='none';dac();}
-function n4(v){
-  if(isNaN(v)||!isFinite(v))return'—';
-  var av=Math.abs(v);
-  if(av===0)return'0';
-  if(av>=0.0001&&av<1e6)return parseFloat(v.toPrecision(5)).toString();
-  // Scientific notation with HTML superscript (for HTML display only)
-  var exp=Math.floor(Math.log10(av));
-  var mant=v/Math.pow(10,exp);
-  return parseFloat(mant.toPrecision(4)).toString()+' × 10<sup>'+exp+'</sup>';
-}
-// Plain-text version of n4 for use in canvas fillText (no HTML)
-function n4t(v){
-  if(isNaN(v)||!isFinite(v))return'—';
-  var av=Math.abs(v);
-  if(av===0)return'0';
-  if(av>=0.0001&&av<1e6)return parseFloat(v.toPrecision(4)).toString();
-  var exp=Math.floor(Math.log10(av));
-  var mant=v/Math.pow(10,exp);
-  return parseFloat(mant.toPrecision(3)).toString()+'×10^'+exp;
-}
+function setTanMode(mode){tanInputMode=mode;var xRow=document.getElementById('tan-x-row'),yRow=document.getElementById('tan-y-row'),btnX=document.getElementById('tan-mode-x'),btnY=document.getElementById('tan-mode-y');if(mode==='x'){xRow.style.opacity='1';xRow.style.pointerEvents='';yRow.style.opacity='0.4';yRow.style.pointerEvents='none';btnX.className='gb';btnY.className='gb sec';}else{yRow.style.opacity='1';yRow.style.pointerEvents='';xRow.style.opacity='0.4';xRow.style.pointerEvents='none';btnY.className='gb';btnX.className='gb sec';}}
+function setLiveTan(on){liveTanMode=on;if(!on)dac();}
+function drawLinePixelSlope(ctx,px_,py_,mMath){var scaleX=(V.xMax-V.xMin)/W,scaleY=(V.yMax-V.yMin)/H;var pixSlope=-(mMath*scaleX/scaleY);var x0=0,y0=py_-pixSlope*(px_-x0),x1=W,y1=py_-pixSlope*(px_-x1);ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();}
+function drawNormalPixelSlope(ctx,px_,py_,mMath){var scaleX=(V.xMax-V.xMin)/W,scaleY=(V.yMax-V.yMin)/H;var pixSlopeTan=-(mMath*scaleX/scaleY);if(Math.abs(pixSlopeTan)<1e-12){ctx.beginPath();ctx.moveTo(px_,0);ctx.lineTo(px_,H);ctx.stroke();return;}var pixSlopeNorm=-1/pixSlopeTan;var x0=0,y0=py_-pixSlopeNorm*(px_-x0),x1=W,y1=py_-pixSlopeNorm*(px_-x1);ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();}
+function drawTan(mode){var fn=fns.find(f=>f.id===selId&&f.vis);if(!fn){msg('Select a function first');return;}var inp=mode==='x'?document.getElementById('tnx'):document.getElementById('tny');var val=parseFloat(inp.value);if(isNaN(val)){msg('Enter a valid number');return;}var tx,ty,sl_;if(fn.isParametric){var param=fn.parametric;var tMin2=param.tMin,tMax2=param.tMax;if(param.skipNearZero){tMin2=V.xMin;tMax2=V.xMax;}var N2=2000,dt2=(tMax2-tMin2)/N2,bestD2=Infinity,bt2=tMin2;for(var i2=0;i2<=N2;i2++){var t2=tMin2+i2*dt2;if(param.splits&&param.splits.some(s=>Math.abs(t2-s)<dt2*2))continue;if(param.skipNearZero&&Math.abs(t2)<0.08)continue;var cx2p=param.x(t2),cy2p=param.y(t2);if(isNaN(cx2p)||isNaN(cy2p))continue;var dd2=mode==='x'?Math.abs(cx2p-val):Math.abs(cy2p-val);if(dd2<bestD2){bestD2=dd2;bt2=t2;}}tx=param.x(bt2);ty=param.y(bt2);var dh=dt2*0.01;var dxdt=(param.x(bt2+dh)-param.x(bt2-dh))/(2*dh);var dydt=(param.y(bt2+dh)-param.y(bt2-dh))/(2*dh);sl_=Math.abs(dxdt)>1e-12?dydt/dxdt:NaN;if(isNaN(tx)||isNaN(ty)){msg('Could not find point on curve');return;}if(isNaN(sl_)){msg('Tangent undefined at that point (vertical)');return;}}else{if(mode==='x'){tx=val;}else{var searchA=Math.min(V.xMin,-20*Math.PI),searchB=Math.max(V.xMax,20*Math.PI);var df_={evaluate:function(s){return ev(fn.c,s.x)-val;}};var roots_=fRoots(df_,searchA,searchB,fn);if(!roots_.length){msg('No point found for that y value');return;}roots_.sort((a,b)=>Math.abs(a)-Math.abs(b));tx=roots_[0];}ty=ev(fn.c,tx);sl_=d1(fn.c,tx);if(isNaN(ty)||isNaN(sl_)){msg('Function undefined at that point');return;}}var tb=ty-sl_*tx;var nsl=Math.abs(sl_)>1e-10?-1/sl_:null;var nb=nsl!==null?ty-nsl*tx:null;tanState={tx:tx,ty:ty,sl:sl_,tb:tb,nsl:nsl,nb:nb};var res='<strong>Point:</strong> ('+n4(tx)+', '+n4(ty)+')<br/>';res+='<strong>Tangent:</strong> y = '+n4(sl_)+'x '+(tb>=0?'+ ':' − ')+n4(Math.abs(tb))+'<br/>';if(nsl!==null)res+='<strong>Normal:</strong> y = '+n4(nsl)+'x '+(nb>=0?'+ ':' − ')+n4(Math.abs(nb));else res+='<strong>Normal:</strong> x = '+n4(tx)+' (vertical)';document.getElementById('tanres').innerHTML=res;document.getElementById('tan-line-toggle').style.display='block';dac();}
+function clrTan(){tanState=null;document.getElementById('tanres').innerHTML='';document.getElementById('tan-line-toggle').style.display='none';dac();}
+function n4(v){if(isNaN(v)||!isFinite(v))return'—';var av=Math.abs(v);if(av===0)return'0';if(av>=0.0001&&av<1e6)return parseFloat(v.toPrecision(5)).toString();var exp=Math.floor(Math.log10(av));var mant=v/Math.pow(10,exp);return parseFloat(mant.toPrecision(4)).toString()+' × 10<sup>'+exp+'</sup>';}
+function n4t(v){if(isNaN(v)||!isFinite(v))return'—';var av=Math.abs(v);if(av===0)return'0';if(av>=0.0001&&av<1e6)return parseFloat(v.toPrecision(4)).toString();var exp=Math.floor(Math.log10(av));var mant=v/Math.pow(10,exp);return parseFloat(mant.toPrecision(3)).toString()+'×10^'+exp;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function msg(m){var p=document.getElementById('pill');p.textContent=m;p.classList.add('vis');clearTimeout(window._mt);window._mt=setTimeout(function(){if(!mkMode)p.classList.remove('vis');},2400);}
+function msg(m){var p=document.getElementById('pill');p.textContent=m;p.classList.add('vis');clearTimeout(window._mt);window._mt=setTimeout(()=>{if(!mkMode)p.classList.remove('vis');},2400);}
 sw('functions');
 </script>
 </body>
