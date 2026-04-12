@@ -719,16 +719,19 @@ function fIsect(f1, f2, a, b){
       // (bisection on diff guarantees this if no discontinuity, but let's be sure)
       if (Math.abs(y1 - y2) > 1.0) continue;
 
-      // Gate E: verify neither function is discontinuous very near the root
-      // by checking that f1 and f2 are stable on both sides
-      var eps2 = dx * 0.05;
+      // Gate E: verify neither function is near a pole at the root
+      // Use a tight ±1e-4 stability check: if either function's value or
+      // its variation over 2e-4 is large, we are near an asymptote.
+      var eps2 = 1e-4;
       var f1m = ev(f1, r - eps2), f1p = ev(f1, r + eps2);
       var f2m = ev(f2, r - eps2), f2p = ev(f2, r + eps2);
       if (isNaN(f1m) || isNaN(f1p) || isNaN(f2m) || isNaN(f2p)) continue;
-      if (Math.abs(f1m) > 1e5 || Math.abs(f1p) > 1e5 ||
-          Math.abs(f2m) > 1e5 || Math.abs(f2p) > 1e5) continue;
+      if (Math.abs(f1m) > 1e4 || Math.abs(f1p) > 1e4 ||
+          Math.abs(f2m) > 1e4 || Math.abs(f2p) > 1e4) continue;
+      // Variation check: if either function swings more than 200 over 2e-4, pole nearby
+      if (Math.abs(f1p - f1m) > 200 || Math.abs(f2p - f2m) > 200) continue;
 
-      if (!rs.some(v => Math.abs(v - r) < 1e-5)) rs.push(r);
+      if (!rs.some(v => Math.abs(v - r) < 5e-4)) rs.push(r);
     }
     prev = cur;
   }
@@ -830,12 +833,31 @@ function paramFnIsect(paramFn,regularFn){
   var tMin=param.tMin,tMax=param.tMax;
   if(param.skipNearZero){tMin=V.xMin;tMax=V.xMax;}
   var N=1500,dt=(tMax-tMin)/N,pts=[],prev=NaN;
+
+  // Helper: returns true if the regular function is near a pole at x
+  // (value is huge OR varies massively over a tiny neighbourhood)
+  function nearPole(x){
+    var fv=ev(regularFn.c,x);
+    if(isNaN(fv)||!isFinite(fv))return true;
+    if(Math.abs(fv)>1e4)return true;
+    // stability check: sample at ±small step
+    var eps=1e-4;
+    var fl=ev(regularFn.c,x-eps),fr=ev(regularFn.c,x+eps);
+    if(isNaN(fl)||isNaN(fr))return true;
+    if(Math.abs(fl)>1e4||Math.abs(fr)>1e4)return true;
+    // if function jumps by > 200 over 2*eps, it's near a pole
+    if(Math.abs(fr-fl)>200)return true;
+    return false;
+  }
+
   for(var i=0;i<=N;i++){
     var t=tMin+i*dt;
     if(param.splits&&param.splits.some(function(s){return Math.abs(t-s)<dt*2;})){prev=NaN;continue;}
     if(param.skipNearZero&&Math.abs(t)<0.08){prev=NaN;continue;}
     var px2=param.x(t),py2=param.y(t);
     if(isNaN(px2)||isNaN(py2)||!isFinite(px2)||!isFinite(py2)){prev=NaN;continue;}
+    // Skip if regular function is near a pole at this x
+    if(nearPole(px2)){prev=NaN;continue;}
     var fy=ev(regularFn.c,px2);
     if(isNaN(fy)||!isFinite(fy)){prev=NaN;continue;}
     var diff=py2-fy;
@@ -851,7 +873,8 @@ function paramFnIsect(paramFn,regularFn){
       }
       var tm=(lo+hi)/2;
       var ix=param.x(tm),iy=param.y(tm);
-      if(!isNaN(ix)&&!isNaN(iy)&&isFinite(ix)&&isFinite(iy))
+      // Final gate: regular function must be well-behaved at the found x
+      if(!isNaN(ix)&&!isNaN(iy)&&isFinite(ix)&&isFinite(iy)&&!nearPole(ix))
         pts.push({x:ix,y:iy});
     }
     prev=diff;
@@ -910,17 +933,23 @@ function do_(){
         if(!fi.vis||!fj.vis)continue;
         var ipts=[];
         if(!fi.isParametric&&!fj.isParametric){
-          ipts=fIsect(fi.c,fj.c,V.xMin,V.xMax).slice(0,10).map(function(ix){return{x:ix,y:ev(fi.c,ix)};}).filter(function(p){return!isNaN(p.y)&&isFinite(p.y);});
+          ipts=fIsect(fi.c,fj.c,V.xMin,V.xMax).map(function(ix){return{x:ix,y:ev(fi.c,ix)};}).filter(function(p){return!isNaN(p.y)&&isFinite(p.y);});
         } else if(!fi.isParametric&&fj.isParametric){
-          ipts=paramFnIsect(fj,fi).slice(0,10);
+          ipts=paramFnIsect(fj,fi);
         } else if(fi.isParametric&&!fj.isParametric){
-          ipts=paramFnIsect(fi,fj).slice(0,10);
+          ipts=paramFnIsect(fi,fj);
         }
-        // Deduplicate intersection points before drawing (removes ghost/duplicate marks)
+        // Sort by |x| (closest to origin first) then limit to 10 for canvas
+        ipts.sort(function(a,b){return Math.abs(a.x)-Math.abs(b.x);});
+        ipts=ipts.slice(0,10);
+        // Deduplicate in pixel-space (8px tolerance) — kills ALL ghost marks near real ones
         var dedupIpts = [];
         ipts.forEach(function(p){
-          if(!dedupIpts.some(function(q){ return Math.abs(q.x-p.x)<0.01 && Math.abs(q.y-p.y)<0.01; }))
-            dedupIpts.push(p);
+          var ppx2=xp(p.x), ppy2=yp(p.y);
+          if(!dedupIpts.some(function(q){
+            var dx2=xp(q.x)-ppx2, dy2=yp(q.y)-ppy2;
+            return Math.sqrt(dx2*dx2+dy2*dy2)<8;
+          })) dedupIpts.push(p);
         });
         dedupIpts.forEach(function(p){
           var pp=xp(p.x),ipp=yp(p.y);
@@ -1091,20 +1120,110 @@ function runAna(){
     fns.forEach(f=>{
       if(f.id===selId||!f.vis)return;
       if(!fn.isParametric&&!f.isParametric){
-        fIsect(fn.c,f.c,V.xMin,V.xMax).slice(0,6).forEach(ix=>allI.push({x:ix,y:ev(fn.c,ix),e:f.e,col:f.col}));
+        // Collect ALL intersections (no slice) — sort by |x| later
+        fIsect(fn.c,f.c,V.xMin,V.xMax).forEach(ix=>allI.push({x:ix,y:ev(fn.c,ix),e:f.e,col:f.col}));
       } else if(!fn.isParametric&&f.isParametric){
-        paramFnIsect(f,fn).slice(0,6).forEach(p=>allI.push({x:p.x,y:p.y,e:f.e,col:f.col}));
+        paramFnIsect(f,fn).forEach(p=>allI.push({x:p.x,y:p.y,e:f.e,col:f.col}));
       } else if(fn.isParametric&&!f.isParametric){
-        paramFnIsect(fn,f).slice(0,6).forEach(p=>allI.push({x:p.x,y:p.y,e:f.e,col:f.col}));
+        paramFnIsect(fn,f).forEach(p=>allI.push({x:p.x,y:p.y,e:f.e,col:f.col}));
       }
     });
-    document.getElementById('ais').innerHTML = allI.length ? allI.map(p=>'<span style="color:'+p.col+'">●</span> <em>'+esc(p.e)+'</em><br/>('+fn4(p.x)+', '+n4(p.y)+')').join('<br/>') : '<span class="ae">None in view</span>';
+    // Deduplicate allI by math-distance, then sort by |x| (closest to origin first), limit 10
+    var allIDedup=[];
+    allI.forEach(function(p){
+      if(!allIDedup.some(function(q){return Math.abs(q.x-p.x)<5e-4&&Math.abs(q.y-p.y)<5e-4;}))
+        allIDedup.push(p);
+    });
+    allIDedup.sort(function(a,b){return Math.abs(a.x)-Math.abs(b.x);});
+    var allIShow=allIDedup.slice(0,10);
+    document.getElementById('ais').innerHTML = allIShow.length
+      ? allIShow.map(p=>'<span style="color:'+p.col+'">●</span> <em>'+esc(p.e)+'</em><br/>('+fn4(p.x)+', '+n4(p.y)+')').join('<br/>')
+        + (allIDedup.length>10?'<br/><span style="color:var(--muted);font-size:0.82rem">…+'+(allIDedup.length-10)+' more</span>':'')
+      : '<span class="ae">None in view</span>';
   } else iacc.style.display='none';
   evalAtX();
   do_();
 }
 function evalAtX(){var fn=fns.find(f=>f.id===selId);if(!fn){document.getElementById('er').textContent='';return;}var x=parseFloat(document.getElementById('evalX').value);if(isNaN(x))return;var y=ev(fn.c,x),sl=d1(fn.c,x),s2=d2(fn.c,x);var el=document.getElementById('er');if(isNaN(y)){el.innerHTML='<span class="ae">undefined here</span>';return;}el.innerHTML='<strong>f('+n4(x)+')</strong> = '+n4(y)+'<br/><strong>f′</strong> = '+n4(sl)+'<br/><strong>f″</strong> = '+n4(s2)+'&ensp;<span style="font-size:0.67rem;color:var(--muted)">'+(s2>0?'⌣ concave up':s2<0?'⌢ concave down':'inflection')+'</span>';}
-function compArea(){var fn=fns.find(f=>f.id===selId&&f.vis);if(!fn){msg('Select a function first');return;}var x1=parseFloat(document.getElementById('ax1').value),x2=parseFloat(document.getElementById('ax2').value);if(isNaN(x1)||isNaN(x2)||x1>=x2){msg('Enter valid x₁ < x₂');return;}var area=simp(fn.c,x1,x2);aS={fnId:selId,x1:x1,x2:x2};document.getElementById('ares').innerHTML='<div class="ar">∫ = <strong>'+fmtA(area)+'</strong></div>';dac();}
+function compArea(){
+  var fn=fns.find(f=>f.id===selId&&f.vis);
+  if(!fn){msg('Select a function first');return;}
+  var x1=parseFloat(document.getElementById('ax1').value),x2=parseFloat(document.getElementById('ax2').value);
+  if(isNaN(x1)||isNaN(x2)||x1>=x2){msg('Enter valid x₁ < x₂');return;}
+
+  // ── Asymptote/pole detection in [x1, x2] ──────────────────────────────────
+  // Dense scan with low thresholds to catch tan/cot/sec/csc poles reliably.
+  // tan(x) near π/2 reaches ~600 at distance 0.001 from the pole, so we use
+  // magnitude threshold 200 and jump threshold 50 to catch it safely.
+  var ASCAN = 10000;  // dense: step ≈ 0.0004 for [-2,2]
+  var adx = (x2 - x1) / ASCAN;
+  var poleLocations = [];
+  var prevVal = ev(fn.c, x1);
+  for (var ai = 1; ai <= ASCAN; ai++){
+    var ax = x1 + ai * adx;
+    var aVal = ev(fn.c, ax);
+    // Undefined/infinite sample → pole nearby
+    if (isNaN(aVal) || !isFinite(aVal)){
+      var poleLoc = ax - adx / 2;
+      if (!poleLocations.some(function(p){ return Math.abs(p - poleLoc) < adx * 10; }))
+        poleLocations.push(poleLoc);
+    }
+    // Sign-change jump between adjacent samples → asymptote crossing
+    // Threshold 50: typical smooth functions vary by < 5 per step; any jump > 50 is a pole
+    else if (!isNaN(prevVal) && isFinite(prevVal) && prevVal * aVal < 0 && Math.abs(aVal - prevVal) > 50){
+      var poleLoc2 = ax - adx / 2;
+      if (!poleLocations.some(function(p){ return Math.abs(p - poleLoc2) < adx * 10; }))
+        poleLocations.push(poleLoc2);
+    }
+    // Single sample magnitude too large → near pole
+    else if (Math.abs(aVal) > 200){
+      if (!poleLocations.some(function(p){ return Math.abs(p - ax) < adx * 10; }))
+        poleLocations.push(ax);
+    }
+    prevVal = aVal;
+  }
+  // Merge pole locations that are within adx*15 of each other (keeps one representative per pole)
+  var merged = [];
+  poleLocations.sort(function(a,b){return a-b;});
+  poleLocations.forEach(function(p){
+    if(!merged.length || Math.abs(p - merged[merged.length-1]) > adx * 15) merged.push(p);
+  });
+  poleLocations = merged;
+
+  if (poleLocations.length > 0){
+    // Format pole locations nicely
+    var poleStrs = poleLocations.slice(0,5).map(function(p){
+      return '<strong>' + fn4(p) + '</strong>';
+    });
+    var poleList = poleStrs.join(', ');
+    var moreNote = poleLocations.length > 5
+      ? ' and ' + (poleLocations.length - 5) + ' more'
+      : '';
+    var errHTML =
+      '<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);' +
+      'border-radius:8px;padding:10px 12px;margin-top:6px;font-size:0.88rem;line-height:1.7;">' +
+      '<span style="color:var(--red);font-weight:600;">∫ Undefined — improper integral</span><br/>' +
+      '<span style="color:var(--muted)">The function has vertical asymptote' +
+      (poleLocations.length > 1 ? 's' : '') + ' at x ≈ ' + poleList + moreNote +
+      ' within [' + fn4(x1) + ', ' + fn4(x2) + '].</span><br/>' +
+      '<span style="color:var(--muted)">The integral diverges to ±∞ at ' +
+      (poleLocations.length > 1 ? 'these points' : 'this point') +
+      ', so no finite area exists over this interval. ' +
+      'Try splitting the interval or choosing bounds that avoid the asymptote' +
+      (poleLocations.length > 1 ? 's.' : '.') + '</span>' +
+      '</div>';
+    document.getElementById('ares').innerHTML = errHTML;
+    aS = null; // do not shade — undefined integral
+    dac();
+    return;
+  }
+
+  // ── No asymptotes found — compute normally ─────────────────────────────────
+  var area = simp(fn.c, x1, x2);
+  aS = {fnId:selId, x1:x1, x2:x2};
+  document.getElementById('ares').innerHTML = '<div class="ar">∫ = <strong>' + fmtA(area) + '</strong></div>';
+  dac();
+}
 function fmtA(v){if(isNaN(v))return'—';var av=Math.abs(v);if(av===0)return'0';if(av>=0.0001&&av<1e7)return parseFloat(v.toPrecision(6)).toString();var exp=Math.floor(Math.log10(av));var mant=v/Math.pow(10,exp);return parseFloat(mant.toPrecision(5)).toString()+' × 10<sup>'+exp+'</sup>';}
 function clrArea(){aS=null;document.getElementById('ares').innerHTML='';dac();}
 function applyHL(){var x1=parseFloat(document.getElementById('hx1').value),x2=parseFloat(document.getElementById('hx2').value);if(isNaN(x1)||isNaN(x2)||x1>=x2){msg('Enter valid x₁ < x₂');return;}hS={x1:x1,x2:x2};dac();}
