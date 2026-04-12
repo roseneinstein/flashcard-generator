@@ -448,6 +448,21 @@ function fRoots(f, a, b, fnObj) {
     }
     prev = cur;
   }
+  // ── Direct x=0 probe ──────────────────────────────────────────────────────
+  // sign-change detector misses roots where f lands exactly on 0 at a sample point.
+  if (a <= 0 && b >= 0 && !rs.some(function(v){ return Math.abs(v) < 1e-4; })){
+    var f0 = ev(f, 0);
+    if (!isNaN(f0) && isFinite(f0) && Math.abs(f0) < 0.5){
+      var der0 = d1(f, 0);
+      var fl0 = ev(f, -1e-4), fr0 = ev(f, 1e-4);
+      if (!isNaN(fl0) && !isNaN(fr0) &&
+          Math.abs(fl0) < 1e5 && Math.abs(fr0) < 1e5 &&
+          !isNaN(der0) && isFinite(der0) &&
+          Math.abs(der0) < (hasAsymp ? 1e6 : 1e8)){
+        rs.push(0);
+      }
+    }
+  }
   return rs.sort((a,b) => a - b);
 }
 
@@ -539,6 +554,46 @@ function fExtr(f, a, b, fnObj){
       }
     }
     prevD = curD;
+  }
+  // ── Direct x=0 probe ──────────────────────────────────────────────────────
+  // sign-change on d1 misses stationary points exactly at x=0.
+  if (a <= 0 && b >= 0){
+    var alreadyAt0 = mx.some(function(p){ return Math.abs(p.x) < 1e-3; }) ||
+                     mn.some(function(p){ return Math.abs(p.x) < 1e-3; });
+    if (!alreadyAt0){
+      var y0e = ev(f, 0);
+      // Gate A: function must be finite
+      if (!isNaN(y0e) && isFinite(y0e) && Math.abs(y0e) < 1e6){
+        // Gate B — THE KEY GATE: f'(0) must be ≈ 0 (stationary point condition)
+        var d1at0 = d1(f, 0);
+        if (!isNaN(d1at0) && isFinite(d1at0) && Math.abs(d1at0) < 1e-3){
+          // Gate C: continuity — f must not jump near 0
+          var eps0e = 1e-4;
+          var fl0e = ev(f, -eps0e), fr0e = ev(f, eps0e);
+          if (!isNaN(fl0e) && !isNaN(fr0e) &&
+              Math.abs(fl0e) < 1e6 && Math.abs(fr0e) < 1e6 &&
+              Math.abs(fl0e - fr0e) < 500 * (Math.abs(y0e) + 1)){
+            // Gate D: d1 must not explode near 0 (not asymptote)
+            if (Math.abs(d1at0) < 1e4){
+              // Classify via d2
+              var d2v0 = d2(f, 0);
+              if (!isNaN(d2v0)){
+                if (d2v0 < -1e-8) mx.push({x:0, y:y0e});
+                else if (d2v0 > 1e-8) mn.push({x:0, y:y0e});
+                else {
+                  // d2 ≈ 0: check sign of d1 on both sides
+                  var d1l0 = d1(f, -eps0e * 5), d1r0 = d1(f, eps0e * 5);
+                  if (!isNaN(d1l0) && !isNaN(d1r0)){
+                    if (d1l0 > 0 && d1r0 < 0) mx.push({x:0, y:y0e});
+                    else if (d1l0 < 0 && d1r0 > 0) mn.push({x:0, y:y0e});
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
   return {maxima: mx, minima: mn};
 }
@@ -637,6 +692,56 @@ function fInfl(f, a, b, fnObj){
     }
     prev = cur;
   }
+  // ── Remove near-zero numerical noise from main sweep ──────────────────────
+  // For functions like x^3, the main sweep may have found a point very near 0
+  // (e.g. 0.001348) caused by floating-point rounding in d2's finite-difference.
+  // These are not genuine independent inflections; x=0 is the real one.
+  // Rule: if the view range includes 0, remove any point r where |r| < 1e-2 AND
+  // f itself doesn't have a special feature there that's separate from x=0
+  // (i.e. d2 at that point just reflects the x=0 inflection with FP drift).
+  // We do this by checking: if two candidate inflections are within 1e-2 of each other
+  // AND one is nearer to 0 than the other, keep only the one closest to 0.
+  if (a <= 0 && b >= 0){
+    // Find groups of near-zero points (|x| < 5e-2) and keep only the one closest to 0
+    var nearZeroGroup = rs.filter(function(v){ return Math.abs(v) < 5e-2; });
+    if (nearZeroGroup.length > 1){
+      // Keep only the minimum |x| representative
+      var minAbs = nearZeroGroup.reduce(function(best,v){ return Math.abs(v)<Math.abs(best)?v:best; }, nearZeroGroup[0]);
+      rs = rs.filter(function(v){ return Math.abs(v) >= 5e-2 || v === minAbs; });
+    }
+  }
+
+  // ── Direct x=0 probe ──────────────────────────────────────────────────────
+  // sign-change on d2 misses inflections exactly at x=0 (e.g. x^3).
+  if (a <= 0 && b >= 0 && !rs.some(function(v){ return Math.abs(v) < 1e-3; })){
+    var fy0i = ev(f, 0);
+    var fp0i = d1(f, 0);
+    var d2at0i = d2(f, 0);
+    if (!isNaN(fy0i) && isFinite(fy0i) && Math.abs(fy0i) < 1e5 &&
+        !isNaN(fp0i) && isFinite(fp0i) && Math.abs(fp0i) < 1e4 &&
+        !isNaN(d2at0i) && isFinite(d2at0i) && Math.abs(d2at0i) < 1e3){
+      // Verify d2 genuinely changes sign — use step wide enough to avoid FP noise
+      var epsi0 = Math.max(step * 2, 1e-4);
+      var d2L0 = d2(f, -epsi0), d2R0 = d2(f, epsi0);
+      if (!isNaN(d2L0) && !isNaN(d2R0) &&
+          isFinite(d2L0) && isFinite(d2R0) &&
+          d2L0 * d2R0 < 0){               // opposite signs → genuine sign change
+        // Gate: f continuous near 0
+        var fl0i = ev(f, -epsi0), fr0i = ev(f, epsi0);
+        if (!isNaN(fl0i) && !isNaN(fr0i) &&
+            Math.abs(fl0i) < 1e4 && Math.abs(fr0i) < 1e4){
+          rs.push(0);
+          // Remove any near-zero numerical noise neighbours that the main sweep added
+          // (e.g. x=0.001348 for x^3) — keep only x=0 from this neighbourhood
+          for (var ki = rs.length - 2; ki >= 0; ki--){
+            if (ki !== rs.length - 1 && Math.abs(rs[ki]) < 1e-3 && rs[ki] !== 0){
+              rs.splice(ki, 1);
+            }
+          }
+        }
+      }
+    }
+  }
   return rs.sort((a,b) => a - b);
 }
 
@@ -734,6 +839,26 @@ function fIsect(f1, f2, a, b){
       if (!rs.some(v => Math.abs(v - r) < 5e-4)) rs.push(r);
     }
     prev = cur;
+  }
+  // ── Direct x=0 probe ──────────────────────────────────────────────────────
+  // If f1(0) = f2(0) exactly, sign-change detector misses this intersection.
+  if (a <= 0 && b >= 0 && !rs.some(function(v){ return Math.abs(v) < 5e-4; })){
+    var y1_0 = ev(f1, 0), y2_0 = ev(f2, 0);
+    if (!isNaN(y1_0) && !isNaN(y2_0) &&
+        isFinite(y1_0) && isFinite(y2_0) &&
+        Math.abs(y1_0) < 1e5 && Math.abs(y2_0) < 1e5 &&
+        Math.abs(y1_0 - y2_0) < 1e-6){   // tight: functions must actually agree
+      // Continuity: neither must be near a pole
+      var eps0s = 1e-4;
+      var f1m0 = ev(f1, -eps0s), f1p0 = ev(f1, eps0s);
+      var f2m0 = ev(f2, -eps0s), f2p0 = ev(f2, eps0s);
+      if (!isNaN(f1m0) && !isNaN(f1p0) && !isNaN(f2m0) && !isNaN(f2p0) &&
+          Math.abs(f1m0) < 1e4 && Math.abs(f1p0) < 1e4 &&
+          Math.abs(f2m0) < 1e4 && Math.abs(f2p0) < 1e4 &&
+          Math.abs(f1p0 - f1m0) < 200 && Math.abs(f2p0 - f2m0) < 200){
+        rs.push(0);
+      }
+    }
   }
   return rs.sort((a,b) => a - b);
 }
