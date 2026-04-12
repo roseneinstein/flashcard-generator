@@ -336,17 +336,92 @@ function simp(f,a,b){var N=Math.min(2000,Math.max(200,Math.round(Math.abs(b-a)*1
 /* ---------- IMPROVED ROOT / EXTREMA / INFLECTION DETECTION ---------- */
 // Check if expression likely has asymptotes (tan, cot, sec, csc, division by x)
 function exprHasAsymptotes(expr) {
-  return /(tan|cot|sec|csc|1\s*\/\s*x|\/\s*x)/i.test(expr);
+  // Detect expressions that commonly produce vertical asymptotes or poles.
+  // Includes tan/cot/sec/csc, any division, log of x (log(x) undefined at x≤0).
+  return /(tan|cot|sec|csc|\/\s*x|\/\s*\(|log\s*\(|log10\s*\()/.test(expr);
+}
+
+// Detect if x is a removable discontinuity of f:
+// f(x) is undefined (NaN) but both one-sided limits exist and are equal.
+// Returns {isRemovable:true, limit:L} or {isRemovable:false}.
+function checkRemovableDisc(f, x){
+  var fExact = ev(f, x);
+  if (!isNaN(fExact)) return {isRemovable: false}; // f is defined here
+  // Try to compute one-sided limits
+  var eps = 1e-6;
+  var trials = [1e-5, 1e-6, 1e-7];
+  var Ls = [], Rs = [];
+  for (var ti = 0; ti < trials.length; ti++){
+    var h = trials[ti];
+    var fl = ev(f, x - h), fr = ev(f, x + h);
+    if (!isNaN(fl) && isFinite(fl)) Ls.push(fl);
+    if (!isNaN(fr) && isFinite(fr)) Rs.push(fr);
+  }
+  if (!Ls.length || !Rs.length) return {isRemovable: false};
+  var limL = Ls[Ls.length - 1]; // finest h value
+  var limR = Rs[Rs.length - 1];
+  // Limits must agree to within a small tolerance
+  if (Math.abs(limL - limR) > 1e-3 * (Math.abs(limL) + Math.abs(limR) + 1))
+    return {isRemovable: false};
+  return {isRemovable: true, limit: (limL + limR) / 2};
 }
 
 // Enhanced root finder: filters out asymptote false-positives
+// Uses adaptive density near x=0 for rapidly oscillating functions
 function fRoots(f, a, b, fnObj) {
-  var N = 5000;  // higher sampling
-  var dx = (b - a) / N;
-  var prev = ev(f, a);
+  // Helper: run one sweep of the root-finding algorithm on [lo,hi] with N steps
+  // and append valid roots into rs (in-place).
+  function sweep(lo, hi, N, rs, hasAsymp){
+    var dx = (hi - lo) / N;
+    var prev = ev(f, lo);
+    for (var i = 1; i <= N; i++) {
+      var xr = lo + i * dx;
+      var cur = ev(f, xr);
+      if (!isNaN(prev) && !isNaN(cur) && prev * cur < 0){
+        var l2 = xr - dx, h2 = xr, fa = prev;
+        for (var j = 0; j < 60; j++){
+          var m = (l2 + h2) / 2;
+          var fm = ev(f, m);
+          if (isNaN(fm)) break;
+          if (fa * fm <= 0) h2 = m; else l2 = m;
+          if (h2 - l2 < 1e-12) break;
+        }
+        var r = (l2 + h2) / 2;
+        var fv = ev(f, r);
+        if (isNaN(fv) || Math.abs(fv) > 0.5){ prev = cur; continue; }
+        if (isNaN(fv)){
+          var rd2 = checkRemovableDisc(f, r);
+          if (rd2.isRemovable && Math.abs(rd2.limit) > 0.1){ prev = cur; continue; }
+        }
+        var der = d1(f, r);
+        if (Math.abs(der) > (hasAsymp ? 1e6 : 1e8)){ prev = cur; continue; }
+        var fl = ev(f, r - dx * 0.02), fr2 = ev(f, r + dx * 0.02);
+        if (isNaN(fl) || isNaN(fr2) || Math.abs(fl) > 1e5 || Math.abs(fr2) > 1e5){ prev = cur; continue; }
+        if (!rs.some(function(v){ return Math.abs(v - r) < 1e-5; })) rs.push(r);
+      }
+      prev = cur;
+    }
+  }
+
+  var N = 5000;
   var rs = [];
   var hasAsymp = fnObj && fnObj.hasAsymp;
   var asympThreshold = 1e6;
+
+  // Main sweep over full range
+  // (We keep the original loop below for the main body, but prepend adaptive zones)
+
+  // Adaptive dense sweep near x=0 (handles sin(1/x), tan(x)/x etc.)
+  // 3000 extra steps on [-0.5, 0.5] ∩ [a, b] — 6x denser than main sweep
+  var zlo = Math.max(a, -0.5), zhi = Math.min(b, 0.5);
+  if (zhi > zlo) sweep(zlo, zhi, 3000, rs, hasAsymp);
+  // Also dense near x=0 at finer scale: [-0.1, 0.1]
+  var zzlo = Math.max(a, -0.1), zzhi = Math.min(b, 0.1);
+  if (zzhi > zzlo) sweep(zzlo, zzhi, 2000, rs, hasAsymp);
+
+  // Now main sweep (continues with original loop structure)
+  var dx = (b - a) / N;
+  var prev = ev(f, a);
   for (var i = 1; i <= N; i++) {
     var xr = a + i * dx;
     var cur = ev(f, xr);
@@ -363,6 +438,11 @@ function fRoots(f, a, b, fnObj) {
       var fv = ev(f, r);
       // Reject if value too large or NaN
       if (isNaN(fv) || Math.abs(fv) > 0.5) { prev = cur; continue; }
+      // Reject if this is a removable discontinuity (limit ≠ 0 means not a root)
+      if (isNaN(fv)){
+        var rd2 = checkRemovableDisc(f, r);
+        if (rd2.isRemovable && Math.abs(rd2.limit) > 0.1){ prev = cur; continue; }
+      }
       // Check derivative magnitude to reject asymptotes
       var der = d1(f, r);
       if (Math.abs(der) > (hasAsymp ? 1e6 : 1e8)) { prev = cur; continue; }
@@ -378,7 +458,9 @@ function fRoots(f, a, b, fnObj) {
 
 function perStr(pts){
   if(pts.length<3)return null;
-  var g=[];for(var i=1;i<pts.length;i++)g.push(Math.abs(pts[i]-pts[i-1]));
+  // Sort by value (not |x|) before computing gaps — caller may sort by |x|
+  var sorted=pts.slice().sort(function(a,b){return a-b;});
+  var g=[];for(var i=1;i<sorted.length;i++)g.push(Math.abs(sorted[i]-sorted[i-1]));
   var mn=g.reduce((a,b)=>a+b)/g.length;
   var va=g.reduce((a,v)=>a+(v-mn)*(v-mn),0)/g.length;
   if(Math.sqrt(va)<mn*0.06){
@@ -397,18 +479,72 @@ function perStr(pts){
   return null;
 }
 
-// Extrema: uses root finder on derivative with higher N
+// Extrema: direct derivative sign-change scan — never blocked by asymptotes
+// Uses fine grid that scans ACROSS undefined zones (like tan's poles)
 function fExtr(f, a, b, fnObj){
-  var df = { evaluate: function(s){ return d1(f, s.x); } };
-  var dr = fRoots(df, a, b, fnObj); // already filtered
+  var N = 8000; // fine enough to catch extrema in each period of tan, csc, etc.
+  var dx = (b - a) / N;
   var mx = [], mn = [];
-  dr.forEach(function(x){
-    var d = d2(f, x);
-    var y = ev(f, x);
-    if (isNaN(y) || !isFinite(y) || Math.abs(y) > 1e6) return;
-    if (d < -1e-6) mx.push({x:x, y:y});
-    else if (d > 1e-6) mn.push({x:x, y:y});
-  });
+  var prevD = d1(f, a);
+
+  for (var i = 1; i <= N; i++){
+    var xr = a + i * dx;
+    var curD = d1(f, xr);
+
+    if (!isNaN(prevD) && !isNaN(curD) && prevD * curD < 0){
+      // Bisect for the exact stationary point
+      var lo = xr - dx, hi = xr, fa = prevD;
+      for (var j = 0; j < 60; j++){
+        var m = (lo + hi) / 2;
+        var fm = d1(f, m);
+        if (isNaN(fm)) break;
+        if (fa * fm <= 0) hi = m; else lo = m;
+        if (hi - lo < 1e-12) break;
+      }
+      var xs = (lo + hi) / 2;
+
+      // Gate 1: f must be defined and finite at the stationary point
+      var y = ev(f, xs);
+      if (isNaN(y) || !isFinite(y) || Math.abs(y) > 1e6){ prevD = curD; continue; }
+
+      // Gate 2: continuity check — f must not jump wildly near xs
+      var eps = Math.max(dx * 0.1, 1e-6);
+      var fl = ev(f, xs - eps), fr2 = ev(f, xs + eps);
+      if (isNaN(fl) || isNaN(fr2)) { prevD = curD; continue; }
+      if (Math.abs(fl) > 1e6 || Math.abs(fr2) > 1e6) { prevD = curD; continue; }
+      // If f jumps hugely across xs it is an asymptote region, not a peak
+      if (Math.abs(fl - fr2) > 500 * (Math.abs(y) + 1)) { prevD = curD; continue; }
+
+      // Gate 3: derivative must truly cross zero (not just be noisy)
+      var d1xs = d1(f, xs);
+      if (!isNaN(d1xs) && Math.abs(d1xs) > 1e4) { prevD = curD; continue; }
+
+      // Gate 4: removable-discontinuity / limit point guard
+      // If f is undefined exactly at xs but the limit exists from both sides,
+      // this is a removable singularity — label it specially, do NOT count as extremum
+      var fExact = ev(f, xs);
+      if (isNaN(fExact)){
+        // both-side limit exists but point itself is hole — skip as extremum
+        prevD = curD; continue;
+      }
+
+      // Classify via second derivative
+      var d2v = d2(f, xs);
+      if (!isNaN(d2v)){
+        if (d2v < -1e-8) mx.push({x:xs, y:y});
+        else if (d2v > 1e-8) mn.push({x:xs, y:y});
+        // if d2 ≈ 0, try sign of d1 on both sides
+        else {
+          var d1l = d1(f, xs - eps * 5), d1r = d1(f, xs + eps * 5);
+          if (!isNaN(d1l) && !isNaN(d1r)){
+            if (d1l > 0 && d1r < 0) mx.push({x:xs, y:y});
+            else if (d1l < 0 && d1r > 0) mn.push({x:xs, y:y});
+          }
+        }
+      }
+    }
+    prevD = curD;
+  }
   return {maxima: mx, minima: mn};
 }
 
@@ -488,9 +624,19 @@ function fInfl(f, a, b, fnObj){
       var d2r = d2(f, r);
       if (Math.abs(d2r) > 1e3) continue;
 
-      // Gate 5: noise filter — reject near-zero f values for non-asymptotic functions
-      // (avoids phantom inflections in near-flat regions)
-      if (Math.abs(fy) < 1e-7 && !hasAsymp) continue;
+      // Gate 5: noise filter — reject near-zero f values in near-flat regions.
+      // Two-part test:
+      //   (a) If |f(r)| < 1e-7 AND f is also tiny on both sides → machine-epsilon noise.
+      //       (This kills Gaussian-tail phantoms like sin(x)*exp(-x²) far from origin.)
+      //   (b) If |f(r)| < 1e-10 always reject regardless of hasAsymp.
+      if (Math.abs(fy) < 1e-10) continue; // absolute floor
+      if (Math.abs(fy) < 1e-7 && !hasAsymp){
+        var fWL = ev(f, r - step * 5), fWR = ev(f, r + step * 5);
+        var fW2L = ev(f, r - step * 20), fW2R = ev(f, r + step * 20);
+        var maxAround = Math.max(Math.abs(fWL), Math.abs(fWR), Math.abs(fW2L||0), Math.abs(fW2R||0));
+        // If entire neighbourhood is tiny, it is floating-point noise — skip
+        if (maxAround < 1e-6) continue;
+      }
 
       if (!rs.some(function(v){ return Math.abs(v - r) < 1e-4; })) rs.push(r);
     }
@@ -727,13 +873,34 @@ function do_(){
       ox_.fillText(fn4(rx),pp,yp(0)+8);ox_.restore();
     });
     if(ca.extr){
-      (ca.extr.maxima||[]).forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,true);
-        ox_.save();ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='bottom';
-        ox_.fillText('('+fn4(p.x)+', '+n4t(p.y)+')',pp,yp(p.y)-8);ox_.restore();
+      (ca.extr.maxima||[]).forEach(function(p){
+        var pp=xp(p.x);if(pp<0||pp>W)return;
+        var rd=checkRemovableDisc(sf.c,p.x);
+        if(rd.isRemovable){
+          // Draw open circle for removable singularity / limit
+          ox_.save();ox_.strokeStyle=cMM;ox_.lineWidth=2;ox_.globalAlpha=0.85;
+          ox_.beginPath();ox_.arc(pp,yp(rd.limit),6,0,Math.PI*2);ox_.stroke();
+          ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='bottom';
+          ox_.fillText('lim('+fn4(p.x)+')='+n4t(rd.limit),pp,yp(rd.limit)-8);ox_.restore();
+        } else {
+          gtri(ox_,pp,yp(p.y),5,cMM,true);
+          ox_.save();ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='bottom';
+          ox_.fillText('('+fn4(p.x)+', '+n4t(p.y)+')',pp,yp(p.y)-8);ox_.restore();
+        }
       });
-      (ca.extr.minima||[]).forEach(function(p){var pp=xp(p.x);if(pp<0||pp>W)return;gtri(ox_,pp,yp(p.y),5,cMM,false);
-        ox_.save();ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='top';
-        ox_.fillText('('+fn4(p.x)+', '+n4t(p.y)+')',pp,yp(p.y)+8);ox_.restore();
+      (ca.extr.minima||[]).forEach(function(p){
+        var pp=xp(p.x);if(pp<0||pp>W)return;
+        var rd=checkRemovableDisc(sf.c,p.x);
+        if(rd.isRemovable){
+          ox_.save();ox_.strokeStyle=cMM;ox_.lineWidth=2;ox_.globalAlpha=0.85;
+          ox_.beginPath();ox_.arc(pp,yp(rd.limit),6,0,Math.PI*2);ox_.stroke();
+          ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='top';
+          ox_.fillText('lim('+fn4(p.x)+')='+n4t(rd.limit),pp,yp(rd.limit)+8);ox_.restore();
+        } else {
+          gtri(ox_,pp,yp(p.y),5,cMM,false);
+          ox_.save();ox_.fillStyle=cMM;ox_.font='9px Geist,system-ui,sans-serif';ox_.textAlign='center';ox_.textBaseline='top';
+          ox_.fillText('('+fn4(p.x)+', '+n4t(p.y)+')',pp,yp(p.y)+8);ox_.restore();
+        }
       });
     }
     (ca.infls||[]).forEach(function(ix){var pp=xp(ix),iy=ev(sf.c,ix);if(pp<0||pp>W||isNaN(iy))return;gdia(ox_,pp,yp(iy),4,cInfl);
@@ -879,14 +1046,30 @@ function runAna(){
   }
   document.getElementById('arp').textContent = perStr(ca.roots)||'';
   // Extrema display: combine maxima/minima, sort by |x|, limit 10
+  // Enrich each extremum with removable-disc check for display labelling
   var allExtr = [];
-  (ca.extr.maxima||[]).forEach(p=>allExtr.push({type:'max',x:p.x,y:p.y}));
-  (ca.extr.minima||[]).forEach(p=>allExtr.push({type:'min',x:p.x,y:p.y}));
+  (ca.extr.maxima||[]).forEach(function(p){
+    var rd = checkRemovableDisc(fn.c, p.x);
+    allExtr.push({type:'max', x:p.x, y:p.y, rd:rd});
+  });
+  (ca.extr.minima||[]).forEach(function(p){
+    var rd = checkRemovableDisc(fn.c, p.x);
+    allExtr.push({type:'min', x:p.x, y:p.y, rd:rd});
+  });
   allExtr.sort((a,b)=>Math.abs(a.x)-Math.abs(b.x));
   var eEl = document.getElementById('axt');
   if(!allExtr.length) eEl.innerHTML='<span class="ae">None in view</span>';
   else {
-    var ep = allExtr.slice(0,10).map(p=>'<span style="color:var(--col-maxmin)">'+(p.type==='max'?'▲ max':'▼ min')+'</span> ('+fn4(p.x)+', '+n4(p.y)+')');
+    var ep = allExtr.slice(0,10).map(function(p){
+      var yDisplay = p.rd && p.rd.isRemovable ? p.rd.limit : p.y;
+      var label = p.rd && p.rd.isRemovable
+        ? '<span style="color:var(--col-maxmin)">○ limit</span>'
+        : '<span style="color:var(--col-maxmin)">'+(p.type==='max'?'▲ max':'▼ min')+'</span>';
+      var note = p.rd && p.rd.isRemovable
+        ? ' <span style="color:var(--muted);font-size:0.72rem">(removable singularity)</span>'
+        : '';
+      return label+' ('+fn4(p.x)+', '+n4(yDisplay)+')'+note;
+    });
     if(allExtr.length>10) ep.push('… and '+(allExtr.length-10)+' more');
     eEl.innerHTML = ep.join('<br/>');
   }
