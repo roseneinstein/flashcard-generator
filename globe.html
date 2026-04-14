@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>3D Earth Atlas — CogniSwift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0d0c1a;--surface:#16142a;--surface2:#1e1c32;--surface3:#26243e;
+  --border:rgba(255,255,255,0.09);--border-h:rgba(255,255,255,0.2);
+  --text:#ecedf2;--muted:#8a8aac;--muted2:#454562;
+  --accent:#e8d5b0;--accent-rgb:232,213,176;
+  --green:#4ade80;--blue:#60a5fa;--red:#f87171;--orange:#fb923c;--purple:#c084fc;
+  --r:12px;--r-sm:8px;
+  --panel:360px;
+}
+.light{
+  --bg:#e8e4db;--surface:#f5f2ea;--surface2:#ede9e0;--surface3:#e4e0d6;
+  --border:rgba(0,0,0,0.1);--border-h:rgba(0,0,0,0.22);
+  --text:#1e1b14;--muted:#7a7060;--muted2:#c0b89e;
+  --accent:#9a7c3f;--accent-rgb:154,124,63;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.5;}
+button{font-family:inherit;cursor:pointer;}
+input{font-family:inherit;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px;}
+
+/* ── Topbar ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:52px;z-index:300;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;background:rgba(13,12,26,0.88);
+  backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
+}
+.light .topbar{background:rgba(232,228,219,0.88);}
+.topbar-left{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.topbar-back{background:none;border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:5px 11px;color:var(--muted);font-size:0.7rem;letter-spacing:0.04em;
+  text-transform:uppercase;transition:all .18s;display:flex;align-items:center;gap:5px;}
+.topbar-back:hover{border-color:var(--border-h);color:var(--text);}
+.topbar-logo{font-family:'Instrument Serif',serif;font-size:1.15rem;color:var(--accent);
+  letter-spacing:-0.02em;text-decoration:none;}
+.topbar-sep{color:var(--muted2);margin:0 6px;font-size:0.75rem;}
+.topbar-title{font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;}
+.topbar-r{display:flex;align-items:center;gap:8px;}
+.tb-btn{background:none;border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:5px 12px;color:var(--muted);font-size:0.7rem;letter-spacing:0.04em;
+  text-transform:uppercase;transition:all .18s;}
+.tb-btn:hover{border-color:var(--border-h);color:var(--text);background:var(--surface2);}
+.thm-btn{background:none;border:1px solid var(--border);border-radius:var(--r-sm);
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  font-size:0.85rem;color:var(--muted);transition:all .18s;}
+.thm-btn:hover{border-color:var(--border-h);color:var(--text);}
+
+/* ── Layout ── */
+.layout{position:fixed;top:52px;bottom:0;left:0;right:0;display:flex;}
+#globeCanvas{position:absolute;top:0;left:0;width:100%;height:100%;display:block;cursor:grab;}
+#globeCanvas.dragging{cursor:grabbing;}
+
+/* ── Left Panel ── */
+.panel{
+  width:var(--panel);flex-shrink:0;position:relative;z-index:20;
+  background:rgba(22,20,42,0.92);
+  backdrop-filter:blur(24px);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.light .panel{background:rgba(245,242,234,0.94);}
+
+/* ── Search ── */
+.search-wrap{padding:14px 14px 10px;flex-shrink:0;}
+.search-box{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:8px 12px;transition:border-color .18s;
+}
+.search-box:focus-within{border-color:rgba(var(--accent-rgb),0.5);}
+.search-icon{color:var(--muted);font-size:0.85rem;flex-shrink:0;}
+.search-input{flex:1;background:none;border:none;outline:none;color:var(--text);
+  font-size:0.88rem;}
+.search-input::placeholder{color:var(--muted2);}
+.search-clear{background:none;border:none;color:var(--muted);font-size:0.75rem;
+  padding:2px 4px;border-radius:3px;transition:color .15s;}
+.search-clear:hover{color:var(--text);}
+
+/* ── Search suggestions ── */
+.suggestions{
+  position:absolute;top:100%;left:14px;right:14px;z-index:100;
+  background:var(--surface);border:1px solid var(--border-h);
+  border-radius:var(--r-sm);box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  max-height:220px;overflow-y:auto;
+}
+.sugg-item{padding:8px 12px;font-size:0.82rem;cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:background .12s;}
+.sugg-item:hover{background:var(--surface2);}
+.sugg-type{font-size:0.65rem;color:var(--muted);background:var(--surface2);
+  border-radius:3px;padding:1px 5px;flex-shrink:0;text-transform:uppercase;letter-spacing:0.06em;}
+.sugg-name{flex:1;}
+
+/* ── Info panel scrollable ── */
+.panel-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 14px 14px;}
+
+/* ── Feature card ── */
+.feat-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px;margin-bottom:10px;
+}
+.feat-name{font-family:'Instrument Serif',serif;font-size:1.15rem;font-style:italic;
+  color:var(--accent);margin-bottom:4px;letter-spacing:-0.01em;}
+.feat-type-badge{display:inline-flex;align-items:center;gap:4px;
+  font-size:0.62rem;color:var(--muted);background:var(--surface);
+  border-radius:4px;padding:2px 7px;text-transform:uppercase;letter-spacing:0.08em;
+  border:1px solid var(--border);margin-bottom:8px;}
+.feat-desc{font-size:0.78rem;color:var(--muted);line-height:1.65;margin-bottom:10px;}
+.feat-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.stat-box{background:var(--surface);border-radius:var(--r-sm);padding:7px 9px;
+  border:1px solid var(--border);}
+.stat-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:2px;}
+.stat-val{font-size:0.82rem;color:var(--text);font-weight:400;}
+
+/* ── Related features ── */
+.related-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--muted);margin-bottom:6px;font-weight:500;}
+.related-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.chip{
+  background:var(--surface);border:1px solid var(--border);border-radius:50px;
+  padding:4px 10px;font-size:0.72rem;color:var(--muted);cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;gap:5px;
+}
+.chip:hover{border-color:var(--border-h);color:var(--text);background:var(--surface2);}
+.chip.active{background:rgba(var(--accent-rgb),0.15);color:var(--accent);
+  border-color:rgba(var(--accent-rgb),0.35);}
+.chip-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* ── Annotation toolbar ── */
+.toolbar{
+  padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;
+}
+.toolbar-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--muted);margin-bottom:8px;}
+.tool-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+.tool-btn{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:5px 10px;font-size:0.72rem;color:var(--muted);
+  transition:all .15s;display:flex;align-items:center;gap:4px;
+}
+.tool-btn:hover{border-color:var(--border-h);color:var(--text);}
+.tool-btn.active{background:rgba(var(--accent-rgb),0.12);color:var(--accent);
+  border-color:rgba(var(--accent-rgb),0.3);}
+.color-row-t{display:flex;gap:4px;margin-top:6px;}
+.color-dot{width:18px;height:18px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;transition:transform .15s,border-color .15s;flex-shrink:0;}
+.color-dot:hover{transform:scale(1.15);}
+.color-dot.sel{border-color:var(--text);}
+
+/* ── Export bar ── */
+.export-bar{
+  padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;gap:6px;
+}
+.exp-btn{flex:1;padding:7px;border:none;border-radius:var(--r-sm);
+  font-size:0.72rem;letter-spacing:0.04em;text-transform:uppercase;
+  transition:all .18s;cursor:pointer;}
+.exp-btn.pri{background:var(--accent);color:var(--bg);}
+.exp-btn.pri:hover{opacity:0.85;}
+.exp-btn.sec{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.exp-btn.sec:hover{border-color:var(--border-h);}
+
+/* ── Empty state ── */
+.empty-state{padding:24px 14px;text-align:center;color:var(--muted);font-size:0.82rem;line-height:1.8;}
+.empty-icon{font-size:2rem;margin-bottom:8px;opacity:0.4;}
+.empty-hint{font-size:0.72rem;color:var(--muted2);margin-top:8px;}
+.hint-example{display:inline-block;background:var(--surface2);border-radius:4px;
+  padding:2px 7px;margin:2px;font-size:0.68rem;cursor:pointer;
+  border:1px solid var(--border);transition:border-color .15s;}
+.hint-example:hover{border-color:var(--border-h);color:var(--text);}
+
+/* ── Annotation canvas overlay ── */
+#annotCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:5;}
+#annotCanvas.drawing{pointer-events:all;cursor:crosshair;}
+
+/* ── Tooltip on globe ── */
+.globe-tip{
+  position:absolute;pointer-events:none;z-index:50;
+  background:var(--surface);border:1px solid var(--border-h);
+  border-radius:var(--r-sm);padding:7px 11px;font-size:0.78rem;
+  box-shadow:0 6px 20px rgba(0,0,0,0.4);
+}
+
+/* ── Zoom controls ── */
+.zoom-btns{position:absolute;right:14px;bottom:80px;z-index:20;
+  display:flex;flex-direction:column;gap:4px;}
+.zoom-btn{width:34px;height:34px;background:rgba(22,20,42,0.88);
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  color:var(--text);font-size:1rem;display:flex;align-items:center;
+  justify-content:center;transition:all .15s;
+  backdrop-filter:blur(12px);}
+.light .zoom-btn{background:rgba(245,242,234,0.88);}
+.zoom-btn:hover{border-color:var(--border-h);}
+
+/* ── Loading screen ── */
+.loading{
+  position:fixed;inset:0;z-index:500;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+.loading-globe{font-size:3rem;animation:spin 3s linear infinite;}
+@keyframes spin{from{transform:rotateY(0deg);}to{transform:rotateY(360deg);}}
+.loading-text{font-family:'Instrument Serif',serif;font-size:1.1rem;color:var(--accent);font-style:italic;}
+.loading-bar{width:200px;height:2px;background:var(--surface2);border-radius:1px;overflow:hidden;}
+.loading-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;width:0%;}
+
+/* ── Mobile ── */
+@media(max-width:700px){
+  .panel{width:100%;position:absolute;bottom:0;left:0;right:0;
+    top:auto;height:48%;border-right:none;border-top:1px solid var(--border);}
+  #globeCanvas{bottom:48%;}
+  :root{--panel:100vw;}
+  .topbar-title,.topbar-sep{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading" id="loading">
+  <div class="loading-globe">🌍</div>
+  <div class="loading-text">Preparing the Earth…</div>
+  <div class="loading-bar"><div class="loading-fill" id="loadFill"></div></div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <button class="topbar-back" onclick="goBack()">← Back</button>
+    <a href="/" class="topbar-logo">CogniSwift</a>
+    <span class="topbar-sep">|</span>
+    <span class="topbar-title">3D Earth Atlas</span>
+  </div>
+  <div class="topbar-r">
+    <button class="thm-btn" id="thmBtn" onclick="toggleTheme()">☀</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Left Panel -->
+  <div class="panel">
+    <!-- Search -->
+    <div class="search-wrap" style="position:relative;">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="searchInput" placeholder="Search any place, river, mountain, country…"
+          autocomplete="off" oninput="onSearch(this.value)" onkeydown="onSearchKey(event)"/>
+        <button class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none">✕</button>
+      </div>
+      <div class="suggestions" id="suggestions" style="display:none"></div>
+    </div>
+
+    <!-- Panel content -->
+    <div class="panel-scroll" id="panelContent">
+      <div class="empty-state">
+        <div class="empty-icon">🌐</div>
+        <div>Search any geographical feature<br/>to explore it on the globe</div>
+        <div class="empty-hint">Try searching for:</div>
+        <div style="margin-top:6px">
+          <span class="hint-example" onclick="doSearch('Gangetic Plains')">Gangetic Plains</span>
+          <span class="hint-example" onclick="doSearch('Himalayas')">Himalayas</span>
+          <span class="hint-example" onclick="doSearch('Amazon River')">Amazon River</span>
+          <span class="hint-example" onclick="doSearch('Sahara Desert')">Sahara Desert</span>
+          <span class="hint-example" onclick="doSearch('Western Ghats')">Western Ghats</span>
+          <span class="hint-example" onclick="doSearch('Mariana Trench')">Mariana Trench</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Annotation Toolbar -->
+    <div class="toolbar" id="toolbar" style="display:none">
+      <div class="toolbar-label">Mark on globe</div>
+      <div class="tool-row">
+        <button class="tool-btn" id="toolLabel" onclick="setTool('label')" title="Add text label">🏷 Label</button>
+        <button class="tool-btn" id="toolArrow" onclick="setTool('arrow')" title="Draw arrow">↗ Arrow</button>
+        <button class="tool-btn" id="toolErase" onclick="setTool('erase')" title="Erase annotation">✕ Erase</button>
+      </div>
+      <div class="color-row-t" id="annotColors"></div>
+    </div>
+
+    <!-- Export bar -->
+    <div class="export-bar" id="exportBar" style="display:none">
+      <button class="exp-btn sec" onclick="exportPDF()">⬇ Export PDF</button>
+    </div>
+  </div>
+
+  <!-- Globe canvas -->
+  <canvas id="globeCanvas"></canvas>
+  <!-- Annotation overlay -->
+  <canvas id="annotCanvas"></canvas>
+
+  <!-- Zoom controls -->
+  <div class="zoom-btns">
+    <button class="zoom-btn" onclick="zoomGlobe(0.85)" title="Zoom in">+</button>
+    <button class="zoom-btn" onclick="zoomGlobe(1.18)" title="Zoom out">−</button>
+    <button class="zoom-btn" style="font-size:0.6rem" onclick="resetView()" title="Reset">⊙</button>
+  </div>
+
+  <!-- Globe tooltip -->
+  <div class="globe-tip" id="globeTip" style="display:none"></div>
+</div>
+
+<!-- Three.js r128 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════════
+// THEME
+// ══════════════════════════════════════════════════════════════════════
+var isDark = true;
+try{var _p=new URLSearchParams(location.search);if(_p.get('theme')==='light'){isDark=false;document.body.classList.add('light');}}catch(e){}
+document.getElementById('thmBtn').textContent = isDark ? '☀' : '🌙';
+
+function toggleTheme(){
+  isDark = !isDark;
+  document.body.classList.toggle('light', !isDark);
+  document.getElementById('thmBtn').textContent = isDark ? '☀' : '🌙';
+  updateGlobeTheme();
+}
+function goBack(){
+  var theme = isDark ? 'dark' : 'light';
+  window.location.href = '/?theme=' + theme;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// GEOGRAPHIC FEATURE DATABASE
+// ══════════════════════════════════════════════════════════════════════
+// Curated from Natural Earth + official Indian government geographic data
+// All India boundaries follow GOI position (J&K, Arunachal Pradesh, Aksai Chin)
+var GEO_FEATURES = {
+
+  // ── INDIA — Physical Regions ──────────────────────────────────────
+  'gangetic plains': {
+    name:'Gangetic Plains', type:'plain', region:'South Asia', country:'India',
+    lat:26.0, lng:82.0, zoom:4.5,
+    desc:'The most fertile and densely populated plains of India, formed by alluvial deposits of the Ganga, Yamuna, and their tributaries. Breadbasket of India spanning ~700,000 km².',
+    stats:{Area:'~700,000 km²', 'Avg Elevation':'~100–300 m', 'Major Rivers':'Ganga, Yamuna, Ghaghra', States:'UP, Bihar, WB'},
+    related:['ganga river','yamuna river','brahmaputra river','himalayas','doab','indo-gangetic plain'],
+    highlights:['ganga river','yamuna river','ghaghra river','gandak river']
+  },
+  'himalayas': {
+    name:'Himalayas', type:'mountain range', region:'South Asia',
+    lat:30.0, lng:81.0, zoom:4.0,
+    desc:'World\'s highest mountain range, stretching ~2,400 km across India, Nepal, Bhutan, and Tibet. Contains 14 of the world\'s 15 highest peaks including Mount Everest (8,849 m).',
+    stats:{Length:'~2,400 km', 'Highest Peak':'Mt. Everest 8,849 m', 'Avg Width':'~200–400 km', 'Countries':'India, Nepal, Bhutan, China'},
+    related:['mount everest','karakoram','gangetic plains','brahmaputra river','indo-gangetic plain','k2'],
+    highlights:['brahmaputra river','indus river']
+  },
+  'western ghats': {
+    name:'Western Ghats', type:'mountain range', region:'India',
+    lat:13.5, lng:75.5, zoom:5.0,
+    desc:'UNESCO World Heritage Site and one of the world\'s 8 hottest biodiversity hotspots. Runs ~1,600 km along India\'s western coast, influencing the monsoon and sheltering 5,000+ species of flowering plants.',
+    stats:{Length:'~1,600 km', 'Highest Peak':'Anamudi 2,695 m', 'Biodiversity':'5,000+ plant species', States:'Gujarat, MH, Goa, Karnataka, Kerala, TN'},
+    related:['eastern ghats','deccan plateau','kerala backwaters','nilgiri hills','arabian sea'],
+    highlights:[]
+  },
+  'deccan plateau': {
+    name:'Deccan Plateau', type:'plateau', region:'India',
+    lat:17.5, lng:76.5, zoom:4.5,
+    desc:'A large triangular plateau forming most of southern India. Bounded by the Vindhya Range to the north and the Eastern and Western Ghats on its sides. Rich in mineral resources.',
+    stats:{Area:'~1.9 million km²', Elevation:'300–900 m avg', 'Major Rivers':'Godavari, Krishna, Kaveri', Minerals:'Iron ore, coal, limestone'},
+    related:['western ghats','eastern ghats','godavari river','krishna river','vindhya range'],
+    highlights:['godavari river','krishna river','kaveri river']
+  },
+  'thar desert': {
+    name:'Thar Desert (Great Indian Desert)', type:'desert', region:'India',
+    lat:27.0, lng:71.0, zoom:5.0,
+    desc:'The world\'s 17th largest desert and India\'s only major hot desert. Spanning ~200,000 km² across Rajasthan and parts of Pakistan, it is home to 40 million people.',
+    stats:{Area:'~200,000 km²', 'Annual Rainfall':'< 250 mm', States:'Rajasthan, Gujarat (India), Sindh (Pakistan)', Wildlife:'Great Indian Bustard'},
+    related:['aravalli range','luni river','indus river','rajasthan','rann of kutch'],
+    highlights:['luni river']
+  },
+  'eastern ghats': {
+    name:'Eastern Ghats', type:'mountain range', region:'India',
+    lat:15.0, lng:79.5, zoom:5.0,
+    desc:'A discontinuous range of hills along India\'s eastern coast. Interrupted by rivers like the Godavari, Krishna, and Kaveri. Average elevation ~600 m.',
+    stats:{Length:'~1,750 km (discontinuous)', 'Highest Peak':'Arma Konda 1,680 m', States:'Odisha, AP, TN, partial Chhattisgarh'},
+    related:['western ghats','deccan plateau','godavari river','krishna river','bay of bengal'],
+    highlights:['godavari river','krishna river','mahanadi river']
+  },
+
+  // ── INDIA — Rivers ────────────────────────────────────────────────
+  'ganga river': {
+    name:'Ganga (Ganges)', type:'river', region:'India',
+    lat:25.5, lng:83.0, zoom:5.0,
+    desc:'India\'s most sacred river, originating from Gangotri glacier in the Himalayas. Flows ~2,525 km to empty into the Bay of Bengal. Sustains 500 million people along its banks.',
+    stats:{Length:'2,525 km', Origin:'Gangotri Glacier, Uttarakhand', Mouth:'Bay of Bengal (Sundarbans)', Tributaries:'Yamuna, Ghaghra, Gandak, Kosi'},
+    related:['yamuna river','brahmaputra river','gangetic plains','himalayan glaciers','sundarbans'],
+    highlights:[]
+  },
+  'yamuna river': {
+    name:'Yamuna River', type:'river', region:'India',
+    lat:27.0, lng:78.5, zoom:5.5,
+    desc:'Largest tributary of the Ganga, originating from Yamunotri glacier. Flows 1,376 km before merging with the Ganga at Allahabad (Prayagraj). Delhi sits on its banks.',
+    stats:{Length:'1,376 km', Origin:'Yamunotri Glacier', Mouth:'Prayagraj (confluence with Ganga)', States:'Uttarakhand, Delhi, UP'},
+    related:['ganga river','chambal river','betwa river','gangetic plains','delhi'],
+    highlights:[]
+  },
+  'brahmaputra river': {
+    name:'Brahmaputra River', type:'river', region:'South Asia',
+    lat:27.5, lng:93.0, zoom:4.5,
+    desc:'One of the world\'s major rivers, originating in Tibet as the Yarlung Tsangpo. After cutting through the Himalayas it enters India\'s Assam valley. One of the widest rivers in the world.',
+    stats:{Length:'2,900 km total (918 km in India)', Origin:'Angsi Glacier, Tibet', Mouth:'Bay of Bengal', 'Width in Assam':'Up to 10 km'},
+    related:['ganga river','himalayas','assam','sundarbans','tibet plateau','northeast india'],
+    highlights:[]
+  },
+  'indus river': {
+    name:'Indus River', type:'river', region:'South Asia',
+    lat:31.0, lng:71.5, zoom:4.0,
+    desc:'One of the longest rivers in Asia, originating near Lake Mansarovar in Tibet. Flows through Ladakh (India), through Pakistan, into the Arabian Sea. Cradle of the Indus Valley Civilisation.',
+    stats:{Length:'3,180 km (1,114 km in India)', Origin:'Near Lake Mansarovar, Tibet', Mouth:'Arabian Sea, Pakistan', Tributaries:'Jhelum, Chenab, Ravi, Beas, Sutlej'},
+    related:['himalayas','ladakh','karakoram','thar desert','punjab'],
+    highlights:[]
+  },
+  'godavari river': {
+    name:'Godavari River', type:'river', region:'India',
+    lat:17.5, lng:80.5, zoom:5.0,
+    desc:'The second longest river of India ("Dakshin Ganga" or Ganges of the South). Originates in Nashik, Maharashtra, and flows 1,465 km to the Bay of Bengal through the Eastern Ghats.',
+    stats:{Length:'1,465 km', Origin:'Nashik, Maharashtra', Mouth:'Bay of Bengal (Andhra Pradesh)', States:'MH, Telangana, AP'},
+    related:['krishna river','eastern ghats','deccan plateau','mahanadi river','andhra pradesh'],
+    highlights:[]
+  },
+  'krishna river': {
+    name:'Krishna River', type:'river', region:'India',
+    lat:16.5, lng:78.0, zoom:5.0,
+    desc:'Originates at Mahabaleshwar in the Western Ghats and flows 1,400 km eastward to the Bay of Bengal. Major irrigation source for Karnataka, Telangana, and Andhra Pradesh.',
+    stats:{Length:'1,400 km', Origin:'Mahabaleshwar, MH', Mouth:'Bay of Bengal', States:'MH, Karnataka, Telangana, AP'},
+    related:['godavari river','tungabhadra river','eastern ghats','deccan plateau'],
+    highlights:[]
+  },
+
+  // ── INDIA — Other Major Features ──────────────────────────────────
+  'sundarbans': {
+    name:'Sundarbans', type:'mangrove delta', region:'India / Bangladesh',
+    lat:21.9, lng:89.2, zoom:6.0,
+    desc:'World\'s largest tidal halophytic mangrove forest and a UNESCO World Heritage Site. Home to the Royal Bengal Tiger and the unique mangrove ecosystem of the Ganga-Brahmaputra delta.',
+    stats:{Area:'~10,000 km²', Location:'Ganga-Brahmaputra delta', 'Tiger Population':'~400 in Indian side', Status:'UNESCO World Heritage + Ramsar Site'},
+    related:['ganga river','brahmaputra river','bay of bengal','west bengal','bangladesh'],
+    highlights:[]
+  },
+  'rann of kutch': {
+    name:'Rann of Kutch', type:'salt marsh', region:'India',
+    lat:23.7, lng:70.8, zoom:5.5,
+    desc:'Largest salt desert in the world, located in Gujarat. Seasonally flooded by the Arabian Sea and home to the wild ass sanctuary. Famous for the Rann Utsav festival.',
+    stats:{Area:'~30,000 km²', Location:'Gujarat, India', Wildlife:'Indian Wild Ass, Flamingo', 'Season':'Dry: Oct–May'},
+    related:['thar desert','arabian sea','gujarat','luni river'],
+    highlights:[]
+  },
+  'kerala backwaters': {
+    name:'Kerala Backwaters', type:'lagoon/waterway', region:'India',
+    lat:9.5, lng:76.5, zoom:6.5,
+    desc:'A network of over 900 km of interconnected canals, rivers, lakes, and inlets in Kerala. A major tourism destination and lifeline for coastal communities.',
+    stats:{Length:'~900 km network', Location:'Kerala coast', Features:'Lakes, canals, rivers, lagoons', 'UNESCO Status':'Tentative list'},
+    related:['western ghats','arabian sea','kerala','periyar river'],
+    highlights:[]
+  },
+
+  // ── WORLD — Mountains ─────────────────────────────────────────────
+  'mount everest': {
+    name:'Mount Everest', type:'mountain', region:'South Asia',
+    lat:27.9881, lng:86.9250, zoom:7.0,
+    desc:'World\'s highest mountain at 8,849 m (29,032 ft) above sea level. Located on the border of Nepal and Tibet (China). First summited by Edmund Hillary and Tenzing Norgay on May 29, 1953.',
+    stats:{Elevation:'8,849 m (29,032 ft)', Location:'Nepal-Tibet border', 'First Summit':'May 29, 1953', 'Annual Summits':'~900+'},
+    related:['himalayas','k2','kanchenjunga','nepal','tibet plateau'],
+    highlights:[]
+  },
+  'andes': {
+    name:'Andes Mountains', type:'mountain range', region:'South America',
+    lat:-20.0, lng:-67.0, zoom:3.5,
+    desc:'World\'s longest continental mountain range, stretching ~7,000 km along the western edge of South America. Contains Aconcagua (6,961 m), the highest peak outside Asia.',
+    stats:{Length:'~7,000 km', 'Highest Peak':'Aconcagua 6,961 m', Countries:'Colombia, Ecuador, Peru, Bolivia, Chile, Argentina'},
+    related:['amazon river','atacama desert','patagonia','machu picchu'],
+    highlights:[]
+  },
+  'alps': {
+    name:'Alps', type:'mountain range', region:'Europe',
+    lat:46.5, lng:9.5, zoom:5.0,
+    desc:'Europe\'s highest and most extensive mountain range system, stretching ~1,200 km across 8 countries. Mont Blanc (4,808 m) is the highest peak.',
+    stats:{Length:'~1,200 km', 'Highest Peak':'Mont Blanc 4,808 m', Countries:'France, Switzerland, Italy, Austria, Germany, Liechtenstein, Monaco, Slovenia'},
+    related:['rhine river','danube river','mediterranean sea','france','switzerland'],
+    highlights:[]
+  },
+  'rocky mountains': {
+    name:'Rocky Mountains', type:'mountain range', region:'North America',
+    lat:45.0, lng:-113.0, zoom:3.5,
+    desc:'Major mountain range system of western North America, stretching ~4,800 km from British Columbia to New Mexico. Contains numerous national parks including Yellowstone.',
+    stats:{Length:'~4,800 km', 'Highest Peak':'Mount Elbert 4,399 m', Countries:'USA, Canada'},
+    related:['mississippi river','colorado river','yellowstone','great plains'],
+    highlights:[]
+  },
+  'karakoram': {
+    name:'Karakoram Range', type:'mountain range', region:'Central Asia',
+    lat:35.9, lng:76.5, zoom:5.5,
+    desc:'Contains the world\'s second highest peak K2 (8,611 m). Straddles the borders of India (Ladakh), Pakistan, and China. Home to the largest glaciers outside the polar regions.',
+    stats:{'Highest Peak':'K2 at 8,611 m', Location:'India, Pakistan, China border', 'Glaciers':'Longest non-polar glaciers', 'Disputed':'Partially in Aksai Chin (India per GOI)'},
+    related:['k2','himalayas','indus river','ladakh','siachen glacier'],
+    highlights:[]
+  },
+
+  // ── WORLD — Rivers ────────────────────────────────────────────────
+  'amazon river': {
+    name:'Amazon River', type:'river', region:'South America',
+    lat:-3.5, lng:-62.0, zoom:3.5,
+    desc:'World\'s largest river by discharge volume (20% of all freshwater entering oceans). Flows ~6,400 km across Brazil. Drains the Amazon Rainforest, the world\'s largest tropical rainforest.',
+    stats:{Length:'~6,400 km', Discharge:'209,000 m³/s (20% of global)', Basin:'~7 million km²', Countries:'Brazil, Peru, Colombia'},
+    related:['amazon rainforest','andes','atlantic ocean','orinoco river','brazil'],
+    highlights:[]
+  },
+  'nile river': {
+    name:'Nile River', type:'river', region:'Africa',
+    lat:20.0, lng:32.0, zoom:3.5,
+    desc:'Historically considered the world\'s longest river (~6,650 km). Flows northward through northeastern Africa into the Mediterranean Sea. Cradle of Ancient Egyptian civilisation.',
+    stats:{Length:'~6,650 km', Origin:'Lake Victoria (White Nile)', Mouth:'Mediterranean Sea', Countries:'Uganda, Sudan, Egypt and 9 more'},
+    related:['sahara desert','egypt','lake victoria','sudan','mediterranean sea'],
+    highlights:[]
+  },
+  'yangtze river': {
+    name:'Yangtze River', type:'river', region:'Asia',
+    lat:30.5, lng:108.0, zoom:4.0,
+    desc:'Asia\'s longest river (~6,300 km) and the world\'s third longest. Flows through central China, powering the Three Gorges Dam. Critical to China\'s economy and ecology.',
+    stats:{Length:'~6,300 km', Origin:'Tibetan Plateau', Mouth:'East China Sea, Shanghai', 'Dam':'Three Gorges Dam (world\'s largest power station)'},
+    related:['tibet plateau','three gorges','shanghai','china','yellow river'],
+    highlights:[]
+  },
+  'mississippi river': {
+    name:'Mississippi River', type:'river', region:'North America',
+    lat:38.0, lng:-90.5, zoom:4.0,
+    desc:'Second longest river in North America (~3,730 km). Drains 40% of the contiguous USA. With the Missouri River, forms the fourth longest river system in the world.',
+    stats:{Length:'~3,730 km', Origin:'Lake Itasca, Minnesota', Mouth:'Gulf of Mexico', 'Drainage Basin':'~3.2 million km²'},
+    related:['ohio river','missouri river','great plains','rocky mountains','gulf of mexico'],
+    highlights:[]
+  },
+  'congo river': {
+    name:'Congo River', type:'river', region:'Africa',
+    lat:-1.5, lng:24.0, zoom:4.0,
+    desc:'World\'s deepest river (over 220 m) and second largest by discharge. Flows through the Congo Rainforest, the world\'s second largest tropical rainforest.',
+    stats:{Length:'~4,700 km', 'Max Depth':'>220 m (world\'s deepest)', Discharge:'41,000 m³/s (2nd globally)', Countries:'Congo, DRC, CAR'},
+    related:['congo rainforest','lake tanganyika','africa','atlantic ocean'],
+    highlights:[]
+  },
+
+  // ── WORLD — Deserts ───────────────────────────────────────────────
+  'sahara desert': {
+    name:'Sahara Desert', type:'desert', region:'Africa',
+    lat:23.0, lng:12.0, zoom:3.0,
+    desc:'World\'s largest hot desert at ~9.2 million km², covering most of North Africa. Despite its aridity, it hosts oases, ancient caravan routes, and a population of ~4 million people.',
+    stats:{Area:'~9.2 million km²', Countries:'11 African nations', 'Annual Rainfall':'< 25 mm/year', Temperature:'Up to 58°C recorded'},
+    related:['nile river','atlas mountains','sahel','mediterranean sea','niger river'],
+    highlights:[]
+  },
+  'gobi desert': {
+    name:'Gobi Desert', type:'desert', region:'Asia',
+    lat:42.5, lng:103.0, zoom:4.0,
+    desc:'Asia\'s largest desert and the world\'s 5th largest, spanning southern Mongolia and northern China. A cold desert that played a key role in the Silk Road trade routes.',
+    stats:{Area:'~1.3 million km²', Countries:'Mongolia, China', Type:'Cold desert', Temperature:'From -40°C to +45°C'},
+    related:['mongolia','china','silk road','himalayas','china-mongolia border'],
+    highlights:[]
+  },
+  'atacama desert': {
+    name:'Atacama Desert', type:'desert', region:'South America',
+    lat:-23.0, lng:-68.0, zoom:5.0,
+    desc:'World\'s driest non-polar desert, averaging just 1-3 mm of rain per year in some areas. Paradoxically rich in copper and lithium. Contains world-class astronomical observatories.',
+    stats:{Area:'~105,000 km²', Countries:'Chile, Peru, Bolivia, Argentina', 'Annual Rain':'<1 mm in some areas', Resources:'World\'s largest copper and lithium deposits'},
+    related:['andes','pacific ocean','chile','peru','patagonia'],
+    highlights:[]
+  },
+
+  // ── WORLD — Forests & Ecosystems ──────────────────────────────────
+  'amazon rainforest': {
+    name:'Amazon Rainforest', type:'forest', region:'South America',
+    lat:-5.0, lng:-60.0, zoom:3.0,
+    desc:'World\'s largest tropical rainforest, covering ~5.5 million km². Produces 20% of Earth\'s oxygen and hosts 10% of all species on Earth. Under severe deforestation pressure.',
+    stats:{Area:'~5.5 million km²', Countries:'Brazil (60%), Peru, Colombia + others', Biodiversity:'10% of Earth\'s species', 'O₂ Production':'~20% of global'},
+    related:['amazon river','andes','atlantic ocean','brazil','orinoco river'],
+    highlights:[]
+  },
+  'congo rainforest': {
+    name:'Congo Rainforest', type:'forest', region:'Africa',
+    lat:-1.0, lng:22.5, zoom:4.0,
+    desc:'World\'s second largest tropical rainforest. Absorbs significant carbon dioxide. Home to bonobos, forest elephants, and western lowland gorillas. Critical for global climate regulation.',
+    stats:{Area:'~3.7 million km²', Countries:'DRC, Republic of Congo, CAR, Gabon, others', 'Key Species':'Bonobo, Gorilla, Forest Elephant'},
+    related:['congo river','africa','equatorial guinea','gabon'],
+    highlights:[]
+  },
+
+  // ── WORLD — Oceans & Seas ─────────────────────────────────────────
+  'mariana trench': {
+    name:'Mariana Trench', type:'ocean trench', region:'Pacific Ocean',
+    lat:11.35, lng:142.2, zoom:5.0,
+    desc:'Deepest oceanic trench on Earth. The Challenger Deep reaches 10,935 m below sea level — deeper than Mt. Everest is tall. Located in the western Pacific Ocean near Guam.',
+    stats:{'Max Depth':'10,935 m (Challenger Deep)', Location:'Western Pacific, near Guam', Length:'~2,550 km', Width:'~69 km'},
+    related:['pacific ocean','philippine trench','guam','tectonic plates'],
+    highlights:[]
+  },
+  'arabian sea': {
+    name:'Arabian Sea', type:'sea', region:'Indian Ocean',
+    lat:17.0, lng:64.0, zoom:4.0,
+    desc:'Northwestern part of the Indian Ocean, bounded by India to the east, the Arabian Peninsula to the west, and Pakistan to the north. Critical shipping route between Asia and Europe.',
+    stats:{Area:'~3.86 million km²', 'Max Depth':'4,652 m', Countries:'India, Pakistan, Oman, Yemen, Somalia + others'},
+    related:['indian ocean','bay of bengal','persian gulf','red sea','western ghats'],
+    highlights:[]
+  },
+  'bay of bengal': {
+    name:'Bay of Bengal', type:'sea', region:'Indian Ocean',
+    lat:15.0, lng:87.0, zoom:4.0,
+    desc:'World\'s largest bay. Bounded by India to the west, Bangladesh and Myanmar to the north, and Sri Lanka to the south. Receives the Ganga and Brahmaputra rivers.',
+    stats:{Area:'~2.17 million km²', 'Max Depth':'4,694 m', Countries:'India, Bangladesh, Myanmar, Sri Lanka, Thailand + others'},
+    related:['ganga river','brahmaputra river','arabian sea','indian ocean','sundarbans'],
+    highlights:[]
+  },
+
+  // ── WORLD — Plains & Plateaus ─────────────────────────────────────
+  'siberian plain': {
+    name:'West Siberian Plain', type:'plain', region:'Russia',
+    lat:61.0, lng:70.0, zoom:3.0,
+    desc:'One of the world\'s largest plains, covering ~2.6 million km². Mostly flat marshy terrain in central Russia. Rich in oil and natural gas.',
+    stats:{Area:'~2.6 million km²', Country:'Russia', Resources:'Major oil and gas reserves', Climate:'Continental; harsh winters'},
+    related:['ob river','ural mountains','russia','arctic ocean'],
+    highlights:[]
+  },
+  'tibetan plateau': {
+    name:'Tibetan Plateau (Roof of the World)', type:'plateau', region:'Asia',
+    lat:32.0, lng:88.0, zoom:4.0,
+    desc:'World\'s highest and largest plateau, averaging over 4,500 m elevation. Source of 10 of Asia\'s major rivers. Politically part of China; significant in Indian context as headwaters of Indian rivers.',
+    stats:{Area:'~2.5 million km²', 'Avg Elevation':'4,500 m', Rivers:'Indus, Ganga, Yangtze, Mekong, Brahmaputra', Country:'China (Tibet Autonomous Region)'},
+    related:['himalayas','brahmaputra river','indus river','yangtze river','china'],
+    highlights:[]
+  },
+  'great plains': {
+    name:'Great Plains', type:'plain', region:'North America',
+    lat:40.0, lng:-102.0, zoom:3.5,
+    desc:'Vast flat expanse of grassland prairie stretching ~1.3 million km² in central North America. Known as North America\'s breadbasket for wheat and cattle production.',
+    stats:{Area:'~1.3 million km²', Countries:'USA (10 states), Canada (3 provinces)', Agriculture:'Wheat, corn, cattle, bison (historic)', Climate:'Semi-arid continental'},
+    related:['mississippi river','rocky mountains','canada','central usa'],
+    highlights:[]
+  },
+
+  // ── WORLD — Countries / Regions ───────────────────────────────────
+  'india': {
+    name:'India', type:'country', region:'South Asia',
+    lat:22.0, lng:79.0, zoom:3.5,
+    desc:'World\'s most populous country (1.44 billion) and 7th largest by area. Federal constitutional republic with 28 states and 8 Union Territories. Major emerging economy.',
+    stats:{Area:'3.29 million km²', Population:'1.44 billion (2024)', States:'28 states + 8 UTs', Capital:'New Delhi'},
+    related:['himalayas','gangetic plains','deccan plateau','western ghats','bay of bengal','arabian sea'],
+    highlights:['ganga river','brahmaputra river','indus river','godavari river']
+  },
+  'brazil': {
+    name:'Brazil', type:'country', region:'South America',
+    lat:-10.0, lng:-53.0, zoom:3.5,
+    desc:'World\'s largest country in South America and 5th largest globally. Home to 60% of the Amazon Rainforest. Largest economy in South America.',
+    stats:{Area:'8.5 million km²', Population:'215 million', Capital:'Brasília', Language:'Portuguese'},
+    related:['amazon rainforest','amazon river','andes','atlantic ocean','paraguay river'],
+    highlights:['amazon river']
+  },
+  'china': {
+    name:'China', type:'country', region:'East Asia',
+    lat:36.0, lng:104.0, zoom:3.2,
+    desc:'World\'s most populous country until 2023, now 2nd. 4th largest by area. World\'s 2nd largest economy. Shares borders with 14 countries including India.',
+    stats:{Area:'9.6 million km²', Population:'1.41 billion', Capital:'Beijing', 'Border Countries':'14 (most in the world)'},
+    related:['himalayas','tibet plateau','yangtze river','yellow river','gobi desert','south china sea'],
+    highlights:['yangtze river','yellow river']
+  },
+  'russia': {
+    name:'Russia', type:'country', region:'Eurasia',
+    lat:62.0, lng:94.0, zoom:2.5,
+    desc:'World\'s largest country by area (17.1 million km²), spanning 11 time zones from Eastern Europe to the Pacific. Rich in natural resources.',
+    stats:{Area:'17.1 million km²', Population:'144 million', 'Time Zones':'11', Capital:'Moscow'},
+    related:['ural mountains','siberian plain','baikal lake','volga river','arctic ocean'],
+    highlights:[]
+  },
+  'usa': {
+    name:'United States of America', type:'country', region:'North America',
+    lat:39.5, lng:-98.5, zoom:3.2,
+    desc:'World\'s 3rd largest country by area and 3rd most populous. World\'s largest economy. Federal republic of 50 states.',
+    stats:{Area:'9.8 million km²', Population:'331 million', States:'50', Capital:'Washington D.C.'},
+    related:['rocky mountains','mississippi river','great plains','great lakes','appalachians'],
+    highlights:['mississippi river']
+  },
+
+  // ── WORLD — Lakes ─────────────────────────────────────────────────
+  'caspian sea': {
+    name:'Caspian Sea', type:'lake (endorheic)', region:'Central Asia',
+    lat:42.0, lng:51.0, zoom:4.5,
+    desc:'World\'s largest enclosed inland body of water. Despite being called a "sea" it has no natural connection to the ocean. Rich in oil and natural gas. Bordered by 5 countries.',
+    stats:{Area:'371,000 km²', 'Max Depth':'1,025 m', Countries:'Russia, Kazakhstan, Turkmenistan, Iran, Azerbaijan', Resources:'Major oil and gas reserves'},
+    related:['volga river','iran','kazakhstan','russia','azerbaijan'],
+    highlights:[]
+  },
+  'lake baikal': {
+    name:'Lake Baikal', type:'lake', region:'Russia',
+    lat:53.5, lng:108.0, zoom:5.5,
+    desc:'World\'s deepest lake (1,642 m) and largest freshwater lake by volume (23% of world\'s liquid surface freshwater). UNESCO World Heritage Site.',
+    stats:{Depth:'1,642 m (world\'s deepest)', Area:'31,722 km²', Volume:'23% of world\'s liquid surface freshwater', Age:'~25 million years (world\'s oldest lake)'},
+    related:['siberian plain','russia','angara river','ural mountains'],
+    highlights:[]
+  },
+  'lake victoria': {
+    name:'Lake Victoria', type:'lake', region:'Africa',
+    lat:-1.0, lng:33.0, zoom:5.5,
+    desc:'Africa\'s largest lake and world\'s 2nd largest freshwater lake by area. Source of the White Nile. Shared by Uganda, Tanzania, and Kenya.',
+    stats:{Area:'68,870 km²', Countries:'Uganda, Tanzania, Kenya', 'Nile Source':'White Nile begins here', 'Max Depth':'81 m'},
+    related:['nile river','uganda','tanzania','kenya','east africa'],
+    highlights:[]
+  },
+
+  // ── WORLD — Volcanoes & Special Features ──────────────────────────
+  'kilimanjaro': {
+    name:'Mount Kilimanjaro', type:'volcano / mountain', region:'Africa',
+    lat:-3.0674, lng:37.3556, zoom:6.5,
+    desc:'Africa\'s highest peak at 5,895 m. A dormant stratovolcano in Tanzania. Famous for its glacial cap, which has retreated ~85% since 1912 due to climate change.',
+    stats:{Elevation:'5,895 m (19,341 ft)', Location:'Tanzania, near Kenya border', Type:'Dormant stratovolcano', 'Glacier Loss':'~85% since 1912'},
+    related:['kenya','tanzania','east africa','great rift valley','serengeti'],
+    highlights:[]
+  },
+  'great rift valley': {
+    name:'Great Rift Valley', type:'rift valley', region:'Africa',
+    lat:3.0, lng:36.0, zoom:3.5,
+    desc:'A continuous geographic depression running ~6,000 km from Lebanon in Asia to Mozambique in Africa. Contains several of Africa\'s Great Lakes and many active volcanoes.',
+    stats:{Length:'~6,000 km', Region:'East Africa / Middle East', Lakes:'Victoria, Tanganyika, Malawi, Turkana', Volcanoes:'Kilimanjaro, Nyiragongo, Ol Doinyo Lengai'},
+    related:['kilimanjaro','lake victoria','ethiopia','kenya','red sea'],
+    highlights:[]
+  },
+
+  // ── INDIA — Administrative / Competition relevance ─────────────────
+  'ladakh': {
+    name:'Ladakh', type:'union territory', region:'India',
+    lat:34.2, lng:77.6, zoom:5.5,
+    desc:'Highest Union Territory of India, established on October 31, 2019. Borders Pakistan (PoK), China (Aksai Chin — which India claims). Contains the Siachen Glacier and Pangong Lake.',
+    stats:{Area:'59,146 km²', Status:'Union Territory of India (since 2019)', Districts:'Leh and Kargil', Notable:'Pangong Lake, Siachen, Zoji La Pass'},
+    related:['himalayas','karakoram','indus river','siachen glacier','pangong lake'],
+    highlights:[]
+  },
+  'northeast india': {
+    name:'Northeast India (Seven Sisters)', type:'region', region:'India',
+    lat:25.5, lng:93.0, zoom:5.0,
+    desc:'Seven states of northeastern India: Assam, Arunachal Pradesh, Manipur, Meghalaya, Mizoram, Nagaland, Tripura. Rich in biodiversity and cultural heritage. Arunachal Pradesh is fully Indian territory per GOI.',
+    stats:{States:'Assam, Arunachal Pradesh, Manipur, Meghalaya, Mizoram, Nagaland, Tripura', Rivers:'Brahmaputra, Barak, Subansiri', Biodiversity:'Part of Indo-Burma hotspot'},
+    related:['brahmaputra river','himalayas','myanmar','bangladesh','assam'],
+    highlights:['brahmaputra river']
+  },
+  'aravalli range': {
+    name:'Aravalli Range', type:'mountain range', region:'India',
+    lat:25.5, lng:73.5, zoom:5.0,
+    desc:'One of the world\'s oldest fold mountains (~700 million years), running ~800 km through Rajasthan, Haryana, and Delhi. Provides a natural barrier against desertification.',
+    stats:{Length:'~800 km', Age:'~700 million years (world\'s oldest)', States:'Gujarat, Rajasthan, Haryana, Delhi', 'Highest Peak':'Guru Shikhar 1,722 m'},
+    related:['thar desert','rajasthan','delhi','luni river','chambal river'],
+    highlights:[]
+  },
+  'vindhya range': {
+    name:'Vindhya Range', type:'mountain range', region:'India',
+    lat:23.5, lng:79.5, zoom:5.0,
+    desc:'An old and eroded mountain range forming the historical and cultural boundary between North India and South India (Aryavarta and Deccan). Runs ~1,050 km across central India.',
+    stats:{Length:'~1,050 km', States:'Gujarat, MP, UP, Chhattisgarh', 'Highest Point':'~827 m', 'Cultural role':'Historic divide between N and S India'},
+    related:['deccan plateau','narmada river','son river','satpura range'],
+    highlights:['narmada river']
+  }
+};
+
+// Build search index
+var SEARCH_INDEX = [];
+Object.keys(GEO_FEATURES).forEach(function(key){
+  var f = GEO_FEATURES[key];
+  SEARCH_INDEX.push({
+    key: key,
+    name: f.name,
+    type: f.type,
+    region: f.region,
+    country: f.country || '',
+    searchStr: (f.name + ' ' + f.type + ' ' + f.region + ' ' + (f.country||'')).toLowerCase()
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// THREE.JS GLOBE
+// ══════════════════════════════════════════════════════════════════════
+var scene, camera, renderer, globe, clouds, atmosphere;
+var raycaster, mouse;
+var isDragging = false, lastMouse = {x:0, y:0};
+var globeGroup; // contains globe + all overlays
+var currentLat = 20, currentLng = 78; // default view: India
+var currentAlt = 2.8; // camera distance from globe center (in globe radii)
+var targetLat, targetLng, targetAlt;
+var isAnimating = false;
+var GLOBE_R = 1.0;
+var overlayMeshes = []; // active highlight meshes
+var annotations = [];   // {type, lat, lng, text, color, ...}
+var activeChips = {};   // featureKey -> color
+var annotColor = '#e8d5b0';
+var currentTool = null;
+var arrowStart = null;
+var currentFeature = null;
+
+function initGlobe(){
+  var canvas = document.getElementById('globeCanvas');
+  var W = canvas.parentElement.offsetWidth - document.querySelector('.panel').offsetWidth;
+  var H = canvas.parentElement.offsetHeight;
+
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(45, W / H, 0.01, 100);
+  camera.position.set(0, 0, currentAlt + GLOBE_R);
+
+  renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H);
+
+  globeGroup = new THREE.Group();
+  scene.add(globeGroup);
+
+  // Earth sphere
+  var geo = new THREE.SphereGeometry(GLOBE_R, 64, 64);
+
+  // Create procedural texture — deep blue ocean, continent colors
+  var texCanvas = document.createElement('canvas');
+  texCanvas.width = 2048; texCanvas.height = 1024;
+  var ctx = texCanvas.getContext('2d');
+  drawGlobeTexture(ctx, 2048, 1024);
+  var texture = new THREE.CanvasTexture(texCanvas);
+
+  var mat = new THREE.MeshPhongMaterial({
+    map: texture,
+    specular: new THREE.Color(0x222244),
+    shininess: 8,
+  });
+  globe = new THREE.Mesh(geo, mat);
+  globeGroup.add(globe);
+
+  // Atmosphere glow
+  var atmGeo = new THREE.SphereGeometry(GLOBE_R * 1.02, 32, 32);
+  var atmMat = new THREE.MeshPhongMaterial({
+    color: 0x4488ff,
+    transparent: true,
+    opacity: 0.04,
+    side: THREE.FrontSide,
+  });
+  atmosphere = new THREE.Mesh(atmGeo, atmMat);
+  globeGroup.add(atmosphere);
+
+  // Outer atmosphere ring
+  var haloGeo = new THREE.SphereGeometry(GLOBE_R * 1.06, 32, 32);
+  var haloMat = new THREE.MeshPhongMaterial({
+    color: 0x6699ff,
+    transparent: true,
+    opacity: 0.018,
+    side: THREE.BackSide,
+  });
+  scene.add(new THREE.Mesh(haloGeo, haloMat));
+
+  // Lighting
+  var ambient = new THREE.AmbientLight(0xffffff, 0.4);
+  scene.add(ambient);
+  var sun = new THREE.DirectionalLight(0xffeedd, 1.1);
+  sun.position.set(5, 3, 5);
+  scene.add(sun);
+  var fill = new THREE.DirectionalLight(0x334466, 0.25);
+  fill.position.set(-3, -2, -3);
+  scene.add(fill);
+
+  // Stars
+  addStars();
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  // Set initial orientation — center on India
+  setGlobeOrientation(currentLat, currentLng);
+
+  // Start render loop
+  animate();
+
+  // Resize handler
+  window.addEventListener('resize', onResize);
+
+  // Globe interactions
+  setupInteractions();
+
+  updateGlobeTheme();
+}
+
+function drawGlobeTexture(ctx, W, H){
+  // Ocean base
+  var oceanGrad = ctx.createLinearGradient(0, 0, 0, H);
+  oceanGrad.addColorStop(0, '#0a1a3a');
+  oceanGrad.addColorStop(0.5, '#0d2248');
+  oceanGrad.addColorStop(1, '#091530');
+  ctx.fillStyle = oceanGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Equatorial glow
+  ctx.fillStyle = 'rgba(20,60,120,0.3)';
+  ctx.fillRect(0, H*0.35, W, H*0.3);
+
+  // Grid lines (lat/lng graticule — subtle)
+  ctx.strokeStyle = 'rgba(100,140,220,0.07)';
+  ctx.lineWidth = 0.5;
+  for(var lat = -80; lat <= 80; lat += 20){
+    var y = H * (1 - (lat + 90) / 180);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  for(var lng2 = 0; lng2 < 360; lng2 += 20){
+    var x = W * lng2 / 360;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+}
+
+function addStars(){
+  var starGeo = new THREE.BufferGeometry();
+  var positions = [];
+  for(var i = 0; i < 3000; i++){
+    var r = 80 + Math.random() * 20;
+    var theta = Math.random() * Math.PI * 2;
+    var phi = Math.acos(2 * Math.random() - 1);
+    positions.push(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.sin(phi) * Math.sin(theta),
+      r * Math.cos(phi)
+    );
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  var starMat = new THREE.PointsMaterial({color:0xffffff, size:0.08, transparent:true, opacity:0.6});
+  scene.add(new THREE.Points(starGeo, starMat));
+}
+
+function latLngToVec3(lat, lng, r){
+  r = r || GLOBE_R;
+  var phi = (90 - lat) * Math.PI / 180;
+  var theta = (lng + 180) * Math.PI / 180;
+  return new THREE.Vector3(
+    -r * Math.sin(phi) * Math.cos(theta),
+     r * Math.cos(phi),
+     r * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+function setGlobeOrientation(lat, lng){
+  // Rotate globe so that (lat,lng) faces the camera
+  globeGroup.rotation.y = -lng * Math.PI / 180;
+  globeGroup.rotation.x = lat * Math.PI / 180;
+}
+
+function updateGlobeTheme(){
+  if(!globe) return;
+  // Atmosphere changes with theme
+  if(!isDark && atmosphere){
+    atmosphere.material.color.set(0x3366aa);
+    atmosphere.material.opacity = 0.025;
+  } else if(atmosphere){
+    atmosphere.material.color.set(0x4488ff);
+    atmosphere.material.opacity = 0.04;
+  }
+}
+
+function onResize(){
+  var panel = document.querySelector('.panel');
+  var area = document.getElementById('ca') || document.querySelector('.layout');
+  var W = window.innerWidth - panel.offsetWidth;
+  var H = window.innerHeight - 52;
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+  renderer.setSize(W, H);
+  resizeAnnotCanvas();
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  // Auto-slow rotation when idle
+  if(!isDragging && !isAnimating){
+    globeGroup.rotation.y += 0.0008;
+  }
+  // Animate flyover
+  if(isAnimating){
+    animateStep();
+  }
+  renderer.render(scene, camera);
+}
+
+// ── Flyover animation ────────────────────────────────────────────────
+var flyFrom = {lat:0, lng:0, alt:2.8};
+var flyTo = {lat:0, lng:0, alt:2.8};
+var flyT = 0, flyDuration = 2.8;
+var flyStartTime = 0;
+
+function flyTo_(lat, lng, alt){
+  // Capture current orientation from globeGroup
+  flyFrom.lat = currentLat;
+  flyFrom.lng = currentLng;
+  flyFrom.alt = currentAlt;
+  flyTo.lat = lat;
+  flyTo.lng = lng;
+  flyTo.alt = alt;
+  flyT = 0;
+  flyStartTime = performance.now();
+  isAnimating = true;
+}
+
+function animateStep(){
+  var now = performance.now();
+  flyT = Math.min(1, (now - flyStartTime) / (flyDuration * 1000));
+  // Ease: cubic in-out
+  var t = flyT < 0.5 ? 4*flyT*flyT*flyT : 1 - Math.pow(-2*flyT+2,3)/2;
+
+  // Arc: go slightly higher in mid-flight
+  var arcAlt = flyFrom.alt + (flyTo.alt - flyFrom.alt) * t;
+  var angDist = Math.sqrt(Math.pow(flyTo.lat-flyFrom.lat,2)+Math.pow(flyTo.lng-flyFrom.lng,2));
+  var midBump = angDist > 60 ? 1.5 : angDist > 20 ? 0.8 : 0.3;
+  arcAlt += midBump * Math.sin(t * Math.PI);
+
+  var lat = flyFrom.lat + (flyTo.lat - flyFrom.lat) * t;
+  var lng = flyFrom.lng + (flyTo.lng - flyFrom.lng) * t;
+
+  currentLat = lat; currentLng = lng; currentAlt = arcAlt;
+  setGlobeOrientation(lat, lng);
+  camera.position.z = arcAlt + GLOBE_R;
+  camera.updateProjectionMatrix();
+
+  if(flyT >= 1){
+    isAnimating = false;
+    currentAlt = flyTo.alt;
+    camera.position.z = flyTo.alt + GLOBE_R;
+  }
+}
+
+// ── Globe interactions ────────────────────────────────────────────────
+function setupInteractions(){
+  var canvas = document.getElementById('globeCanvas');
+
+  canvas.addEventListener('mousedown', function(e){
+    if(currentTool) return;
+    isDragging = true;
+    lastMouse = {x: e.clientX, y: e.clientY};
+    canvas.classList.add('dragging');
+  });
+
+  canvas.addEventListener('mousemove', function(e){
+    if(isDragging && !currentTool){
+      var dx = e.clientX - lastMouse.x;
+      var dy = e.clientY - lastMouse.y;
+      globeGroup.rotation.y += dx * 0.005;
+      globeGroup.rotation.x += dy * 0.005;
+      currentLng = -globeGroup.rotation.y * 180 / Math.PI;
+      currentLat = globeGroup.rotation.x * 180 / Math.PI;
+      lastMouse = {x: e.clientX, y: e.clientY};
+    }
+  });
+
+  canvas.addEventListener('mouseup', function(){
+    isDragging = false;
+    canvas.classList.remove('dragging');
+  });
+  canvas.addEventListener('mouseleave', function(){
+    isDragging = false;
+    canvas.classList.remove('dragging');
+  });
+
+  canvas.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var delta = e.deltaY > 0 ? 1.12 : 0.88;
+    currentAlt = Math.min(5.5, Math.max(0.3, currentAlt * delta));
+    camera.position.z = currentAlt + GLOBE_R;
+    camera.updateProjectionMatrix();
+  }, {passive:false});
+
+  // Touch
+  var lastTouchDist = 0;
+  canvas.addEventListener('touchstart', function(e){
+    if(e.touches.length === 1){
+      isDragging = true;
+      lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+    } else if(e.touches.length === 2){
+      lastTouchDist = Math.hypot(e.touches[1].clientX-e.touches[0].clientX, e.touches[1].clientY-e.touches[0].clientY);
+    }
+  },{passive:true});
+  canvas.addEventListener('touchmove', function(e){
+    if(e.touches.length===1 && isDragging){
+      var dx=e.touches[0].clientX-lastMouse.x, dy=e.touches[0].clientY-lastMouse.y;
+      globeGroup.rotation.y+=dx*0.005; globeGroup.rotation.x+=dy*0.005;
+      lastMouse={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    } else if(e.touches.length===2){
+      var d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+      if(lastTouchDist>0){currentAlt=Math.min(5.5,Math.max(0.3,currentAlt*(lastTouchDist/d)));camera.position.z=currentAlt+GLOBE_R;}
+      lastTouchDist=d;
+    }
+  },{passive:true});
+  canvas.addEventListener('touchend',function(){isDragging=false;lastTouchDist=0;},{passive:true});
+}
+
+function zoomGlobe(factor){
+  currentAlt = Math.min(5.5, Math.max(0.3, currentAlt * factor));
+  camera.position.z = currentAlt + GLOBE_R;
+  camera.updateProjectionMatrix();
+}
+function resetView(){
+  flyTo_(20, 78, 2.8);
+  setTimeout(function(){
+    clearHighlights();
+    clearAnnotations();
+    document.getElementById('panelContent').innerHTML = getEmptyState();
+    document.getElementById('toolbar').style.display = 'none';
+    document.getElementById('exportBar').style.display = 'none';
+    currentFeature = null;
+  }, 300);
+}
+
+// ── Highlight a feature ───────────────────────────────────────────────
+function drawFeatureHighlight(featureKey, color, opacity){
+  // Place a glowing disc on the globe at the feature's lat/lng
+  var f = GEO_FEATURES[featureKey];
+  if(!f) return;
+  color = color || annotColor;
+  opacity = opacity || 0.45;
+
+  // Remove existing highlight for this key
+  overlayMeshes = overlayMeshes.filter(function(m){
+    if(m.userData.featureKey === featureKey){ globeGroup.remove(m); m.geometry.dispose(); m.material.dispose(); return false; }
+    return true;
+  });
+
+  // Compute disc size based on feature type
+  var sizeMap = {mountain:0.06, 'mountain range':0.12, plain:0.18, plateau:0.15, country:0.22,
+    river:0.08, desert:0.18, forest:0.20, lake:0.08, sea:0.20, trench:0.06,
+    'salt marsh':0.10, volcano:0.05, 'rift valley':0.12, 'union territory':0.09,
+    region:0.14, 'ocean trench':0.06, 'mangrove delta':0.08, 'lagoon/waterway':0.07};
+  var r2 = sizeMap[f.type] || 0.1;
+
+  var discGeo = new THREE.CircleGeometry(r2, 32);
+  var col = new THREE.Color(color);
+  var discMat = new THREE.MeshBasicMaterial({
+    color: col, transparent:true, opacity:opacity, depthWrite:false, side:THREE.DoubleSide
+  });
+  var disc = new THREE.Mesh(discGeo, discMat);
+
+  // Position on globe surface
+  var pos = latLngToVec3(f.lat, f.lng, GLOBE_R * 1.002);
+  disc.position.copy(pos);
+  disc.lookAt(new THREE.Vector3(0,0,0));
+  disc.rotateX(Math.PI); // face outward
+  disc.userData.featureKey = featureKey;
+  disc.userData.color = color;
+  globeGroup.add(disc);
+  overlayMeshes.push(disc);
+
+  // Add a pulsing ring
+  var ringGeo = new THREE.RingGeometry(r2 * 1.05, r2 * 1.2, 32);
+  var ringMat = new THREE.MeshBasicMaterial({
+    color:col, transparent:true, opacity:0.5, depthWrite:false, side:THREE.DoubleSide
+  });
+  var ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.copy(pos);
+  ring.lookAt(new THREE.Vector3(0,0,0));
+  ring.rotateX(Math.PI);
+  ring.userData.featureKey = featureKey + '_ring';
+  globeGroup.add(ring);
+  overlayMeshes.push(ring);
+}
+
+function clearHighlights(){
+  overlayMeshes.forEach(function(m){
+    globeGroup.remove(m); m.geometry.dispose(); m.material.dispose();
+  });
+  overlayMeshes = [];
+  activeChips = {};
+}
+
+// ── Annotations ───────────────────────────────────────────────────────
+var annotC, annotCtx;
+function setupAnnotCanvas(){
+  annotC = document.getElementById('annotCanvas');
+  var panel = document.querySelector('.panel');
+  annotC.width = window.innerWidth - panel.offsetWidth;
+  annotC.height = window.innerHeight - 52;
+  annotCtx = annotC.getContext('2d');
+}
+function resizeAnnotCanvas(){
+  if(!annotC) return;
+  var panel = document.querySelector('.panel');
+  annotC.width = window.innerWidth - panel.offsetWidth;
+  annotC.height = window.innerHeight - 52;
+  redrawAnnotations();
+}
+
+function redrawAnnotations(){
+  if(!annotCtx) return;
+  annotCtx.clearRect(0,0,annotC.width,annotC.height);
+  annotations.forEach(function(a){
+    if(a.type === 'label') drawAnnotLabel(a);
+    else if(a.type === 'arrow') drawAnnotArrow(a);
+  });
+}
+
+function worldToScreen(lat, lng){
+  // Project lat/lng through Three.js camera
+  var v = latLngToVec3(lat, lng, GLOBE_R * 1.003);
+  var vCopy = v.clone();
+  // Apply globeGroup rotation
+  vCopy.applyEuler(globeGroup.rotation);
+  vCopy.project(camera);
+  var panel = document.querySelector('.panel');
+  var W = window.innerWidth - panel.offsetWidth;
+  var H = window.innerHeight - 52;
+  return {
+    x: (vCopy.x + 1) / 2 * W,
+    y: -(vCopy.y - 1) / 2 * H,
+    visible: vCopy.z < 1 // behind globe check
+  };
+}
+
+function drawAnnotLabel(a){
+  var sc = worldToScreen(a.lat, a.lng);
+  if(!sc.visible) return;
+  annotCtx.save();
+  annotCtx.font = 'bold 13px Geist, system-ui, sans-serif';
+  annotCtx.fillStyle = a.color || annotColor;
+  annotCtx.strokeStyle = 'rgba(0,0,0,0.7)';
+  annotCtx.lineWidth = 3;
+  // Dot
+  annotCtx.beginPath(); annotCtx.arc(sc.x, sc.y, 4, 0, Math.PI*2);
+  annotCtx.fillStyle = a.color || annotColor; annotCtx.fill();
+  annotCtx.strokeStyle = 'rgba(0,0,0,0.5)'; annotCtx.lineWidth = 1; annotCtx.stroke();
+  // Text with outline
+  annotCtx.strokeStyle = 'rgba(0,0,0,0.8)'; annotCtx.lineWidth = 3;
+  annotCtx.strokeText(a.text, sc.x + 8, sc.y - 5);
+  annotCtx.fillStyle = a.color || annotColor;
+  annotCtx.fillText(a.text, sc.x + 8, sc.y - 5);
+  annotCtx.restore();
+}
+
+function drawAnnotArrow(a){
+  var s = worldToScreen(a.fromLat, a.fromLng);
+  var e = worldToScreen(a.toLat, a.toLng);
+  if(!s.visible && !e.visible) return;
+  annotCtx.save();
+  annotCtx.strokeStyle = a.color || annotColor;
+  annotCtx.fillStyle = a.color || annotColor;
+  annotCtx.lineWidth = 2;
+  // Line
+  annotCtx.beginPath(); annotCtx.moveTo(s.x, s.y); annotCtx.lineTo(e.x, e.y); annotCtx.stroke();
+  // Arrowhead
+  var angle = Math.atan2(e.y - s.y, e.x - s.x);
+  annotCtx.beginPath();
+  annotCtx.moveTo(e.x, e.y);
+  annotCtx.lineTo(e.x - 12*Math.cos(angle-0.4), e.y - 12*Math.sin(angle-0.4));
+  annotCtx.lineTo(e.x - 12*Math.cos(angle+0.4), e.y - 12*Math.sin(angle+0.4));
+  annotCtx.closePath(); annotCtx.fill();
+  // Label
+  if(a.label){
+    var mx = (s.x+e.x)/2, my = (s.y+e.y)/2;
+    annotCtx.font = '12px Geist, system-ui, sans-serif';
+    annotCtx.strokeStyle = 'rgba(0,0,0,0.8)'; annotCtx.lineWidth = 3;
+    annotCtx.strokeText(a.label, mx+4, my-4);
+    annotCtx.fillText(a.label, mx+4, my-4);
+  }
+  annotCtx.restore();
+}
+
+// Continuously redraw annotations as globe rotates
+setInterval(redrawAnnotations, 80);
+
+function clearAnnotations(){
+  annotations = [];
+  if(annotCtx) annotCtx.clearRect(0,0,annotC.width,annotC.height);
+}
+
+// ── Annotation tool interactions ──────────────────────────────────────
+function setTool(tool){
+  currentTool = currentTool === tool ? null : tool;
+  ['label','arrow','erase'].forEach(function(t){
+    var btn = document.getElementById('tool'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(btn) btn.classList.toggle('active', currentTool===t);
+  });
+  if(annotC) annotC.classList.toggle('drawing', !!currentTool);
+  arrowStart = null;
+}
+
+// ── Screen→globe lat/lng ──────────────────────────────────────────────
+function screenToLatLng(px, py){
+  // Raycast against globe sphere
+  var panel = document.querySelector('.panel');
+  var W = window.innerWidth - panel.offsetWidth;
+  var H = window.innerHeight - 52;
+  var ndcX = (px / W) * 2 - 1;
+  var ndcY = -(py / H) * 2 + 1;
+  raycaster.setFromCamera({x:ndcX, y:ndcY}, camera);
+  var hits = raycaster.intersectObject(globe);
+  if(!hits.length) return null;
+  var pt = hits[0].point;
+  // Reverse globeGroup rotation
+  var inv = globeGroup.quaternion.clone().invert();
+  var local = pt.clone().applyQuaternion(inv);
+  var lat = 90 - Math.acos(local.y / GLOBE_R) * 180 / Math.PI;
+  var lng = Math.atan2(local.z, -local.x) * 180 / Math.PI - 180;
+  if(lng < -180) lng += 360;
+  return {lat:lat, lng:lng};
+}
+
+// Set up annotation canvas click handlers
+function setupAnnotInteractions(){
+  annotC.addEventListener('click', function(e){
+    if(!currentTool) return;
+    var rect = annotC.getBoundingClientRect();
+    var px = e.clientX - rect.left, py = e.clientY - rect.top;
+    var ll = screenToLatLng(px, py);
+    if(!ll) return;
+
+    if(currentTool === 'label'){
+      var text = prompt('Enter label text:');
+      if(!text) return;
+      annotations.push({type:'label', lat:ll.lat, lng:ll.lng, text:text, color:annotColor});
+    } else if(currentTool === 'arrow'){
+      if(!arrowStart){
+        arrowStart = ll;
+        document.getElementById('globeTip').textContent = 'Now click the end point of the arrow';
+        document.getElementById('globeTip').style.display = 'block';
+        document.getElementById('globeTip').style.left = (px+10)+'px';
+        document.getElementById('globeTip').style.top = (py+10)+'px';
+      } else {
+        var label = prompt('Arrow label (optional):') || '';
+        annotations.push({type:'arrow', fromLat:arrowStart.lat, fromLng:arrowStart.lng,
+          toLat:ll.lat, toLng:ll.lng, label:label, color:annotColor});
+        arrowStart = null;
+        document.getElementById('globeTip').style.display = 'none';
+      }
+    } else if(currentTool === 'erase'){
+      // Remove annotation nearest to click
+      var sc, minD = 25, minI = -1;
+      annotations.forEach(function(a, i){
+        sc = worldToScreen(a.lat, a.lng);
+        var d = Math.hypot(sc.x-px, sc.y-py);
+        if(d<minD){minD=d;minI=i;}
+      });
+      if(minI>=0) annotations.splice(minI,1);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SEARCH
+// ══════════════════════════════════════════════════════════════════════
+var searchTimeout;
+function onSearch(val){
+  document.getElementById('searchClear').style.display = val ? 'block' : 'none';
+  clearTimeout(searchTimeout);
+  if(!val.trim()){
+    document.getElementById('suggestions').style.display = 'none'; return;
+  }
+  searchTimeout = setTimeout(function(){ showSuggestions(val); }, 120);
+}
+
+function showSuggestions(val){
+  var q = val.toLowerCase().trim();
+  var results = SEARCH_INDEX.filter(function(item){
+    return item.searchStr.indexOf(q) >= 0;
+  }).slice(0, 8);
+
+  if(!results.length){ document.getElementById('suggestions').style.display='none'; return; }
+
+  var html = results.map(function(r){
+    return '<div class="sugg-item" onclick="doSearch(\''+esc(r.name)+'\')">'+
+      '<span class="sugg-name">'+esc(r.name)+'</span>'+
+      '<span class="sugg-type">'+esc(r.type)+'</span></div>';
+  }).join('');
+  var el = document.getElementById('suggestions');
+  el.innerHTML = html; el.style.display = 'block';
+}
+
+function onSearchKey(e){
+  if(e.key === 'Enter'){
+    var val = document.getElementById('searchInput').value.trim();
+    if(val) doSearch(val);
+  } else if(e.key === 'Escape'){
+    document.getElementById('suggestions').style.display = 'none';
+  }
+}
+
+function clearSearch(){
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  document.getElementById('suggestions').style.display = 'none';
+}
+
+function doSearch(name){
+  document.getElementById('suggestions').style.display = 'none';
+  document.getElementById('searchInput').value = name;
+  document.getElementById('searchClear').style.display = 'block';
+
+  // Find in database
+  var key = name.toLowerCase().trim();
+  var feature = GEO_FEATURES[key];
+  if(!feature){
+    // Fuzzy match
+    var best = SEARCH_INDEX.find(function(r){ return r.name.toLowerCase() === key; }) ||
+               SEARCH_INDEX.find(function(r){ return r.searchStr.indexOf(key) >= 0; });
+    if(best) feature = GEO_FEATURES[best.key];
+    if(best) key = best.key;
+  }
+  if(!feature){
+    document.getElementById('panelContent').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">🔎</div><div>No results for "'+esc(name)+'"</div>'+
+      '<div class="empty-hint">Try broader terms like country names, major rivers, or well-known mountain ranges</div></div>';
+    return;
+  }
+
+  currentFeature = {key:key, data:feature};
+  clearHighlights();
+  clearAnnotations();
+
+  // Fly to feature
+  flyTo_(feature.lat, feature.lng, feature.zoom || 3.5);
+
+  // Highlight main feature
+  drawFeatureHighlight(key, annotColor, 0.5);
+  activeChips[key] = annotColor;
+
+  // Show info
+  showFeatureInfo(key, feature);
+
+  // Show toolbar + export bar
+  document.getElementById('toolbar').style.display = 'block';
+  document.getElementById('exportBar').style.display = 'flex';
+}
+
+function showFeatureInfo(key, f){
+  var statsHtml = '';
+  if(f.stats){
+    statsHtml = '<div class="feat-stats">';
+    Object.keys(f.stats).forEach(function(k){
+      statsHtml += '<div class="stat-box"><div class="stat-label">'+esc(k)+'</div>'+
+        '<div class="stat-val">'+esc(f.stats[k])+'</div></div>';
+    });
+    statsHtml += '</div>';
+  }
+
+  var relHtml = '';
+  if(f.related && f.related.length){
+    relHtml = '<div class="related-label">Related features</div><div class="related-chips">';
+    f.related.forEach(function(rk){
+      var rf = GEO_FEATURES[rk];
+      var rname = rf ? rf.name : rk.split(' ').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join(' ');
+      var isActive = !!activeChips[rk];
+      relHtml += '<div class="chip'+(isActive?' active':'')+'" onclick="toggleRelated(\''+esc(rk)+'\')">'+
+        '<div class="chip-dot" style="background:'+(isActive?activeChips[rk]:'var(--muted)')+'"></div>'+
+        esc(rname)+'</div>';
+    });
+    relHtml += '</div>';
+  }
+
+  var html = '<div class="feat-card">'+
+    '<div class="feat-name">'+esc(f.name)+'</div>'+
+    '<div class="feat-type-badge">'+typeIcon(f.type)+' '+esc(f.type)+'</div>'+
+    '<div class="feat-desc">'+esc(f.desc)+'</div>'+
+    statsHtml+relHtml+
+    '</div>';
+  document.getElementById('panelContent').innerHTML = html;
+}
+
+function typeIcon(type){
+  var icons = {mountain:'⛰',river:'〰️',plain:'🌾',desert:'🏜',forest:'🌿',country:'🏳',
+    plateau:'🗻',sea:'🌊',lake:'💧',volcano:'🌋',trench:'🔽',mountain_range:'⛰',
+    'mountain range':'⛰','salt marsh':'🌊','lagoon/waterway':'🚤','union territory':'🏛',
+    region:'📍','mangrove delta':'🌊','ocean trench':'🔽','rift valley':'🏔'};
+  return icons[type] || '📌';
+}
+
+function toggleRelated(rk){
+  if(activeChips[rk]){
+    // Remove
+    delete activeChips[rk];
+    overlayMeshes = overlayMeshes.filter(function(m){
+      if(m.userData.featureKey === rk || m.userData.featureKey === rk+'_ring'){
+        globeGroup.remove(m); m.geometry.dispose(); m.material.dispose(); return false;
+      }
+      return true;
+    });
+  } else {
+    // Add with a different color
+    var colors = ['#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#34d399','#f472b6'];
+    var usedColors = Object.values(activeChips);
+    var col = colors.find(function(c){ return !usedColors.includes(c); }) || colors[0];
+    activeChips[rk] = col;
+    drawFeatureHighlight(rk, col, 0.4);
+  }
+  // Re-render panel to update chip states
+  if(currentFeature) showFeatureInfo(currentFeature.key, currentFeature.data);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// EXPORT PDF
+// ══════════════════════════════════════════════════════════════════════
+function exportPDF(){
+  // 1. Render current Three.js frame to offscreen at 2x
+  renderer.render(scene, camera);
+  var globeDataUrl = renderer.domElement.toDataURL('image/png');
+
+  // 2. Compose with annotation canvas
+  var W = renderer.domElement.width, H = renderer.domElement.height;
+  var comp = document.createElement('canvas');
+  comp.width = W; comp.height = H;
+  var ctx = comp.getContext('2d');
+  ctx.drawImage(renderer.domElement, 0, 0);
+  if(annotC) ctx.drawImage(annotC, 0, 0, W, H);
+
+  var imgUrl = comp.toDataURL('image/png');
+
+  var pdf = new jspdf.jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+  pdf.addImage(imgUrl, 'PNG', 0, 0, 297, 210);
+
+  // Info text
+  if(currentFeature){
+    pdf.setFontSize(16);
+    pdf.setTextColor(232,213,176);
+    pdf.text(currentFeature.data.name, 10, 195);
+  }
+  pdf.setFontSize(7);
+  pdf.setTextColor(120,120,140);
+  pdf.text('CogniSwift 3D Earth Atlas — cogniswift.in  |  Educational use only', 297-10, 207, {align:'right'});
+
+  pdf.save('cogniswift-earth-' + (currentFeature ? currentFeature.key.replace(/\s+/g,'-') : 'globe') + '.pdf');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ANNOTATION COLOR PICKER
+// ══════════════════════════════════════════════════════════════════════
+var ANNOT_COLORS = ['#e8d5b0','#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#ffffff'];
+function buildColorPicker(){
+  var el = document.getElementById('annotColors');
+  el.innerHTML = ANNOT_COLORS.map(function(c){
+    return '<div class="color-dot'+(c===annotColor?' sel':'')+'" style="background:'+c+'" onclick="pickAnnotColor(\''+c+'\')"></div>';
+  }).join('');
+}
+function pickAnnotColor(c){
+  annotColor = c; buildColorPicker();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// UTILITY
+// ══════════════════════════════════════════════════════════════════════
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function getEmptyState(){
+  return '<div class="empty-state">'+
+    '<div class="empty-icon">🌐</div>'+
+    '<div>Search any geographical feature<br/>to explore it on the globe</div>'+
+    '<div class="empty-hint">Try searching for:</div>'+
+    '<div style="margin-top:6px">'+
+    '<span class="hint-example" onclick="doSearch(\'Gangetic Plains\')">Gangetic Plains</span>'+
+    '<span class="hint-example" onclick="doSearch(\'Himalayas\')">Himalayas</span>'+
+    '<span class="hint-example" onclick="doSearch(\'Amazon River\')">Amazon River</span>'+
+    '<span class="hint-example" onclick="doSearch(\'Sahara Desert\')">Sahara Desert</span>'+
+    '<span class="hint-example" onclick="doSearch(\'Western Ghats\')">Western Ghats</span>'+
+    '<span class="hint-example" onclick="doSearch(\'Mariana Trench\')">Mariana Trench</span>'+
+    '</div></div>';
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.search-wrap')) document.getElementById('suggestions').style.display='none';
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════
+window.addEventListener('load', function(){
+  var fill = document.getElementById('loadFill');
+  var progress = 0;
+  var loadInterval = setInterval(function(){
+    progress = Math.min(90, progress + Math.random() * 15);
+    fill.style.width = progress + '%';
+  }, 150);
+
+  // Give Three.js time to set up
+  setTimeout(function(){
+    initGlobe();
+    setupAnnotCanvas();
+    setupAnnotInteractions();
+    buildColorPicker();
+
+    clearInterval(loadInterval);
+    fill.style.width = '100%';
+    setTimeout(function(){
+      document.getElementById('loading').style.opacity = '0';
+      document.getElementById('loading').style.transition = 'opacity 0.5s';
+      setTimeout(function(){ document.getElementById('loading').style.display = 'none'; }, 500);
+    }, 300);
+  }, 400);
+});
+</script>
+</body>
+</html>
