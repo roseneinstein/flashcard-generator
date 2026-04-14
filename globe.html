@@ -833,11 +833,33 @@ function initGlobe(){
   drawGlobeTexture(ctx, 2048, 1024);
   var texture = new THREE.CanvasTexture(texCanvas);
 
+  // Try loading a real Earth texture — fall back to procedural if blocked
+  var textureLoader = new THREE.TextureLoader();
+  var earthTexUrls = [
+    'https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/textures/land_ocean_ice_cloud_2048.jpg',
+    'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg'
+  ];
   var mat = new THREE.MeshPhongMaterial({
-    map: texture,
-    specular: new THREE.Color(0x222244),
-    shininess: 8,
+    map: texture, // starts with procedural
+    specular: new THREE.Color(0x112233),
+    shininess: 12,
   });
+
+  // Attempt real texture load
+  function tryLoadTexture(urls, idx){
+    if(idx >= urls.length) return;
+    textureLoader.load(urls[idx], function(t){
+      mat.map = t;
+      mat.needsUpdate = true;
+      // Dim the coastlines slightly since texture has its own detail
+      globeGroup.children.forEach(function(c){
+        if(c.isLine && c.material && c.material.opacity !== undefined){
+          if(c.material.opacity > 0.5) c.material.opacity *= 0.7;
+        }
+      });
+    }, undefined, function(){ tryLoadTexture(urls, idx+1); });
+  }
+  tryLoadTexture(earthTexUrls, 0);
   globe = new THREE.Mesh(geo, mat);
   globeGroup.add(globe);
 
@@ -874,6 +896,8 @@ function initGlobe(){
 
   // Stars
   addStars();
+  // Country/coastline outlines on sphere surface
+  addGlobeLines();
 
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
@@ -894,29 +918,207 @@ function initGlobe(){
 }
 
 function drawGlobeTexture(ctx, W, H){
-  // Ocean base
+  // Ocean base — deep navy blue
   var oceanGrad = ctx.createLinearGradient(0, 0, 0, H);
-  oceanGrad.addColorStop(0, '#0a1a3a');
-  oceanGrad.addColorStop(0.5, '#0d2248');
-  oceanGrad.addColorStop(1, '#091530');
+  oceanGrad.addColorStop(0,   '#0a1529');
+  oceanGrad.addColorStop(0.25,'#0d2040');
+  oceanGrad.addColorStop(0.5, '#0e2448');
+  oceanGrad.addColorStop(0.75,'#0d2040');
+  oceanGrad.addColorStop(1,   '#0a1529');
   ctx.fillStyle = oceanGrad;
   ctx.fillRect(0, 0, W, H);
 
-  // Equatorial glow
-  ctx.fillStyle = 'rgba(20,60,120,0.3)';
-  ctx.fillRect(0, H*0.35, W, H*0.3);
+  // Draw continents using simplified polygon outlines
+  // Coordinates: [lng, lat] arrays, equirectangular projection
+  function project(lng, lat){
+    return [(lng + 180) / 360 * W, (90 - lat) / 180 * H];
+  }
+  function drawPoly(rings, fill, stroke){
+    ctx.beginPath();
+    rings.forEach(function(ring){
+      var p0 = project(ring[0][0], ring[0][1]);
+      ctx.moveTo(p0[0], p0[1]);
+      for(var i=1;i<ring.length;i++){
+        var p = project(ring[i][0], ring[i][1]);
+        ctx.lineTo(p[0], p[1]);
+      }
+      ctx.closePath();
+    });
+    if(fill){ctx.fillStyle=fill;ctx.fill();}
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=0.4;ctx.stroke();}
+  }
 
-  // Grid lines (lat/lng graticule — subtle)
-  ctx.strokeStyle = 'rgba(100,140,220,0.07)';
-  ctx.lineWidth = 0.5;
-  for(var lat = -80; lat <= 80; lat += 20){
-    var y = H * (1 - (lat + 90) / 180);
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  var LAND = '#2a4a2e';   // dark green-grey for land
+  var LAND2 = '#223d26';  // slightly darker variant
+  var COAST = '#3a6040';  // coastline outline
+
+  // ── Africa ──
+  drawPoly([[[37,-35],[16,-35],[14,-18],[9,-5],[0,5],[-6,5],[-18,0],[-18,15],[-10,20],[2,24],[10,24],[20,22],[30,22],[37,10],[42,10],[45,15],[50,10],[45,0],[40,-5],[37,-20],[32,-32],[27,-35],[20,-35],[16,-29],[12,-20],[10,-10],[6,-2],[2,6],[0,6],[-3,5],[-6,3],[-11,7],[-15,12],[-17,15],[-18,20],[0,30],[10,34],[15,38],[22,38],[30,38],[37,35],[40,25],[42,18],[50,12],[50,0],[42,-12],[37,-20],[37,-35]]],LAND,COAST);
+
+  // ── Europe ──
+  drawPoly([[[-10,36],[0,36],[8,36],[15,38],[20,38],[28,42],[30,46],[28,52],[20,56],[15,58],[10,60],[5,58],[0,50],[-5,48],[-10,44],[-10,36]]],LAND,COAST);
+  // Scandanavia
+  drawPoly([[[5,58],[10,58],[15,60],[20,64],[22,70],[18,72],[12,70],[8,64],[5,58]]],LAND,COAST);
+
+  // ── Asia ──
+  drawPoly([[[28,42],[35,42],[42,38],[50,30],[55,24],[58,22],[60,24],[68,24],[72,20],[72,8],[80,8],[85,22],[88,26],[96,22],[100,10],[105,10],[110,18],[120,22],[130,32],[130,42],[128,50],[138,46],[142,54],[142,46],[136,48],[130,42],[128,36],[122,32],[116,22],[108,16],[100,2],[100,-2],[108,-8],[110,-8],[106,-8],[100,4],[98,8],[95,12],[88,22],[82,26],[74,34],[68,36],[60,30],[56,22],[50,22],[44,36],[38,38],[30,42],[28,42]]],LAND,COAST);
+  // Indian subcontinent extra detail
+  drawPoly([[[68,24],[72,22],[76,8],[78,8],[80,10],[82,18],[88,22],[84,22],[80,14],[77,8],[72,8],[68,24]]],LAND,COAST);
+  // Japan
+  drawPoly([[[130,32],[132,34],[134,34],[136,36],[137,36],[136,34],[133,33],[130,32]]],LAND,COAST);
+  // Indonesia
+  drawPoly([[[106,-6],[108,-7],[112,-7],[115,-8],[110,-9],[106,-7],[106,-6]]],LAND,COAST);
+
+  // ── Australia ──
+  drawPoly([[[114,-22],[116,-22],[120,-20],[128,-16],[135,-12],[136,-14],[134,-18],[136,-24],[130,-32],[124,-34],[116,-34],[114,-32],[112,-26],[114,-22]]],LAND,COAST);
+
+  // ── North America ──
+  drawPoly([[[-170,60],[-162,60],[-140,60],[-136,60],[-130,54],[-126,50],[-124,48],[-120,44],[-120,36],[-116,30],[-110,24],[-98,20],[-90,16],[-85,10],[-80,8],[-75,8],[-70,12],[-62,18],[-60,14],[-62,8],[-70,8],[-78,8],[-83,8],[-88,14],[-90,18],[-97,20],[-104,20],[-108,24],[-116,28],[-120,32],[-122,38],[-124,44],[-124,50],[-130,54],[-132,58],[-136,60],[-148,62],[-152,60],[-156,60],[-162,60],[-170,62],[-170,60]]],LAND,COAST);
+  // Greenland
+  drawPoly([[[-55,60],[-42,62],[-20,76],[-18,80],[-30,84],[-50,84],[-62,82],[-68,76],[-62,70],[-55,60]]],LAND2,COAST);
+
+  // ── South America ──
+  drawPoly([[[-82,8],[-78,2],[-52,-4],[-48,-2],[-38,0],[-36,-10],[-40,-20],[-50,-30],[-58,-38],[-65,-42],[-68,-56],[-74,-52],[-72,-48],[-68,-42],[-62,-40],[-56,-30],[-50,-24],[-44,-20],[-40,-12],[-38,-8],[-40,-4],[-50,-4],[-56,-2],[-62,2],[-68,4],[-74,8],[-78,8],[-82,8]]],LAND,COAST);
+
+  // ── Antarctica ──
+  drawPoly([[[-180,-80],[-160,-76],[-120,-72],[-80,-72],[-40,-74],[0,-70],[40,-72],[80,-70],[120,-72],[160,-76],[180,-80],[180,-90],[-180,-90],[-180,-80]]],LAND2,COAST);
+
+  // Ice / snow on polar regions
+  ctx.fillStyle='rgba(220,230,240,0.25)';
+  ctx.fillRect(0,0,W,H*0.08); // Arctic
+  ctx.fillRect(0,H*0.92,W,H*0.08); // Antarctic
+
+  // Subtle atmosphere glow at equator
+  var glow=ctx.createLinearGradient(0,H*0.3,0,H*0.7);
+  glow.addColorStop(0,'rgba(30,80,160,0)');
+  glow.addColorStop(0.5,'rgba(30,80,160,0.08)');
+  glow.addColorStop(1,'rgba(30,80,160,0)');
+  ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+}
+
+// Draw country/coastline outlines as 3D lines on globe surface
+function addGlobeLines(){
+  var lineColor = isDark ? 0x4488aa : 0x336688;
+  var lineMat = new THREE.LineBasicMaterial({
+    color: lineColor, transparent: true, opacity: 0.55, linewidth: 1
+  });
+
+  // Convert array of [lng,lat] pairs to a 3D line on globe surface
+  function makeGlobeLine(coords, r){
+    r = r || GLOBE_R * 1.001;
+    var pts = [];
+    for(var i=0;i<coords.length;i++){
+      pts.push(latLngToVec3(coords[i][1], coords[i][0], r));
+    }
+    var geo = new THREE.BufferGeometry().setFromPoints(pts);
+    return new THREE.Line(geo, lineMat);
   }
-  for(var lng2 = 0; lng2 < 360; lng2 += 20){
-    var x = W * lng2 / 360;
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+
+  // Graticule (latitude lines every 30°, longitude every 30°)
+  var gratColor = isDark ? 0x1a3060 : 0x6699aa;
+  var gratMat = new THREE.LineBasicMaterial({color:gratColor, transparent:true, opacity:0.25});
+  for(var lat=-60;lat<=60;lat+=30){
+    var pts=[];
+    for(var lng=-180;lng<=180;lng+=3)
+      pts.push(latLngToVec3(lat,lng,GLOBE_R*1.0005));
+    var g=new THREE.BufferGeometry().setFromPoints(pts);
+    globeGroup.add(new THREE.Line(g,gratMat));
   }
+  for(var lng2=-180;lng2<=180;lng2+=30){
+    var pts2=[];
+    for(var la=-90;la<=90;la+=3)
+      pts2.push(latLngToVec3(la,lng2,GLOBE_R*1.0005));
+    var g2=new THREE.BufferGeometry().setFromPoints(pts2);
+    globeGroup.add(new THREE.Line(g2,gratMat));
+  }
+  // Equator (brighter)
+  var eqPts=[];
+  for(var l=-180;l<=180;l+=2) eqPts.push(latLngToVec3(0,l,GLOBE_R*1.001));
+  var eqGeo=new THREE.BufferGeometry().setFromPoints(eqPts);
+  var eqMat=new THREE.LineBasicMaterial({color: isDark?0x2255aa:0x336699, transparent:true, opacity:0.45});
+  globeGroup.add(new THREE.Line(eqGeo,eqMat));
+  // Tropics & Polar circles
+  [23.5,-23.5,66.5,-66.5].forEach(function(lat2){
+    var tPts=[];
+    for(var l2=-180;l2<=180;l2+=2) tPts.push(latLngToVec3(lat2,l2,GLOBE_R*1.0005));
+    var tGeo=new THREE.BufferGeometry().setFromPoints(tPts);
+    var tMat=new THREE.LineBasicMaterial({color:isDark?0x1a3555:0x557799,transparent:true,opacity:0.3});
+    globeGroup.add(new THREE.Line(tGeo,tMat));
+  });
+
+  // ── Major coastline outlines (simplified) ──────────────────────────
+  // Format: [[lng,lat], ...]
+  var coastlines = [
+    // Africa outer
+    [[37,-35],[30,-32],[27,-34],[20,-35],[15,-30],[12,-20],[10,-10],[7,-2],[3,6],[0,6],
+     [-3,5],[-6,3],[-11,7],[-15,12],[-17,15],[-18,20],[0,30],[10,34],[15,38],
+     [22,38],[30,38],[37,35],[40,25],[42,18],[50,12],[50,0],[42,-12],[37,-20],[37,-35]],
+    // Europe
+    [[-10,36],[0,36],[8,36],[15,38],[20,38],[28,42],[30,46],[28,52],[20,56],
+     [15,58],[10,60],[5,58],[0,50],[-5,48],[-10,44],[-10,36]],
+    // Scandinavia
+    [[5,58],[10,58],[15,60],[20,64],[22,70],[18,72],[12,70],[8,64],[5,58]],
+    // Great Britain
+    [[-5,50],[0,52],[2,52],[0,54],[-2,58],[-5,58],[-5,52],[-5,50]],
+    // Asia
+    [[28,42],[35,42],[42,38],[50,30],[55,24],[58,22],[60,24],[68,24],
+     [72,20],[72,8],[80,8],[85,22],[88,26],[96,22],[100,10],[105,10],
+     [110,18],[120,22],[130,32],[130,42],[128,50],[138,46],[142,54]],
+    // Japan
+    [[130,32],[132,34],[134,34],[136,36],[137,36],[136,34],[133,33],[130,32]],
+    // Indian subcontinent coast
+    [[68,24],[72,22],[76,8],[78,8],[80,10],[82,18],[88,22],[88,22]],
+    // Sri Lanka
+    [[80,10],[81,9],[81,7],[80,6],[79,7],[80,10]],
+    // Southeast Asia
+    [[100,2],[100,-2],[104,-2],[108,-4],[110,-8],[106,-8],[102,-2],[100,2]],
+    // Australia
+    [[114,-22],[116,-22],[120,-20],[128,-16],[135,-12],[136,-14],
+     [134,-18],[136,-24],[130,-32],[124,-34],[116,-34],[114,-32],[112,-26],[114,-22]],
+    // North America
+    [[-170,60],[-162,60],[-140,60],[-136,60],[-130,54],[-126,50],[-124,48],
+     [-120,44],[-120,36],[-116,30],[-110,24],[-98,20],[-90,16],[-85,10],
+     [-80,8],[-75,8],[-70,12],[-62,18],[-60,14],[-62,8],[-70,8],[-78,8],
+     [-83,8],[-88,14],[-90,18],[-97,20],[-104,20],[-108,24],[-116,28],
+     [-120,32],[-122,38],[-124,44],[-124,50],[-130,54],[-132,58],[-136,60],
+     [-148,62],[-152,60],[-156,60],[-162,60],[-170,62],[-170,60]],
+    // Greenland
+    [[-55,60],[-42,62],[-20,76],[-18,80],[-30,84],[-50,84],[-62,82],[-68,76],[-62,70],[-55,60]],
+    // South America
+    [[-82,8],[-78,2],[-52,-4],[-48,-2],[-38,0],[-36,-10],[-40,-20],
+     [-50,-30],[-58,-38],[-65,-42],[-68,-56],[-74,-52],[-72,-48],[-68,-42],
+     [-62,-40],[-56,-30],[-50,-24],[-44,-20],[-40,-12],[-38,-8],[-40,-4],
+     [-50,-4],[-56,-2],[-62,2],[-68,4],[-74,8],[-78,8],[-82,8]],
+    // New Zealand
+    [[172,-42],[174,-40],[174,-36],[172,-38],[170,-44],[168,-46],[170,-46],[172,-42]],
+    // Iceland
+    [[-24,64],[-18,66],[-14,66],[-12,64],[-16,62],[-22,63],[-24,64]],
+  ];
+
+  coastlines.forEach(function(c){ globeGroup.add(makeGlobeLine(c)); });
+
+  // ── India specific coastline + borders (more detailed) ──────────────
+  var indiaMat = new THREE.LineBasicMaterial({color:isDark?0x5588cc:0x3366aa, transparent:true, opacity:0.7});
+  var indiaBorder = [
+    // Western coast
+    [68.2,23.7],[67.4,22.0],[68.0,20.0],[69.0,17.0],[73.0,15.0],[74.5,13.0],
+    [76.0,8.5],[77.5,8.0],[78.5,9.5],[80.0,10.5],[80.5,12.0],[79.5,14.0],
+    [80.2,15.0],[80.5,17.0],[82.5,18.5],[84.0,19.0],[85.5,19.5],[87.0,20.0],
+    [88.0,22.0],[89.0,22.0],[89.5,22.5],[91.5,22.0],[92.0,22.5],
+    // Northeast
+    [93.0,24.0],[94.5,25.0],[96.0,27.0],[97.0,28.0],[97.5,29.0],
+    // North (Himalayan frontier approximate)
+    [97.0,29.0],[96.0,28.0],[94.0,28.0],[92.0,27.5],[90.0,28.0],
+    [88.0,27.5],[87.0,28.0],[86.0,28.5],[84.0,28.0],[82.0,30.0],
+    [80.0,31.0],[78.0,31.0],[77.0,33.0],[75.5,34.0],[74.5,34.5],
+    // J&K / Ladakh (GOI line)
+    [73.5,34.5],[72.5,34.0],[71.0,34.5],[70.0,36.0],[79.0,37.0],
+    [79.5,34.5],[78.0,33.0],[76.5,32.5],[75.5,34.0]
+  ];
+  var igeo = new THREE.BufferGeometry().setFromPoints(
+    indiaBorder.map(function(c){ return latLngToVec3(c[1],c[0],GLOBE_R*1.002); })
+  );
+  globeGroup.add(new THREE.Line(igeo, indiaMat));
 }
 
 function addStars(){
@@ -956,13 +1158,15 @@ function setGlobeOrientation(lat, lng){
 
 function updateGlobeTheme(){
   if(!globe) return;
-  // Atmosphere changes with theme
   if(!isDark && atmosphere){
     atmosphere.material.color.set(0x3366aa);
     atmosphere.material.opacity = 0.025;
+    globe.material.specular = new THREE.Color(0x334466);
+    scene.background = new THREE.Color(0x8899bb);
   } else if(atmosphere){
     atmosphere.material.color.set(0x4488ff);
     atmosphere.material.opacity = 0.04;
+    scene.background = null;
   }
 }
 
