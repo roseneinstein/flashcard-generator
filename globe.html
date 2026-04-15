@@ -354,7 +354,8 @@ var GEO_FEATURES = {
     desc:'The most fertile and densely populated plains of India, formed by alluvial deposits of the Ganga, Yamuna, and their tributaries. Breadbasket of India spanning ~700,000 km².',
     stats:{Area:'~700,000 km²', 'Avg Elevation':'~100–300 m', 'Major Rivers':'Ganga, Yamuna, Ghaghra', States:'UP, Bihar, WB'},
     related:['ganga river','yamuna river','brahmaputra river','himalayas','doab','indo-gangetic plain'],
-    highlights:['ganga river','yamuna river','ghaghra river','gandak river']
+    highlights:['ganga river','yamuna river','ghaghra river','gandak river'],
+    shape:{type:'polygon',ring:[[76.5,29.5],[78.0,29.0],[80.0,28.0],[82.0,27.0],[84.0,26.0],[86.0,25.5],[88.0,25.0],[89.5,25.5],[89.5,26.5],[88.0,26.5],[86.0,26.5],[84.0,27.0],[82.0,27.5],[80.5,28.5],[78.5,29.5],[76.5,29.5]]}
   },
   'himalayas': {
     name:'Himalayas', type:'mountain range', region:'South Asia',
@@ -362,7 +363,8 @@ var GEO_FEATURES = {
     desc:'World\'s highest mountain range, stretching ~2,400 km across India, Nepal, Bhutan, and Tibet. Contains 14 of the world\'s 15 highest peaks including Mount Everest (8,849 m).',
     stats:{Length:'~2,400 km', 'Highest Peak':'Mt. Everest 8,849 m', 'Avg Width':'~200–400 km', 'Countries':'India, Nepal, Bhutan, China'},
     related:['mount everest','karakoram','gangetic plains','brahmaputra river','indo-gangetic plain','k2'],
-    highlights:['brahmaputra river','indus river']
+    highlights:['brahmaputra river','indus river'],
+    shape:{type:'polygon',ring:[[73.0,37.0],[75.5,36.0],[77.5,35.5],[80.0,34.5],[82.5,33.5],[84.5,28.5],[85.5,27.5],[87.0,27.0],[88.5,27.5],[90.0,28.0],[92.0,28.5],[94.0,29.0],[96.5,29.5],[97.0,28.5],[96.5,27.0],[95.0,26.5],[92.5,26.5],[90.0,26.5],[87.5,26.5],[85.0,26.5],[82.5,27.5],[80.0,29.5],[78.0,31.5],[76.5,32.5],[74.5,33.5],[73.0,35.5],[73.0,37.0]]}
   },
   'western ghats': {
     name:'Western Ghats', type:'mountain range', region:'India',
@@ -370,7 +372,8 @@ var GEO_FEATURES = {
     desc:'UNESCO World Heritage Site and one of the world\'s 8 hottest biodiversity hotspots. Runs ~1,600 km along India\'s western coast, influencing the monsoon and sheltering 5,000+ species of flowering plants.',
     stats:{Length:'~1,600 km', 'Highest Peak':'Anamudi 2,695 m', 'Biodiversity':'5,000+ plant species', States:'Gujarat, MH, Goa, Karnataka, Kerala, TN'},
     related:['eastern ghats','deccan plateau','kerala backwaters','nilgiri hills','arabian sea'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[73.5,22.0],[73.0,20.0],[72.8,18.5],[73.5,17.0],[74.5,15.5],[75.0,13.5],[75.5,11.0],[76.5,8.5],[77.5,8.0],[78.0,9.5],[77.0,11.0],[76.0,13.0],[75.0,15.0],[74.5,16.5],[74.0,18.5],[74.0,20.0],[74.5,22.0],[73.5,22.0]]}
   },
   'deccan plateau': {
     name:'Deccan Plateau', type:'plateau', region:'India',
@@ -378,7 +381,8 @@ var GEO_FEATURES = {
     desc:'A large triangular plateau forming most of southern India. Bounded by the Vindhya Range to the north and the Eastern and Western Ghats on its sides. Rich in mineral resources.',
     stats:{Area:'~1.9 million km²', Elevation:'300–900 m avg', 'Major Rivers':'Godavari, Krishna, Kaveri', Minerals:'Iron ore, coal, limestone'},
     related:['western ghats','eastern ghats','godavari river','krishna river','vindhya range'],
-    highlights:['godavari river','krishna river','kaveri river']
+    highlights:['godavari river','krishna river','kaveri river'],
+    shape:{type:'polygon',ring:[[73.5,22.0],[75.0,22.0],[77.0,21.0],[79.0,20.0],[81.0,19.5],[82.5,18.5],[83.0,17.5],[82.5,15.0],[80.5,13.5],[78.5,13.0],[76.5,13.5],[74.5,14.5],[73.5,15.5],[73.0,17.5],[73.0,19.5],[72.5,21.0],[73.5,22.0]]}
   },
   'thar desert': {
     name:'Thar Desert (Great Indian Desert)', type:'desert', region:'India',
@@ -386,7 +390,8 @@ var GEO_FEATURES = {
     desc:'The world\'s 17th largest desert and India\'s only major hot desert. Spanning ~200,000 km² across Rajasthan and parts of Pakistan, it is home to 40 million people.',
     stats:{Area:'~200,000 km²', 'Annual Rainfall':'< 250 mm', States:'Rajasthan, Gujarat (India), Sindh (Pakistan)', Wildlife:'Great Indian Bustard'},
     related:['aravalli range','luni river','indus river','rajasthan','rann of kutch'],
-    highlights:['luni river']
+    highlights:['luni river'],
+    shape:{type:'polygon',ring:[[68.0,28.5],[69.5,29.5],[71.0,30.5],[72.0,29.5],[73.5,29.0],[74.5,28.5],[74.0,27.0],[72.5,26.5],[71.0,26.0],[70.0,25.5],[68.5,24.5],[67.5,24.0],[67.5,25.5],[68.0,27.0],[68.0,28.5]]}
   },
   'eastern ghats': {
     name:'Eastern Ghats', type:'mountain range', region:'India',
@@ -394,7 +399,8 @@ var GEO_FEATURES = {
     desc:'A discontinuous range of hills along India\'s eastern coast. Interrupted by rivers like the Godavari, Krishna, and Kaveri. Average elevation ~600 m.',
     stats:{Length:'~1,750 km (discontinuous)', 'Highest Peak':'Arma Konda 1,680 m', States:'Odisha, AP, TN, partial Chhattisgarh'},
     related:['western ghats','deccan plateau','godavari river','krishna river','bay of bengal'],
-    highlights:['godavari river','krishna river','mahanadi river']
+    highlights:['godavari river','krishna river','mahanadi river'],
+    shape:{type:'polygon',ring:[[79.0,22.0],[80.0,21.0],[81.0,19.5],[82.0,18.0],[82.5,16.5],[80.5,14.5],[79.5,13.0],[80.5,14.5],[81.0,15.5],[81.5,17.0],[82.0,18.5],[81.0,20.0],[80.0,21.5],[79.0,22.0]]}
   },
 
   // ── INDIA — Rivers ────────────────────────────────────────────────
@@ -404,7 +410,8 @@ var GEO_FEATURES = {
     desc:'India\'s most sacred river, originating from Gangotri glacier in the Himalayas. Flows ~2,525 km to empty into the Bay of Bengal. Sustains 500 million people along its banks.',
     stats:{Length:'2,525 km', Origin:'Gangotri Glacier, Uttarakhand', Mouth:'Bay of Bengal (Sundarbans)', Tributaries:'Yamuna, Ghaghra, Gandak, Kosi'},
     related:['yamuna river','brahmaputra river','gangetic plains','himalayan glaciers','sundarbans'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[79.1,30.9],[79.5,30.0],[80.2,28.5],[81.5,27.5],[82.5,26.8],[83.5,26.3],[84.5,25.8],[85.5,25.5],[86.5,25.2],[87.5,25.0],[88.0,24.5],[88.5,23.5],[88.8,22.5],[89.2,22.0]]}
   },
   'yamuna river': {
     name:'Yamuna River', type:'river', region:'India',
@@ -412,7 +419,8 @@ var GEO_FEATURES = {
     desc:'Largest tributary of the Ganga, originating from Yamunotri glacier. Flows 1,376 km before merging with the Ganga at Allahabad (Prayagraj). Delhi sits on its banks.',
     stats:{Length:'1,376 km', Origin:'Yamunotri Glacier', Mouth:'Prayagraj (confluence with Ganga)', States:'Uttarakhand, Delhi, UP'},
     related:['ganga river','chambal river','betwa river','gangetic plains','delhi'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[78.2,30.8],[78.0,29.5],[77.8,28.5],[77.3,27.5],[77.0,26.5],[78.0,25.8],[79.0,25.3],[80.5,25.4],[81.5,25.4],[82.0,25.5]]}
   },
   'brahmaputra river': {
     name:'Brahmaputra River', type:'river', region:'South Asia',
@@ -420,7 +428,8 @@ var GEO_FEATURES = {
     desc:'One of the world\'s major rivers, originating in Tibet as the Yarlung Tsangpo. After cutting through the Himalayas it enters India\'s Assam valley. One of the widest rivers in the world.',
     stats:{Length:'2,900 km total (918 km in India)', Origin:'Angsi Glacier, Tibet', Mouth:'Bay of Bengal', 'Width in Assam':'Up to 10 km'},
     related:['ganga river','himalayas','assam','sundarbans','tibet plateau','northeast india'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[82.0,29.5],[84.0,29.3],[86.5,28.5],[88.0,27.5],[90.0,26.5],[91.5,26.0],[92.5,26.2],[93.5,26.5],[94.5,27.0],[95.5,27.5],[96.5,28.0],[95.0,27.5],[93.5,26.2],[92.0,26.0],[90.5,26.3],[89.5,25.5],[89.8,24.5],[90.2,23.5]]}
   },
   'indus river': {
     name:'Indus River', type:'river', region:'South Asia',
@@ -428,7 +437,8 @@ var GEO_FEATURES = {
     desc:'One of the longest rivers in Asia, originating near Lake Mansarovar in Tibet. Flows through Ladakh (India), through Pakistan, into the Arabian Sea. Cradle of the Indus Valley Civilisation.',
     stats:{Length:'3,180 km (1,114 km in India)', Origin:'Near Lake Mansarovar, Tibet', Mouth:'Arabian Sea, Pakistan', Tributaries:'Jhelum, Chenab, Ravi, Beas, Sutlej'},
     related:['himalayas','ladakh','karakoram','thar desert','punjab'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[79.0,31.5],[77.5,33.0],[76.0,33.5],[74.5,34.0],[73.0,33.5],[71.5,33.0],[70.0,32.5],[69.5,31.5],[69.0,30.0],[68.5,28.5],[68.0,27.0],[67.5,25.5],[67.0,24.5],[67.5,23.5]]}
   },
   'godavari river': {
     name:'Godavari River', type:'river', region:'India',
@@ -436,7 +446,8 @@ var GEO_FEATURES = {
     desc:'The second longest river of India ("Dakshin Ganga" or Ganges of the South). Originates in Nashik, Maharashtra, and flows 1,465 km to the Bay of Bengal through the Eastern Ghats.',
     stats:{Length:'1,465 km', Origin:'Nashik, Maharashtra', Mouth:'Bay of Bengal (Andhra Pradesh)', States:'MH, Telangana, AP'},
     related:['krishna river','eastern ghats','deccan plateau','mahanadi river','andhra pradesh'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[73.8,19.8],[75.0,19.5],[76.5,19.0],[78.0,18.5],[79.5,18.0],[81.0,17.5],[82.5,17.0],[81.5,16.5],[81.8,16.0],[82.0,17.0]]}
   },
   'krishna river': {
     name:'Krishna River', type:'river', region:'India',
@@ -444,7 +455,8 @@ var GEO_FEATURES = {
     desc:'Originates at Mahabaleshwar in the Western Ghats and flows 1,400 km eastward to the Bay of Bengal. Major irrigation source for Karnataka, Telangana, and Andhra Pradesh.',
     stats:{Length:'1,400 km', Origin:'Mahabaleshwar, MH', Mouth:'Bay of Bengal', States:'MH, Karnataka, Telangana, AP'},
     related:['godavari river','tungabhadra river','eastern ghats','deccan plateau'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[74.0,17.5],[75.5,17.0],[77.0,16.5],[78.5,16.0],[79.5,15.5],[80.5,15.8],[81.5,16.5],[80.5,15.5],[80.8,15.0]]}
   },
 
   // ── INDIA — Other Major Features ──────────────────────────────────
@@ -454,7 +466,8 @@ var GEO_FEATURES = {
     desc:'World\'s largest tidal halophytic mangrove forest and a UNESCO World Heritage Site. Home to the Royal Bengal Tiger and the unique mangrove ecosystem of the Ganga-Brahmaputra delta.',
     stats:{Area:'~10,000 km²', Location:'Ganga-Brahmaputra delta', 'Tiger Population':'~400 in Indian side', Status:'UNESCO World Heritage + Ramsar Site'},
     related:['ganga river','brahmaputra river','bay of bengal','west bengal','bangladesh'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[88.0,22.5],[88.5,22.0],[89.5,22.0],[90.0,22.5],[90.5,22.0],[91.0,22.5],[90.5,23.0],[89.0,23.0],[88.0,22.5]]}
   },
   'rann of kutch': {
     name:'Rann of Kutch', type:'salt marsh', region:'India',
@@ -462,7 +475,8 @@ var GEO_FEATURES = {
     desc:'Largest salt desert in the world, located in Gujarat. Seasonally flooded by the Arabian Sea and home to the wild ass sanctuary. Famous for the Rann Utsav festival.',
     stats:{Area:'~30,000 km²', Location:'Gujarat, India', Wildlife:'Indian Wild Ass, Flamingo', 'Season':'Dry: Oct–May'},
     related:['thar desert','arabian sea','gujarat','luni river'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[68.0,24.5],[70.0,24.5],[71.5,24.5],[72.5,24.0],[72.5,23.0],[71.5,23.0],[70.0,23.0],[68.5,23.5],[68.0,24.5]]}
   },
   'kerala backwaters': {
     name:'Kerala Backwaters', type:'lagoon/waterway', region:'India',
@@ -480,7 +494,8 @@ var GEO_FEATURES = {
     desc:'World\'s highest mountain at 8,849 m (29,032 ft) above sea level. Located on the border of Nepal and Tibet (China). First summited by Edmund Hillary and Tenzing Norgay on May 29, 1953.',
     stats:{Elevation:'8,849 m (29,032 ft)', Location:'Nepal-Tibet border', 'First Summit':'May 29, 1953', 'Annual Summits':'~900+'},
     related:['himalayas','k2','kanchenjunga','nepal','tibet plateau'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'point'}
   },
   'andes': {
     name:'Andes Mountains', type:'mountain range', region:'South America',
@@ -488,7 +503,8 @@ var GEO_FEATURES = {
     desc:'World\'s longest continental mountain range, stretching ~7,000 km along the western edge of South America. Contains Aconcagua (6,961 m), the highest peak outside Asia.',
     stats:{Length:'~7,000 km', 'Highest Peak':'Aconcagua 6,961 m', Countries:'Colombia, Ecuador, Peru, Bolivia, Chile, Argentina'},
     related:['amazon river','atacama desert','patagonia','machu picchu'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[-75.0,10.0],[-77.0,5.0],[-78.0,0.0],[-78.5,-5.0],[-76.0,-10.0],[-74.0,-15.0],[-73.5,-20.0],[-70.5,-25.0],[-69.5,-30.0],[-70.0,-35.0],[-71.0,-40.0],[-72.5,-45.0],[-73.0,-50.0],[-71.0,-50.0],[-70.5,-45.0],[-69.5,-40.0],[-68.5,-35.0],[-68.0,-30.0],[-67.5,-25.0],[-68.5,-20.0],[-70.0,-15.0],[-72.0,-10.0],[-74.0,-5.0],[-73.5,0.0],[-76.0,5.0],[-73.5,10.0],[-75.0,10.0]]}
   },
   'alps': {
     name:'Alps', type:'mountain range', region:'Europe',
@@ -496,7 +512,8 @@ var GEO_FEATURES = {
     desc:'Europe\'s highest and most extensive mountain range system, stretching ~1,200 km across 8 countries. Mont Blanc (4,808 m) is the highest peak.',
     stats:{Length:'~1,200 km', 'Highest Peak':'Mont Blanc 4,808 m', Countries:'France, Switzerland, Italy, Austria, Germany, Liechtenstein, Monaco, Slovenia'},
     related:['rhine river','danube river','mediterranean sea','france','switzerland'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[5.5,43.5],[7.0,43.5],[8.5,45.5],[10.0,46.5],[12.0,47.5],[14.0,47.5],[15.0,46.5],[14.5,45.5],[13.0,45.5],[11.0,45.0],[9.5,44.5],[7.5,44.5],[6.0,44.0],[5.5,43.5]]}
   },
   'rocky mountains': {
     name:'Rocky Mountains', type:'mountain range', region:'North America',
@@ -504,7 +521,8 @@ var GEO_FEATURES = {
     desc:'Major mountain range system of western North America, stretching ~4,800 km from British Columbia to New Mexico. Contains numerous national parks including Yellowstone.',
     stats:{Length:'~4,800 km', 'Highest Peak':'Mount Elbert 4,399 m', Countries:'USA, Canada'},
     related:['mississippi river','colorado river','yellowstone','great plains'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[-114.0,49.5],[-116.0,48.0],[-117.5,46.5],[-117.0,44.0],[-116.0,42.0],[-114.0,39.5],[-112.0,37.5],[-106.5,37.0],[-105.0,38.5],[-107.0,40.0],[-109.0,41.5],[-110.5,43.5],[-111.5,45.5],[-112.5,47.5],[-114.0,49.5]]}
   },
   'karakoram': {
     name:'Karakoram Range', type:'mountain range', region:'Central Asia',
@@ -512,7 +530,8 @@ var GEO_FEATURES = {
     desc:'Contains the world\'s second highest peak K2 (8,611 m). Straddles the borders of India (Ladakh), Pakistan, and China. Home to the largest glaciers outside the polar regions.',
     stats:{'Highest Peak':'K2 at 8,611 m', Location:'India, Pakistan, China border', 'Glaciers':'Longest non-polar glaciers', 'Disputed':'Partially in Aksai Chin (India per GOI)'},
     related:['k2','himalayas','indus river','ladakh','siachen glacier'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[72.0,36.5],[73.5,36.0],[75.0,36.5],[76.5,36.0],[77.5,35.5],[78.5,35.0],[78.0,35.8],[76.5,36.8],[74.5,37.0],[73.0,37.5],[72.0,36.5]]}
   },
 
   // ── WORLD — Rivers ────────────────────────────────────────────────
@@ -522,7 +541,8 @@ var GEO_FEATURES = {
     desc:'World\'s largest river by discharge volume (20% of all freshwater entering oceans). Flows ~6,400 km across Brazil. Drains the Amazon Rainforest, the world\'s largest tropical rainforest.',
     stats:{Length:'~6,400 km', Discharge:'209,000 m³/s (20% of global)', Basin:'~7 million km²', Countries:'Brazil, Peru, Colombia'},
     related:['amazon rainforest','andes','atlantic ocean','orinoco river','brazil'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[-78.0,-2.5],[-75.0,-4.5],[-72.0,-5.0],[-68.0,-4.5],[-65.0,-3.5],[-62.0,-3.0],[-58.0,-2.5],[-55.0,-2.0],[-52.0,-1.5],[-50.0,-1.0],[-49.5,-0.5]]}
   },
   'nile river': {
     name:'Nile River', type:'river', region:'Africa',
@@ -530,7 +550,8 @@ var GEO_FEATURES = {
     desc:'Historically considered the world\'s longest river (~6,650 km). Flows northward through northeastern Africa into the Mediterranean Sea. Cradle of Ancient Egyptian civilisation.',
     stats:{Length:'~6,650 km', Origin:'Lake Victoria (White Nile)', Mouth:'Mediterranean Sea', Countries:'Uganda, Sudan, Egypt and 9 more'},
     related:['sahara desert','egypt','lake victoria','sudan','mediterranean sea'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[32.0,-1.0],[33.5,2.0],[33.0,5.0],[32.5,8.0],[33.0,12.0],[32.5,15.0],[32.0,18.0],[31.5,22.0],[31.0,26.0],[31.5,30.0],[31.8,31.0]]}
   },
   'yangtze river': {
     name:'Yangtze River', type:'river', region:'Asia',
@@ -538,7 +559,8 @@ var GEO_FEATURES = {
     desc:'Asia\'s longest river (~6,300 km) and the world\'s third longest. Flows through central China, powering the Three Gorges Dam. Critical to China\'s economy and ecology.',
     stats:{Length:'~6,300 km', Origin:'Tibetan Plateau', Mouth:'East China Sea, Shanghai', 'Dam':'Three Gorges Dam (world\'s largest power station)'},
     related:['tibet plateau','three gorges','shanghai','china','yellow river'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[91.0,33.5],[95.0,32.0],[98.0,30.5],[101.0,29.5],[104.0,29.0],[107.0,29.5],[109.0,30.0],[111.0,30.5],[113.0,30.0],[115.0,29.5],[118.0,30.0],[120.0,31.5],[121.5,31.0]]}
   },
   'mississippi river': {
     name:'Mississippi River', type:'river', region:'North America',
@@ -546,7 +568,8 @@ var GEO_FEATURES = {
     desc:'Second longest river in North America (~3,730 km). Drains 40% of the contiguous USA. With the Missouri River, forms the fourth longest river system in the world.',
     stats:{Length:'~3,730 km', Origin:'Lake Itasca, Minnesota', Mouth:'Gulf of Mexico', 'Drainage Basin':'~3.2 million km²'},
     related:['ohio river','missouri river','great plains','rocky mountains','gulf of mexico'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[-94.0,47.5],[-93.5,45.0],[-92.5,43.0],[-91.0,41.0],[-90.5,39.5],[-90.0,37.5],[-89.5,35.0],[-90.0,33.0],[-91.0,31.0],[-91.5,29.5],[-89.5,29.0]]}
   },
   'congo river': {
     name:'Congo River', type:'river', region:'Africa',
@@ -554,7 +577,8 @@ var GEO_FEATURES = {
     desc:'World\'s deepest river (over 220 m) and second largest by discharge. Flows through the Congo Rainforest, the world\'s second largest tropical rainforest.',
     stats:{Length:'~4,700 km', 'Max Depth':'>220 m (world\'s deepest)', Discharge:'41,000 m³/s (2nd globally)', Countries:'Congo, DRC, CAR'},
     related:['congo rainforest','lake tanganyika','africa','atlantic ocean'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polyline',coords:[[29.5,-8.5],[29.0,-6.0],[27.5,-4.0],[25.0,-2.5],[22.5,-1.0],[20.0,-0.5],[18.5,0.0],[17.5,1.0],[16.5,0.5],[16.0,-1.5],[12.5,-5.0]]}
   },
 
   // ── WORLD — Deserts ───────────────────────────────────────────────
@@ -564,7 +588,8 @@ var GEO_FEATURES = {
     desc:'World\'s largest hot desert at ~9.2 million km², covering most of North Africa. Despite its aridity, it hosts oases, ancient caravan routes, and a population of ~4 million people.',
     stats:{Area:'~9.2 million km²', Countries:'11 African nations', 'Annual Rainfall':'< 25 mm/year', Temperature:'Up to 58°C recorded'},
     related:['nile river','atlas mountains','sahel','mediterranean sea','niger river'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[-18.0,15.0],[-14.0,21.0],[-10.0,24.0],[-5.0,26.5],[0.0,27.5],[5.0,28.5],[10.0,30.0],[15.0,30.5],[20.0,30.0],[25.0,30.0],[30.0,29.0],[33.0,26.0],[35.0,22.0],[36.5,19.0],[37.0,16.0],[35.0,14.0],[32.0,13.0],[28.0,12.5],[22.0,13.0],[18.0,13.5],[14.0,13.5],[10.0,13.0],[6.0,14.0],[2.0,14.5],[-2.0,14.0],[-6.0,14.5],[-12.0,14.5],[-18.0,15.0]]}
   },
   'gobi desert': {
     name:'Gobi Desert', type:'desert', region:'Asia',
@@ -572,7 +597,8 @@ var GEO_FEATURES = {
     desc:'Asia\'s largest desert and the world\'s 5th largest, spanning southern Mongolia and northern China. A cold desert that played a key role in the Silk Road trade routes.',
     stats:{Area:'~1.3 million km²', Countries:'Mongolia, China', Type:'Cold desert', Temperature:'From -40°C to +45°C'},
     related:['mongolia','china','silk road','himalayas','china-mongolia border'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[98.0,43.5],[101.0,45.5],[104.0,46.5],[107.0,46.5],[110.0,45.0],[112.0,43.0],[112.5,41.0],[110.0,39.5],[107.5,39.0],[105.0,40.0],[102.5,41.5],[100.0,42.5],[98.0,43.5]]}
   },
   'atacama desert': {
     name:'Atacama Desert', type:'desert', region:'South America',
@@ -580,7 +606,8 @@ var GEO_FEATURES = {
     desc:'World\'s driest non-polar desert, averaging just 1-3 mm of rain per year in some areas. Paradoxically rich in copper and lithium. Contains world-class astronomical observatories.',
     stats:{Area:'~105,000 km²', Countries:'Chile, Peru, Bolivia, Argentina', 'Annual Rain':'<1 mm in some areas', Resources:'World\'s largest copper and lithium deposits'},
     related:['andes','pacific ocean','chile','peru','patagonia'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[-68.5,-14.0],[-70.0,-15.0],[-71.5,-18.0],[-71.0,-21.0],[-70.0,-24.0],[-69.5,-27.0],[-69.0,-27.5],[-69.5,-24.5],[-70.0,-21.5],[-69.5,-18.5],[-68.5,-15.5],[-68.5,-14.0]]}
   },
 
   // ── WORLD — Forests & Ecosystems ──────────────────────────────────
@@ -590,7 +617,8 @@ var GEO_FEATURES = {
     desc:'World\'s largest tropical rainforest, covering ~5.5 million km². Produces 20% of Earth\'s oxygen and hosts 10% of all species on Earth. Under severe deforestation pressure.',
     stats:{Area:'~5.5 million km²', Countries:'Brazil (60%), Peru, Colombia + others', Biodiversity:'10% of Earth\'s species', 'O₂ Production':'~20% of global'},
     related:['amazon river','andes','atlantic ocean','brazil','orinoco river'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[-78.0,2.0],[-74.0,4.0],[-68.0,5.0],[-62.0,4.0],[-56.0,4.5],[-51.0,4.0],[-50.0,2.0],[-50.5,0.0],[-52.0,-2.0],[-54.0,-5.0],[-57.0,-8.0],[-60.0,-12.0],[-62.0,-16.0],[-64.0,-14.0],[-66.0,-10.0],[-68.0,-6.0],[-70.0,-3.0],[-72.0,0.0],[-74.0,1.5],[-78.0,2.0]]}
   },
   'congo rainforest': {
     name:'Congo Rainforest', type:'forest', region:'Africa',
@@ -598,7 +626,8 @@ var GEO_FEATURES = {
     desc:'World\'s second largest tropical rainforest. Absorbs significant carbon dioxide. Home to bonobos, forest elephants, and western lowland gorillas. Critical for global climate regulation.',
     stats:{Area:'~3.7 million km²', Countries:'DRC, Republic of Congo, CAR, Gabon, others', 'Key Species':'Bonobo, Gorilla, Forest Elephant'},
     related:['congo river','africa','equatorial guinea','gabon'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[14.0,4.0],[16.0,5.0],[18.0,5.5],[20.0,5.0],[22.0,4.5],[24.0,3.5],[26.0,2.5],[28.0,1.5],[29.0,0.0],[28.5,-3.0],[27.5,-5.5],[26.0,-6.5],[24.0,-5.5],[22.0,-4.5],[20.0,-4.0],[18.0,-3.5],[16.0,-4.0],[14.5,-3.0],[13.5,-1.0],[13.0,1.5],[14.0,4.0]]}
   },
 
   // ── WORLD — Oceans & Seas ─────────────────────────────────────────
@@ -608,7 +637,8 @@ var GEO_FEATURES = {
     desc:'Deepest oceanic trench on Earth. The Challenger Deep reaches 10,935 m below sea level — deeper than Mt. Everest is tall. Located in the western Pacific Ocean near Guam.',
     stats:{'Max Depth':'10,935 m (Challenger Deep)', Location:'Western Pacific, near Guam', Length:'~2,550 km', Width:'~69 km'},
     related:['pacific ocean','philippine trench','guam','tectonic plates'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'dashed',coords:[[144.0,20.5],[143.5,18.0],[142.5,15.5],[142.0,13.0],[141.5,11.5],[142.0,10.0],[141.8,9.0]]}
   },
   'arabian sea': {
     name:'Arabian Sea', type:'sea', region:'Indian Ocean',
@@ -616,7 +646,8 @@ var GEO_FEATURES = {
     desc:'Northwestern part of the Indian Ocean, bounded by India to the east, the Arabian Peninsula to the west, and Pakistan to the north. Critical shipping route between Asia and Europe.',
     stats:{Area:'~3.86 million km²', 'Max Depth':'4,652 m', Countries:'India, Pakistan, Oman, Yemen, Somalia + others'},
     related:['indian ocean','bay of bengal','persian gulf','red sea','western ghats'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[57.5,25.0],[60.0,24.5],[63.0,22.5],[65.0,20.0],[64.5,17.0],[62.0,14.5],[58.0,13.0],[53.0,14.0],[50.0,16.5],[49.0,20.0],[52.0,24.5],[55.0,24.5],[57.5,25.0]]}
   },
   'bay of bengal': {
     name:'Bay of Bengal', type:'sea', region:'Indian Ocean',
@@ -624,7 +655,8 @@ var GEO_FEATURES = {
     desc:'World\'s largest bay. Bounded by India to the west, Bangladesh and Myanmar to the north, and Sri Lanka to the south. Receives the Ganga and Brahmaputra rivers.',
     stats:{Area:'~2.17 million km²', 'Max Depth':'4,694 m', Countries:'India, Bangladesh, Myanmar, Sri Lanka, Thailand + others'},
     related:['ganga river','brahmaputra river','arabian sea','indian ocean','sundarbans'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[80.0,22.0],[82.0,20.0],[84.0,18.0],[85.5,16.0],[86.5,12.5],[84.5,10.0],[82.0,10.0],[80.5,11.0],[80.5,13.0],[79.5,15.0],[80.5,17.0],[80.5,20.0],[80.0,22.0]]}
   },
 
   // ── WORLD — Plains & Plateaus ─────────────────────────────────────
@@ -642,7 +674,8 @@ var GEO_FEATURES = {
     desc:'World\'s highest and largest plateau, averaging over 4,500 m elevation. Source of 10 of Asia\'s major rivers. Politically part of China; significant in Indian context as headwaters of Indian rivers.',
     stats:{Area:'~2.5 million km²', 'Avg Elevation':'4,500 m', Rivers:'Indus, Ganga, Yangtze, Mekong, Brahmaputra', Country:'China (Tibet Autonomous Region)'},
     related:['himalayas','brahmaputra river','indus river','yangtze river','china'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[78.0,31.5],[80.5,32.5],[83.0,32.5],[85.5,32.0],[88.0,32.0],[90.5,31.5],[93.0,31.0],[95.5,30.5],[97.5,30.5],[99.0,31.0],[101.0,32.0],[102.0,33.5],[102.0,35.0],[100.0,36.0],[97.5,36.5],[95.0,37.0],[92.5,37.5],[89.5,37.5],[87.0,37.0],[84.5,37.0],[82.0,36.5],[79.5,35.0],[77.5,34.0],[76.0,33.0],[78.0,31.5]]}
   },
   'great plains': {
     name:'Great Plains', type:'plain', region:'North America',
@@ -650,7 +683,8 @@ var GEO_FEATURES = {
     desc:'Vast flat expanse of grassland prairie stretching ~1.3 million km² in central North America. Known as North America\'s breadbasket for wheat and cattle production.',
     stats:{Area:'~1.3 million km²', Countries:'USA (10 states), Canada (3 provinces)', Agriculture:'Wheat, corn, cattle, bison (historic)', Climate:'Semi-arid continental'},
     related:['mississippi river','rocky mountains','canada','central usa'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[-104.0,49.0],[-100.0,49.0],[-96.5,49.0],[-96.5,47.0],[-96.0,44.0],[-96.5,41.5],[-97.5,39.5],[-98.5,37.5],[-100.5,35.5],[-102.0,33.0],[-103.0,31.0],[-104.5,30.0],[-105.5,31.5],[-105.0,33.5],[-104.0,36.0],[-103.5,38.0],[-103.0,40.5],[-103.5,43.0],[-104.0,46.5],[-104.0,49.0]]}
   },
 
   // ── WORLD — Countries / Regions ───────────────────────────────────
@@ -660,7 +694,8 @@ var GEO_FEATURES = {
     desc:'World\'s most populous country (1.44 billion) and 7th largest by area. Federal constitutional republic with 28 states and 8 Union Territories. Major emerging economy.',
     stats:{Area:'3.29 million km²', Population:'1.44 billion (2024)', States:'28 states + 8 UTs', Capital:'New Delhi'},
     related:['himalayas','gangetic plains','deccan plateau','western ghats','bay of bengal','arabian sea'],
-    highlights:['ganga river','brahmaputra river','indus river','godavari river']
+    highlights:['ganga river','brahmaputra river','indus river','godavari river'],
+    shape:{type:'polygon',ring:[[68.2,23.7],[70.0,22.5],[72.0,20.5],[73.0,18.0],[73.5,16.0],[74.5,14.0],[76.5,8.5],[78.0,8.0],[80.0,9.5],[80.5,12.5],[79.5,14.0],[80.5,16.0],[80.5,17.5],[82.5,18.5],[84.0,19.5],[85.5,20.0],[87.0,21.5],[88.5,22.5],[89.5,22.5],[91.5,22.0],[92.0,22.5],[93.0,24.0],[94.5,25.5],[95.5,27.0],[97.0,28.5],[97.5,29.0],[96.5,28.5],[94.0,28.0],[92.0,27.5],[90.5,27.5],[88.5,27.5],[87.0,28.0],[85.5,28.5],[83.5,29.0],[82.0,30.5],[80.0,31.5],[78.5,32.5],[77.0,33.5],[76.0,34.0],[75.5,35.0],[79.5,34.5],[80.5,34.0],[79.0,35.5],[77.5,35.5],[75.0,35.5],[73.5,36.0],[72.5,35.5],[71.5,35.0],[70.0,36.0],[71.0,34.5],[70.5,32.0],[69.5,29.5],[68.5,27.0],[68.2,23.7]]}
   },
   'brazil': {
     name:'Brazil', type:'country', region:'South America',
@@ -668,7 +703,8 @@ var GEO_FEATURES = {
     desc:'World\'s largest country in South America and 5th largest globally. Home to 60% of the Amazon Rainforest. Largest economy in South America.',
     stats:{Area:'8.5 million km²', Population:'215 million', Capital:'Brasília', Language:'Portuguese'},
     related:['amazon rainforest','amazon river','andes','atlantic ocean','paraguay river'],
-    highlights:['amazon river']
+    highlights:['amazon river'],
+    shape:{type:'polygon',ring:[[-58.0,5.5],[-53.0,4.5],[-50.0,2.0],[-49.5,0.0],[-51.5,-3.5],[-35.0,-4.5],[-35.0,-9.5],[-37.5,-11.5],[-39.0,-16.5],[-39.5,-20.0],[-41.5,-22.5],[-44.5,-23.5],[-48.5,-26.5],[-51.0,-29.5],[-53.5,-33.5],[-56.0,-34.0],[-58.5,-34.5],[-60.5,-33.5],[-62.0,-31.0],[-64.5,-27.5],[-65.0,-22.5],[-64.5,-18.0],[-62.5,-14.0],[-61.5,-10.5],[-62.0,-7.5],[-64.0,-4.5],[-66.5,-1.5],[-70.0,0.5],[-73.5,1.5],[-75.0,4.0],[-72.5,5.5],[-68.0,6.0],[-63.0,5.5],[-58.0,5.5]]}
   },
   'china': {
     name:'China', type:'country', region:'East Asia',
@@ -676,7 +712,8 @@ var GEO_FEATURES = {
     desc:'World\'s most populous country until 2023, now 2nd. 4th largest by area. World\'s 2nd largest economy. Shares borders with 14 countries including India.',
     stats:{Area:'9.6 million km²', Population:'1.41 billion', Capital:'Beijing', 'Border Countries':'14 (most in the world)'},
     related:['himalayas','tibet plateau','yangtze river','yellow river','gobi desert','south china sea'],
-    highlights:['yangtze river','yellow river']
+    highlights:['yangtze river','yellow river'],
+    shape:{type:'polygon',ring:[[73.5,39.5],[76.0,40.5],[80.0,42.5],[85.0,45.0],[90.0,47.5],[95.0,48.5],[100.0,49.0],[105.0,49.5],[110.0,48.5],[115.0,47.5],[120.0,48.0],[122.0,46.5],[124.0,43.0],[122.5,40.0],[120.5,37.5],[122.0,33.0],[121.5,28.0],[120.0,22.0],[117.0,21.0],[113.0,22.5],[110.0,21.0],[108.0,20.5],[106.0,22.0],[102.5,22.5],[100.0,22.0],[98.0,24.0],[97.5,28.0],[97.0,28.5],[95.0,27.5],[92.0,27.5],[88.5,27.5],[85.5,28.5],[82.0,30.5],[80.0,31.5],[78.0,32.5],[76.0,34.0],[75.0,36.0],[73.5,39.5]]}
   },
   'russia': {
     name:'Russia', type:'country', region:'Eurasia',
@@ -684,7 +721,8 @@ var GEO_FEATURES = {
     desc:'World\'s largest country by area (17.1 million km²), spanning 11 time zones from Eastern Europe to the Pacific. Rich in natural resources.',
     stats:{Area:'17.1 million km²', Population:'144 million', 'Time Zones':'11', Capital:'Moscow'},
     related:['ural mountains','siberian plain','baikal lake','volga river','arctic ocean'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[28.0,71.5],[35.0,70.0],[45.0,69.0],[60.0,69.5],[70.0,72.0],[80.0,73.5],[90.0,73.0],[100.0,70.5],[110.0,70.0],[120.0,71.0],[130.0,71.5],[140.0,73.0],[150.0,71.0],[160.0,68.5],[170.0,66.0],[178.0,65.0],[178.0,60.0],[170.0,59.5],[160.0,60.0],[150.0,59.0],[142.0,53.5],[138.0,48.5],[135.0,47.0],[132.0,43.5],[130.0,42.5],[128.0,43.0],[125.0,46.0],[120.0,50.0],[115.0,52.0],[110.0,53.5],[105.0,52.5],[100.0,51.0],[90.0,50.5],[85.0,50.0],[80.0,51.0],[74.5,52.0],[68.5,54.5],[61.5,55.0],[60.0,56.5],[55.0,57.5],[50.0,58.5],[48.0,60.0],[44.0,62.0],[38.0,64.0],[32.0,64.5],[28.0,65.0],[26.5,69.0],[28.0,71.5]]}
   },
   'usa': {
     name:'United States of America', type:'country', region:'North America',
@@ -692,7 +730,8 @@ var GEO_FEATURES = {
     desc:'World\'s 3rd largest country by area and 3rd most populous. World\'s largest economy. Federal republic of 50 states.',
     stats:{Area:'9.8 million km²', Population:'331 million', States:'50', Capital:'Washington D.C.'},
     related:['rocky mountains','mississippi river','great plains','great lakes','appalachians'],
-    highlights:['mississippi river']
+    highlights:['mississippi river'],
+    shape:{type:'polygon',ring:[[-124.5,49.0],[-110.0,49.0],[-96.0,49.0],[-84.0,46.0],[-83.0,42.5],[-76.5,44.5],[-71.0,45.0],[-67.5,47.5],[-67.0,44.5],[-70.0,41.5],[-72.5,39.0],[-75.0,35.5],[-80.0,31.5],[-81.5,30.0],[-85.0,29.5],[-89.5,29.0],[-93.5,29.5],[-97.0,26.0],[-99.0,27.5],[-100.0,28.5],[-104.5,29.5],[-108.0,31.5],[-111.0,31.5],[-117.0,32.5],[-118.5,34.0],[-122.5,37.5],[-124.0,41.5],[-124.5,46.0],[-124.5,49.0]]}
   },
 
   // ── WORLD — Lakes ─────────────────────────────────────────────────
@@ -702,7 +741,8 @@ var GEO_FEATURES = {
     desc:'World\'s largest enclosed inland body of water. Despite being called a "sea" it has no natural connection to the ocean. Rich in oil and natural gas. Bordered by 5 countries.',
     stats:{Area:'371,000 km²', 'Max Depth':'1,025 m', Countries:'Russia, Kazakhstan, Turkmenistan, Iran, Azerbaijan', Resources:'Major oil and gas reserves'},
     related:['volga river','iran','kazakhstan','russia','azerbaijan'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[51.0,37.5],[53.0,38.5],[54.0,40.0],[53.5,42.0],[52.5,44.5],[51.5,46.5],[50.0,47.5],[49.0,46.5],[49.5,44.5],[50.0,42.0],[50.5,40.0],[50.0,38.0],[51.0,37.5]]}
   },
   'lake baikal': {
     name:'Lake Baikal', type:'lake', region:'Russia',
@@ -710,7 +750,8 @@ var GEO_FEATURES = {
     desc:'World\'s deepest lake (1,642 m) and largest freshwater lake by volume (23% of world\'s liquid surface freshwater). UNESCO World Heritage Site.',
     stats:{Depth:'1,642 m (world\'s deepest)', Area:'31,722 km²', Volume:'23% of world\'s liquid surface freshwater', Age:'~25 million years (world\'s oldest lake)'},
     related:['siberian plain','russia','angara river','ural mountains'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[103.5,56.0],[104.5,55.5],[108.5,52.5],[109.5,52.0],[109.0,51.5],[107.5,52.0],[105.5,53.5],[103.5,55.0],[103.5,56.0]]}
   },
   'lake victoria': {
     name:'Lake Victoria', type:'lake', region:'Africa',
@@ -718,7 +759,8 @@ var GEO_FEATURES = {
     desc:'Africa\'s largest lake and world\'s 2nd largest freshwater lake by area. Source of the White Nile. Shared by Uganda, Tanzania, and Kenya.',
     stats:{Area:'68,870 km²', Countries:'Uganda, Tanzania, Kenya', 'Nile Source':'White Nile begins here', 'Max Depth':'81 m'},
     related:['nile river','uganda','tanzania','kenya','east africa'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[29.5,-1.0],[31.0,-1.5],[34.0,-0.5],[34.5,0.5],[34.0,2.0],[33.0,1.0],[31.5,0.5],[30.0,0.5],[29.5,-1.0]]}
   },
 
   // ── WORLD — Volcanoes & Special Features ──────────────────────────
@@ -728,7 +770,8 @@ var GEO_FEATURES = {
     desc:'Africa\'s highest peak at 5,895 m. A dormant stratovolcano in Tanzania. Famous for its glacial cap, which has retreated ~85% since 1912 due to climate change.',
     stats:{Elevation:'5,895 m (19,341 ft)', Location:'Tanzania, near Kenya border', Type:'Dormant stratovolcano', 'Glacier Loss':'~85% since 1912'},
     related:['kenya','tanzania','east africa','great rift valley','serengeti'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'point'}
   },
   'great rift valley': {
     name:'Great Rift Valley', type:'rift valley', region:'Africa',
@@ -736,7 +779,8 @@ var GEO_FEATURES = {
     desc:'A continuous geographic depression running ~6,000 km from Lebanon in Asia to Mozambique in Africa. Contains several of Africa\'s Great Lakes and many active volcanoes.',
     stats:{Length:'~6,000 km', Region:'East Africa / Middle East', Lakes:'Victoria, Tanganyika, Malawi, Turkana', Volcanoes:'Kilimanjaro, Nyiragongo, Ol Doinyo Lengai'},
     related:['kilimanjaro','lake victoria','ethiopia','kenya','red sea'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'dashed',coords:[[36.0,12.0],[38.0,9.0],[37.5,5.0],[36.5,0.0],[36.0,-3.0],[35.5,-7.0],[34.5,-10.0],[35.0,-15.0],[35.5,-20.0]]}
   },
 
   // ── INDIA — Administrative / Competition relevance ─────────────────
@@ -746,7 +790,8 @@ var GEO_FEATURES = {
     desc:'Highest Union Territory of India, established on October 31, 2019. Borders Pakistan (PoK), China (Aksai Chin — which India claims). Contains the Siachen Glacier and Pangong Lake.',
     stats:{Area:'59,146 km²', Status:'Union Territory of India (since 2019)', Districts:'Leh and Kargil', Notable:'Pangong Lake, Siachen, Zoji La Pass'},
     related:['himalayas','karakoram','indus river','siachen glacier','pangong lake'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[75.5,32.5],[77.0,33.0],[78.5,33.5],[80.0,34.0],[80.5,34.5],[79.0,35.5],[77.5,35.5],[75.5,35.5],[74.0,34.5],[73.5,33.5],[74.5,32.5],[75.5,32.5]]}
   },
   'northeast india': {
     name:'Northeast India (Seven Sisters)', type:'region', region:'India',
@@ -762,7 +807,8 @@ var GEO_FEATURES = {
     desc:'One of the world\'s oldest fold mountains (~700 million years), running ~800 km through Rajasthan, Haryana, and Delhi. Provides a natural barrier against desertification.',
     stats:{Length:'~800 km', Age:'~700 million years (world\'s oldest)', States:'Gujarat, Rajasthan, Haryana, Delhi', 'Highest Peak':'Guru Shikhar 1,722 m'},
     related:['thar desert','rajasthan','delhi','luni river','chambal river'],
-    highlights:[]
+    highlights:[],
+    shape:{type:'polygon',ring:[[72.5,25.0],[73.0,24.0],[73.5,22.5],[74.5,20.5],[75.0,19.0],[76.0,28.0],[75.0,29.5],[74.0,28.0],[73.5,27.0],[72.5,25.0]]}
   },
   'vindhya range': {
     name:'Vindhya Range', type:'mountain range', region:'India',
@@ -770,7 +816,8 @@ var GEO_FEATURES = {
     desc:'An old and eroded mountain range forming the historical and cultural boundary between North India and South India (Aryavarta and Deccan). Runs ~1,050 km across central India.',
     stats:{Length:'~1,050 km', States:'Gujarat, MP, UP, Chhattisgarh', 'Highest Point':'~827 m', 'Cultural role':'Historic divide between N and S India'},
     related:['deccan plateau','narmada river','son river','satpura range'],
-    highlights:['narmada river']
+    highlights:['narmada river'],
+    shape:{type:'polygon',ring:[[73.0,22.0],[74.5,22.5],[76.5,22.5],[78.0,23.0],[80.0,23.5],[82.0,23.5],[83.0,24.0],[83.0,25.0],[81.5,24.5],[79.5,24.0],[77.5,23.5],[75.5,23.5],[74.0,23.0],[73.0,22.0]]}
   }
 };
 
@@ -1381,55 +1428,153 @@ function resetView(){
   flyTo_(20, 78, 3.0);
 }
 
-// ── Highlight a feature ───────────────────────────────────────────────
+// ── Highlight a feature — shape-aware ──────────────────────────────────
+// Types: polygon (filled area), polyline (river/trench), point (peak)
+
+// Build a filled polygon on the sphere surface from [lng,lat] ring
+function addSpherePolygon(ring, color, opacity, featureKey){
+  var col = new THREE.Color(color);
+  // Filled mesh using ear-clip triangulation via fan from centroid
+  var pts3d = ring.map(function(c){ return latLngToVec3(c[1], c[0], GLOBE_R * 1.003); });
+  // Centroid
+  var cx=0,cy=0,cz=0;
+  pts3d.forEach(function(p){cx+=p.x;cy+=p.y;cz+=p.z;});
+  var n=pts3d.length;
+  cx/=n;cy/=n;cz/=n;
+  var center3d=new THREE.Vector3(cx,cy,cz).normalize().multiplyScalar(GLOBE_R*1.003);
+
+  var verts=[], idx=[];
+  // Center vertex
+  verts.push(center3d.x,center3d.y,center3d.z);
+  pts3d.forEach(function(p){verts.push(p.x,p.y,p.z);});
+  for(var i=1;i<=n;i++){
+    idx.push(0, i, i<n?i+1:1);
+  }
+  var geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  var mat=new THREE.MeshBasicMaterial({
+    color:col,transparent:true,opacity:opacity,depthWrite:false,side:THREE.DoubleSide
+  });
+  var mesh=new THREE.Mesh(geo,mat);
+  mesh.userData.featureKey=featureKey;
+  globeGroup.add(mesh);
+  overlayMeshes.push(mesh);
+
+  // Outline
+  var outPts=pts3d.map(function(p){return p.clone().multiplyScalar(1.001/GLOBE_R*1.003);});
+  // Actually just draw the border as a line
+  var borderPts=ring.map(function(c){return latLngToVec3(c[1],c[0],GLOBE_R*1.005);});
+  borderPts.push(borderPts[0]); // close
+  var bGeo=new THREE.BufferGeometry().setFromPoints(borderPts);
+  var bMat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.9,linewidth:2});
+  var border=new THREE.Line(bGeo,bMat);
+  border.userData.featureKey=featureKey+'_border';
+  globeGroup.add(border);
+  overlayMeshes.push(border);
+}
+
+// Build a thick polyline on sphere surface from [lng,lat] array
+function addSphereLine(coords, color, opacity, featureKey, dashed){
+  var col=new THREE.Color(color);
+  var pts=coords.map(function(c){return latLngToVec3(c[1],c[0],GLOBE_R*1.005);});
+  var geo=new THREE.BufferGeometry().setFromPoints(pts);
+  var mat;
+  if(dashed){
+    mat=new THREE.LineDashedMaterial({color:col,transparent:true,opacity:opacity,
+      dashSize:0.04,gapSize:0.02,linewidth:2});
+  } else {
+    mat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:opacity,linewidth:3});
+  }
+  var line=new THREE.Line(geo,mat);
+  if(dashed) line.computeLineDistances();
+  line.userData.featureKey=featureKey;
+  globeGroup.add(line);
+  overlayMeshes.push(line);
+
+  // Glow — wider dimmer duplicate
+  var glowPts=coords.map(function(c){return latLngToVec3(c[1],c[0],GLOBE_R*1.004);});
+  var gGeo=new THREE.BufferGeometry().setFromPoints(glowPts);
+  var gMat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:opacity*0.35,linewidth:6});
+  var glow=new THREE.Line(gGeo,gMat);
+  glow.userData.featureKey=featureKey+'_glow';
+  globeGroup.add(glow);
+  overlayMeshes.push(glow);
+}
+
+// Point marker (mountain peak, volcano)
+function addSpherePoint(lat, lng, color, opacity, featureKey){
+  var col=new THREE.Color(color);
+  var pos=latLngToVec3(lat,lng,GLOBE_R*1.005);
+  // Outer glow sphere
+  var gGeo=new THREE.SphereGeometry(0.022,16,16);
+  var gMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:opacity*0.3,depthWrite:false});
+  var glow=new THREE.Mesh(gGeo,gMat); glow.position.copy(pos);
+  glow.userData.featureKey=featureKey+'_glow'; globeGroup.add(glow); overlayMeshes.push(glow);
+  // Core dot
+  var dGeo=new THREE.SphereGeometry(0.012,12,12);
+  var dMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.95,depthWrite:false});
+  var dot=new THREE.Mesh(dGeo,dMat); dot.position.copy(pos);
+  dot.userData.featureKey=featureKey; globeGroup.add(dot); overlayMeshes.push(dot);
+}
+
 function drawFeatureHighlight(featureKey, color, opacity){
-  // Place a glowing disc on the globe at the feature's lat/lng
   var f = GEO_FEATURES[featureKey];
   if(!f) return;
   color = color || annotColor;
-  opacity = opacity || 0.45;
+  opacity = opacity || 0.50;
 
-  // Remove existing highlight for this key
+  // Remove any existing meshes for this key
   overlayMeshes = overlayMeshes.filter(function(m){
-    if(m.userData.featureKey === featureKey){ globeGroup.remove(m); m.geometry.dispose(); m.material.dispose(); return false; }
+    if(m.userData.featureKey === featureKey ||
+       m.userData.featureKey === featureKey+'_ring' ||
+       m.userData.featureKey === featureKey+'_glow' ||
+       m.userData.featureKey === featureKey+'_border'){
+      globeGroup.remove(m); m.geometry.dispose(); m.material.dispose(); return false;
+    }
     return true;
   });
 
-  // Compute disc size based on feature type
-  var sizeMap = {mountain:0.06, 'mountain range':0.12, plain:0.18, plateau:0.15, country:0.22,
-    river:0.08, desert:0.18, forest:0.20, lake:0.08, sea:0.20, trench:0.06,
-    'salt marsh':0.10, volcano:0.05, 'rift valley':0.12, 'union territory':0.09,
-    region:0.14, 'ocean trench':0.06, 'mangrove delta':0.08, 'lagoon/waterway':0.07};
-  var r2 = sizeMap[f.type] || 0.1;
+  // Route to correct renderer based on type + shape data
+  var t = f.type;
+  var isArea = ['country','plain','plateau','desert','forest','mountain range',
+    'region','sea','salt marsh','mangrove delta','union territory',
+    'rift valley','lake','lagoon/waterway'].indexOf(t) >= 0;
+  var isLine = ['river'].indexOf(t) >= 0;
+  var isTrench = ['trench','ocean trench'].indexOf(t) >= 0;
+  var isPeak = ['mountain','volcano'].indexOf(t) >= 0;
 
-  var discGeo = new THREE.CircleGeometry(r2, 32);
-  var col = new THREE.Color(color);
-  var discMat = new THREE.MeshBasicMaterial({
-    color: col, transparent:true, opacity:Math.min(0.85, opacity * 1.5), depthWrite:false, side:THREE.DoubleSide
-  });
-  var disc = new THREE.Mesh(discGeo, discMat);
-
-  // Position on globe surface — outward-facing (lookAt away from center)
-  var pos = latLngToVec3(f.lat, f.lng, GLOBE_R * 1.003);
-  disc.position.copy(pos);
-  // Face OUTWARD: lookAt a point further along the normal (2x the position vector)
-  disc.lookAt(pos.clone().multiplyScalar(2));
-  disc.userData.featureKey = featureKey;
-  disc.userData.color = color;
-  globeGroup.add(disc);
-  overlayMeshes.push(disc);
-
-  // Bright outline ring slightly outside disc
-  var ringGeo = new THREE.RingGeometry(r2 * 1.04, r2 * 1.22, 48);
-  var ringMat = new THREE.MeshBasicMaterial({
-    color:col, transparent:true, opacity:0.85, depthWrite:false, side:THREE.DoubleSide
-  });
-  var ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.position.copy(latLngToVec3(f.lat, f.lng, GLOBE_R * 1.004));
-  ring.lookAt(pos.clone().multiplyScalar(2));
-  ring.userData.featureKey = featureKey + '_ring';
-  globeGroup.add(ring);
-  overlayMeshes.push(ring);
+  if(f.shape){
+    if(f.shape.type === 'polygon'){
+      addSpherePolygon(f.shape.ring, color, opacity, featureKey);
+    } else if(f.shape.type === 'polyline'){
+      addSphereLine(f.shape.coords, color, opacity, featureKey, false);
+    } else if(f.shape.type === 'dashed'){
+      addSphereLine(f.shape.coords, color, opacity, featureKey, true);
+    }
+  } else if(isLine){
+    // Fallback river: line through center extending ±spread
+    var spread = 3.0;
+    addSphereLine([[f.lng-spread, f.lat],[f.lng,f.lat],[f.lng+spread,f.lat]], color, opacity, featureKey, false);
+  } else if(isTrench){
+    addSphereLine([[f.lng-2,f.lat],[f.lng,f.lat],[f.lng+2,f.lat]], color, opacity, featureKey, true);
+  } else if(isPeak){
+    addSpherePoint(f.lat, f.lng, color, opacity, featureKey);
+  } else if(isArea){
+    // Fallback: approximate region as polygon around center
+    var s = {mountain:2,'mountain range':4,plain:6,plateau:5,country:5,
+      desert:6,forest:6,lake:2,sea:7,'salt marsh':2,'mangrove delta':1.5,
+      'union territory':2,'rift valley':3,region:4,'lagoon/waterway':1.5}[t]||3;
+    var ring=[];
+    for(var a=0;a<360;a+=18){
+      var rad=a*Math.PI/180;
+      ring.push([f.lng+s*Math.cos(rad)*1.3, f.lat+s*Math.sin(rad)]);
+    }
+    addSpherePolygon(ring, color, opacity, featureKey);
+  } else {
+    addSpherePoint(f.lat, f.lng, color, opacity, featureKey);
+  }
 }
 
 function clearHighlights(){
