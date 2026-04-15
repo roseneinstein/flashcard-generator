@@ -840,6 +840,10 @@ Object.keys(GEO_FEATURES).forEach(function(key){
 // ══════════════════════════════════════════════════════════════════════
 var scene, camera, renderer, globe, clouds, atmosphere;
 var raycaster, mouse;
+// Globe texture globals — repainted when highlights change
+var texCanvas, texCtx, globeTexture, globeMat;
+var realTexImage = null;        // cached real Earth image for repainting
+var activeHighlights = {};      // featureKey -> {color, opacity}
 var isDragging = false, lastMouse = {x:0, y:0};
 var autoRotate = true;       // auto-rotation state — stops on search, user can toggle
 var globeGroup;
@@ -878,12 +882,13 @@ function initGlobe(){
   // Earth sphere
   var geo = new THREE.SphereGeometry(GLOBE_R, 64, 64);
 
-  // Create procedural texture — deep blue ocean, continent colors
-  var texCanvas = document.createElement('canvas');
-  texCanvas.width = 2048; texCanvas.height = 1024;
-  var ctx = texCanvas.getContext('2d');
-  drawGlobeTexture(ctx, 2048, 1024);
-  var texture = new THREE.CanvasTexture(texCanvas);
+  // Create procedural texture — exposed as globals so highlights can repaint it
+  texCanvas = document.createElement('canvas');
+  texCanvas.width = 4096; texCanvas.height = 2048; // 4K for sharp highlights
+  texCtx = texCanvas.getContext('2d');
+  drawGlobeTexture(texCtx, 4096, 2048);
+  globeTexture = new THREE.CanvasTexture(texCanvas);
+  var texture = globeTexture;
 
   // Try loading a real Earth texture — fall back to procedural if blocked
   var textureLoader = new THREE.TextureLoader();
@@ -893,19 +898,25 @@ function initGlobe(){
     // Fallback: three.js sample without clouds
     'https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/textures/land_ocean_ice_2048.jpg'
   ];
-  var mat = new THREE.MeshPhongMaterial({
-    map: texture, // starts with procedural
+  globeMat = new THREE.MeshPhongMaterial({
+    map: texture,
     specular: new THREE.Color(0x112233),
     shininess: 12,
   });
+  var mat = globeMat;
 
   // Attempt real texture load
   function tryLoadTexture(urls, idx){
     if(idx >= urls.length) return;
     textureLoader.load(urls[idx], function(t){
-      mat.map = t;
-      mat.needsUpdate = true;
-      // Dim the coastlines slightly since texture has its own detail
+      // Draw the loaded real texture onto our texCanvas so highlights still work
+      var img = t.image;
+      texCtx.clearRect(0, 0, texCanvas.width, texCanvas.height);
+      texCtx.drawImage(img, 0, 0, texCanvas.width, texCanvas.height);
+      // Store clean base image for repainting highlights on top
+      realTexImage = img;
+      globeTexture.needsUpdate = true;
+      // Dim coast lines since real texture has own detail
       globeGroup.children.forEach(function(c){
         if(c.isLine && c.material && c.material.opacity !== undefined){
           if(c.material.opacity > 0.5) c.material.opacity *= 0.7;
@@ -1428,161 +1439,172 @@ function resetView(){
   flyTo_(20, 78, 3.0);
 }
 
-// ── Highlight a feature — shape-aware ──────────────────────────────────
-// Types: polygon (filled area), polyline (river/trench), point (peak)
-
-// Build a filled polygon on the sphere surface from [lng,lat] ring
-function addSpherePolygon(ring, color, opacity, featureKey){
-  var col = new THREE.Color(color);
-  // Filled mesh using ear-clip triangulation via fan from centroid
-  var pts3d = ring.map(function(c){ return latLngToVec3(c[1], c[0], GLOBE_R * 1.003); });
-  // Centroid
-  var cx=0,cy=0,cz=0;
-  pts3d.forEach(function(p){cx+=p.x;cy+=p.y;cz+=p.z;});
-  var n=pts3d.length;
-  cx/=n;cy/=n;cz/=n;
-  var center3d=new THREE.Vector3(cx,cy,cz).normalize().multiplyScalar(GLOBE_R*1.003);
-
-  var verts=[], idx=[];
-  // Center vertex
-  verts.push(center3d.x,center3d.y,center3d.z);
-  pts3d.forEach(function(p){verts.push(p.x,p.y,p.z);});
-  for(var i=1;i<=n;i++){
-    idx.push(0, i, i<n?i+1:1);
-  }
-  var geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
-  var mat=new THREE.MeshBasicMaterial({
-    color:col,transparent:true,opacity:opacity,depthWrite:false,side:THREE.DoubleSide
-  });
-  var mesh=new THREE.Mesh(geo,mat);
-  mesh.userData.featureKey=featureKey;
-  globeGroup.add(mesh);
-  overlayMeshes.push(mesh);
-
-  // Outline
-  var outPts=pts3d.map(function(p){return p.clone().multiplyScalar(1.001/GLOBE_R*1.003);});
-  // Actually just draw the border as a line
-  var borderPts=ring.map(function(c){return latLngToVec3(c[1],c[0],GLOBE_R*1.005);});
-  borderPts.push(borderPts[0]); // close
-  var bGeo=new THREE.BufferGeometry().setFromPoints(borderPts);
-  var bMat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.9,linewidth:2});
-  var border=new THREE.Line(bGeo,bMat);
-  border.userData.featureKey=featureKey+'_border';
-  globeGroup.add(border);
-  overlayMeshes.push(border);
+// ── Highlight features by painting directly onto the globe texture ─────────────
+// Equirectangular projection: lng→x, lat→y on the texture canvas
+function lngLatToTex(lng, lat, W, H){
+  var x = ((lng + 180) / 360) * W;
+  var y = ((90 - lat) / 180) * H;
+  return [x, y];
 }
 
-// Build a thick polyline on sphere surface from [lng,lat] array
-function addSphereLine(coords, color, opacity, featureKey, dashed){
-  var col=new THREE.Color(color);
-  var pts=coords.map(function(c){return latLngToVec3(c[1],c[0],GLOBE_R*1.005);});
-  var geo=new THREE.BufferGeometry().setFromPoints(pts);
-  var mat;
-  if(dashed){
-    mat=new THREE.LineDashedMaterial({color:col,transparent:true,opacity:opacity,
-      dashSize:0.04,gapSize:0.02,linewidth:2});
+// Repaint the entire texture from scratch then redraw all active highlights
+function repaintTexture(){
+  var W = texCanvas.width, H = texCanvas.height;
+  // Base layer: real texture image or procedural
+  texCtx.clearRect(0, 0, W, H);
+  if(realTexImage){
+    texCtx.drawImage(realTexImage, 0, 0, W, H);
   } else {
-    mat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:opacity,linewidth:3});
+    drawGlobeTexture(texCtx, W, H);
   }
-  var line=new THREE.Line(geo,mat);
-  if(dashed) line.computeLineDistances();
-  line.userData.featureKey=featureKey;
-  globeGroup.add(line);
-  overlayMeshes.push(line);
-
-  // Glow — wider dimmer duplicate
-  var glowPts=coords.map(function(c){return latLngToVec3(c[1],c[0],GLOBE_R*1.004);});
-  var gGeo=new THREE.BufferGeometry().setFromPoints(glowPts);
-  var gMat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:opacity*0.35,linewidth:6});
-  var glow=new THREE.Line(gGeo,gMat);
-  glow.userData.featureKey=featureKey+'_glow';
-  globeGroup.add(glow);
-  overlayMeshes.push(glow);
+  // Paint each active highlight on top
+  Object.keys(activeHighlights).forEach(function(key){
+    var hi = activeHighlights[key];
+    paintFeatureOnTexture(key, hi.color, hi.opacity);
+  });
+  globeTexture.needsUpdate = true;
 }
 
-// Point marker (mountain peak, volcano)
-function addSpherePoint(lat, lng, color, opacity, featureKey){
-  var col=new THREE.Color(color);
-  var pos=latLngToVec3(lat,lng,GLOBE_R*1.005);
-  // Outer glow sphere
-  var gGeo=new THREE.SphereGeometry(0.022,16,16);
-  var gMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:opacity*0.3,depthWrite:false});
-  var glow=new THREE.Mesh(gGeo,gMat); glow.position.copy(pos);
-  glow.userData.featureKey=featureKey+'_glow'; globeGroup.add(glow); overlayMeshes.push(glow);
-  // Core dot
-  var dGeo=new THREE.SphereGeometry(0.012,12,12);
-  var dMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.95,depthWrite:false});
-  var dot=new THREE.Mesh(dGeo,dMat); dot.position.copy(pos);
-  dot.userData.featureKey=featureKey; globeGroup.add(dot); overlayMeshes.push(dot);
+// Paint a single feature onto texCtx (already cleared to base)
+function paintFeatureOnTexture(featureKey, color, opacity){
+  var f = GEO_FEATURES[featureKey];
+  if(!f || !f.shape) return;
+  var W = texCanvas.width, H = texCanvas.height;
+  var shape = f.shape;
+
+  // Parse CSS color to rgba
+  var tmp = document.createElement('canvas'); tmp.width=1; tmp.height=1;
+  var tc = tmp.getContext('2d'); tc.fillStyle = color; tc.fillRect(0,0,1,1);
+  var d = tc.getImageData(0,0,1,1).data;
+  var r=d[0],g=d[1],b=d[2];
+
+  if(shape.type === 'polygon'){
+    // Filled polygon — handle wrapping at ±180°
+    var ring = shape.ring;
+    texCtx.save();
+    texCtx.globalAlpha = opacity;
+
+    // Fill
+    texCtx.fillStyle = 'rgba('+r+','+g+','+b+',1)';
+    texCtx.beginPath();
+    var p0 = lngLatToTex(ring[0][0], ring[0][1], W, H);
+    texCtx.moveTo(p0[0], p0[1]);
+    for(var i=1; i<ring.length; i++){
+      var p = lngLatToTex(ring[i][0], ring[i][1], W, H);
+      texCtx.lineTo(p[0], p[1]);
+    }
+    texCtx.closePath();
+    texCtx.fill();
+
+    // Border — brighter, sharper
+    texCtx.globalAlpha = Math.min(1, opacity * 2.2);
+    texCtx.strokeStyle = 'rgba('+r+','+g+','+b+',1)';
+    texCtx.lineWidth = Math.max(3, W / 400);
+    texCtx.stroke();
+
+    texCtx.restore();
+
+  } else if(shape.type === 'polyline'){
+    // River: thick glowing line
+    var coords = shape.coords;
+    texCtx.save();
+
+    // Glow layer (wide, very transparent)
+    texCtx.globalAlpha = opacity * 0.4;
+    texCtx.strokeStyle = 'rgba('+r+','+g+','+b+',1)';
+    texCtx.lineWidth = Math.max(8, W / 200);
+    texCtx.lineCap = 'round';
+    texCtx.lineJoin = 'round';
+    texCtx.beginPath();
+    var c0 = lngLatToTex(coords[0][0], coords[0][1], W, H);
+    texCtx.moveTo(c0[0], c0[1]);
+    for(var i=1; i<coords.length; i++){
+      var c = lngLatToTex(coords[i][0], coords[i][1], W, H);
+      texCtx.lineTo(c[0], c[1]);
+    }
+    texCtx.stroke();
+
+    // Core line (thinner, full opacity)
+    texCtx.globalAlpha = Math.min(1, opacity * 1.8);
+    texCtx.lineWidth = Math.max(4, W / 400);
+    texCtx.beginPath();
+    texCtx.moveTo(c0[0], c0[1]);
+    for(var i=1; i<coords.length; i++){
+      var c = lngLatToTex(coords[i][0], coords[i][1], W, H);
+      texCtx.lineTo(c[0], c[1]);
+    }
+    texCtx.stroke();
+
+    texCtx.restore();
+
+  } else if(shape.type === 'dashed'){
+    // Trench: dashed line
+    var coords = shape.coords;
+    texCtx.save();
+    texCtx.globalAlpha = Math.min(1, opacity * 1.8);
+    texCtx.strokeStyle = 'rgba('+r+','+g+','+b+',1)';
+    texCtx.lineWidth = Math.max(4, W / 350);
+    texCtx.lineCap = 'round';
+    var dashLen = Math.max(16, W / 120);
+    texCtx.setLineDash([dashLen, dashLen * 0.6]);
+    texCtx.beginPath();
+    var c0 = lngLatToTex(coords[0][0], coords[0][1], W, H);
+    texCtx.moveTo(c0[0], c0[1]);
+    for(var i=1; i<coords.length; i++){
+      var c = lngLatToTex(coords[i][0], coords[i][1], W, H);
+      texCtx.lineTo(c[0], c[1]);
+    }
+    texCtx.stroke();
+    texCtx.setLineDash([]);
+    texCtx.restore();
+
+  } else if(shape.type === 'point'){
+    // Peak / volcano: triangle + glow circle
+    var p = lngLatToTex(f.lat, f.lng, W, H);
+    var sz = Math.max(18, W / 100);
+    texCtx.save();
+    texCtx.globalAlpha = Math.min(1, opacity * 2);
+    // Glow circle
+    var grad = texCtx.createRadialGradient(p[0],p[1],0, p[0],p[1],sz*1.5);
+    grad.addColorStop(0, 'rgba('+r+','+g+','+b+',0.7)');
+    grad.addColorStop(1, 'rgba('+r+','+g+','+b+',0)');
+    texCtx.fillStyle = grad;
+    texCtx.beginPath();
+    texCtx.arc(p[0], p[1], sz*1.5, 0, Math.PI*2);
+    texCtx.fill();
+    // Triangle (mountain symbol)
+    texCtx.fillStyle = 'rgba('+r+','+g+','+b+',1)';
+    texCtx.beginPath();
+    texCtx.moveTo(p[0], p[1]-sz);
+    texCtx.lineTo(p[0]-sz*0.8, p[1]+sz*0.5);
+    texCtx.lineTo(p[0]+sz*0.8, p[1]+sz*0.5);
+    texCtx.closePath();
+    texCtx.fill();
+    texCtx.restore();
+  }
 }
 
 function drawFeatureHighlight(featureKey, color, opacity){
   var f = GEO_FEATURES[featureKey];
   if(!f) return;
   color = color || annotColor;
-  opacity = opacity || 0.50;
-
-  // Remove any existing meshes for this key
-  overlayMeshes = overlayMeshes.filter(function(m){
-    if(m.userData.featureKey === featureKey ||
-       m.userData.featureKey === featureKey+'_ring' ||
-       m.userData.featureKey === featureKey+'_glow' ||
-       m.userData.featureKey === featureKey+'_border'){
-      globeGroup.remove(m); m.geometry.dispose(); m.material.dispose(); return false;
-    }
-    return true;
-  });
-
-  // Route to correct renderer based on type + shape data
-  var t = f.type;
-  var isArea = ['country','plain','plateau','desert','forest','mountain range',
-    'region','sea','salt marsh','mangrove delta','union territory',
-    'rift valley','lake','lagoon/waterway'].indexOf(t) >= 0;
-  var isLine = ['river'].indexOf(t) >= 0;
-  var isTrench = ['trench','ocean trench'].indexOf(t) >= 0;
-  var isPeak = ['mountain','volcano'].indexOf(t) >= 0;
-
-  if(f.shape){
-    if(f.shape.type === 'polygon'){
-      addSpherePolygon(f.shape.ring, color, opacity, featureKey);
-    } else if(f.shape.type === 'polyline'){
-      addSphereLine(f.shape.coords, color, opacity, featureKey, false);
-    } else if(f.shape.type === 'dashed'){
-      addSphereLine(f.shape.coords, color, opacity, featureKey, true);
-    }
-  } else if(isLine){
-    // Fallback river: line through center extending ±spread
-    var spread = 3.0;
-    addSphereLine([[f.lng-spread, f.lat],[f.lng,f.lat],[f.lng+spread,f.lat]], color, opacity, featureKey, false);
-  } else if(isTrench){
-    addSphereLine([[f.lng-2,f.lat],[f.lng,f.lat],[f.lng+2,f.lat]], color, opacity, featureKey, true);
-  } else if(isPeak){
-    addSpherePoint(f.lat, f.lng, color, opacity, featureKey);
-  } else if(isArea){
-    // Fallback: approximate region as polygon around center
-    var s = {mountain:2,'mountain range':4,plain:6,plateau:5,country:5,
-      desert:6,forest:6,lake:2,sea:7,'salt marsh':2,'mangrove delta':1.5,
-      'union territory':2,'rift valley':3,region:4,'lagoon/waterway':1.5}[t]||3;
-    var ring=[];
-    for(var a=0;a<360;a+=18){
-      var rad=a*Math.PI/180;
-      ring.push([f.lng+s*Math.cos(rad)*1.3, f.lat+s*Math.sin(rad)]);
-    }
-    addSpherePolygon(ring, color, opacity, featureKey);
-  } else {
-    addSpherePoint(f.lat, f.lng, color, opacity, featureKey);
-  }
+  opacity = opacity || 0.52;
+  // Store in active highlights
+  activeHighlights[featureKey] = {color:color, opacity:opacity};
+  // Repaint texture with all highlights
+  repaintTexture();
 }
 
 function clearHighlights(){
+  // Remove all 3D overlay meshes (kept for annotations etc.)
   overlayMeshes.forEach(function(m){
     globeGroup.remove(m); m.geometry.dispose(); m.material.dispose();
   });
   overlayMeshes = [];
   activeChips = {};
+  // Clear texture highlights and repaint clean
+  activeHighlights = {};
+  repaintTexture();
 }
 
 // ── Annotations ───────────────────────────────────────────────────────
@@ -1885,21 +1907,15 @@ function toggleRelated(rk){
   if(activeChips[rk]){
     // Remove
     delete activeChips[rk];
-    overlayMeshes = overlayMeshes.filter(function(m){
-      if(m.userData.featureKey === rk || m.userData.featureKey === rk+'_ring'){
-        globeGroup.remove(m); m.geometry.dispose(); m.material.dispose(); return false;
-      }
-      return true;
-    });
+    delete activeHighlights[rk];
+    repaintTexture();
   } else {
-    // Add with a different color
     var colors = ['#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#34d399','#f472b6'];
-    var usedColors = Object.values(activeChips);
-    var col = colors.find(function(c){ return !usedColors.includes(c); }) || colors[0];
+    var usedColors = Object.keys(activeChips).map(function(k){return activeChips[k];});
+    var col = colors.find(function(c){ return usedColors.indexOf(c)<0; }) || colors[0];
     activeChips[rk] = col;
-    drawFeatureHighlight(rk, col, 0.4);
+    drawFeatureHighlight(rk, col, 0.42);
   }
-  // Re-render panel to update chip states
   if(currentFeature) showFeatureInfo(currentFeature.key, currentFeature.data);
 }
 
