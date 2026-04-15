@@ -1160,8 +1160,11 @@ function latLngToVec3(lat, lng, r){
 }
 
 function setGlobeOrientation(lat, lng){
-  // Rotate globe so that (lat,lng) faces the camera
-  globeGroup.rotation.y = -lng * Math.PI / 180;
+  // Derived: rotation.y = -(lng+90)*PI/180 brings (lat,lng) to face +Z camera
+  // Proof: latLngToVec3 z-component = sin(phi)*sin((lng+180)*PI/180)
+  // After rotY by ry: new_z = sin(phi)*sin(ry + (lng+180)*PI/180)
+  // Maximized when ry = PI/2 - (lng+180)*PI/180 = -(lng+90)*PI/180
+  globeGroup.rotation.y = -(lng + 90) * Math.PI / 180;
   globeGroup.rotation.x = lat * Math.PI / 180;
 }
 
@@ -1195,7 +1198,7 @@ function animate(){
   if(!isDragging && !isAnimating && autoRotate){
     globeGroup.rotation.y += 0.0006; // gentle idle rotation
     // Keep currentLng in sync so flyTo_ starts from correct position
-    currentLng = -(globeGroup.rotation.y * 180 / Math.PI);
+    currentLng = -(globeGroup.rotation.y * 180 / Math.PI) - 90;
   }
   if(isAnimating) animateStep();
   renderer.render(scene, camera);
@@ -1212,14 +1215,15 @@ var flyDlng=0; // shortest-path lng delta
 var flyT=0, FLY_DUR=3200; // ms
 var flyStartTime=0;
 
-function flyTo_(lat, lng, zoom){
-  // Stop auto-rotate immediately
+var flyCallback = null;
+function flyTo_(lat, lng, zoom, callback){
+  flyCallback = callback || null;
   autoRotate = false;
   updateAutoRotateBtn();
 
   // Capture where we are RIGHT NOW from globeGroup rotation
   // (auto-rotate may have drifted currentLng, read actual rotation)
-  flyFromLng = -(globeGroup.rotation.y * 180 / Math.PI);
+  flyFromLng = -(globeGroup.rotation.y * 180 / Math.PI) - 90;
   flyFromLat = globeGroup.rotation.x * 180 / Math.PI;
   flyFromFOV = currentFOV;
 
@@ -1269,9 +1273,9 @@ function animateStep(){
   currentLng = lng;
   currentFOV = animFOV;
 
-  // Apply to globe (rotate globe group so destination faces camera)
-  globeGroup.rotation.y = -(lng * Math.PI / 180);
-  globeGroup.rotation.x =  (lat * Math.PI / 180);
+  // Apply to globe — match setGlobeOrientation: -(lng+90)*PI/180
+  globeGroup.rotation.y = -(lng + 90) * Math.PI / 180;
+  globeGroup.rotation.x =  lat * Math.PI / 180;
 
   // Apply FOV — camera position NEVER changes
   camera.fov = animFOV;
@@ -1279,8 +1283,9 @@ function animateStep(){
 
   if(flyT >= 1){
     isAnimating = false;
-    autoRotate = false; // confirmed stopped
+    autoRotate = false;
     updateAutoRotateBtn();
+    if(flyCallback){ flyCallback(); flyCallback = null; }
   }
 }
 
@@ -1400,29 +1405,28 @@ function drawFeatureHighlight(featureKey, color, opacity){
   var discGeo = new THREE.CircleGeometry(r2, 32);
   var col = new THREE.Color(color);
   var discMat = new THREE.MeshBasicMaterial({
-    color: col, transparent:true, opacity:opacity, depthWrite:false, side:THREE.DoubleSide
+    color: col, transparent:true, opacity:Math.min(0.85, opacity * 1.5), depthWrite:false, side:THREE.DoubleSide
   });
   var disc = new THREE.Mesh(discGeo, discMat);
 
-  // Position on globe surface
-  var pos = latLngToVec3(f.lat, f.lng, GLOBE_R * 1.002);
+  // Position on globe surface — outward-facing (lookAt away from center)
+  var pos = latLngToVec3(f.lat, f.lng, GLOBE_R * 1.003);
   disc.position.copy(pos);
-  disc.lookAt(new THREE.Vector3(0,0,0));
-  disc.rotateX(Math.PI); // face outward
+  // Face OUTWARD: lookAt a point further along the normal (2x the position vector)
+  disc.lookAt(pos.clone().multiplyScalar(2));
   disc.userData.featureKey = featureKey;
   disc.userData.color = color;
   globeGroup.add(disc);
   overlayMeshes.push(disc);
 
-  // Add a pulsing ring
-  var ringGeo = new THREE.RingGeometry(r2 * 1.05, r2 * 1.2, 32);
+  // Bright outline ring slightly outside disc
+  var ringGeo = new THREE.RingGeometry(r2 * 1.04, r2 * 1.22, 48);
   var ringMat = new THREE.MeshBasicMaterial({
-    color:col, transparent:true, opacity:0.5, depthWrite:false, side:THREE.DoubleSide
+    color:col, transparent:true, opacity:0.85, depthWrite:false, side:THREE.DoubleSide
   });
   var ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.position.copy(pos);
-  ring.lookAt(new THREE.Vector3(0,0,0));
-  ring.rotateX(Math.PI);
+  ring.position.copy(latLngToVec3(f.lat, f.lng, GLOBE_R * 1.004));
+  ring.lookAt(pos.clone().multiplyScalar(2));
   ring.userData.featureKey = featureKey + '_ring';
   globeGroup.add(ring);
   overlayMeshes.push(ring);
@@ -1678,19 +1682,16 @@ function doSearch(name){
   clearHighlights();
   clearAnnotations();
 
-  // Fly to feature
-  flyTo_(feature.lat, feature.lng, feature.zoom || 3.5);
-
-  // Highlight main feature
-  drawFeatureHighlight(key, annotColor, 0.5);
-  activeChips[key] = annotColor;
-
-  // Show info
+  // Show info immediately (panel updates right away)
   showFeatureInfo(key, feature);
-
-  // Show toolbar + export bar
   document.getElementById('toolbar').style.display = 'block';
   document.getElementById('exportBar').style.display = 'flex';
+
+  // Start flyover — highlight added AFTER flyover ends so disc is at correct position
+  flyTo_(feature.lat, feature.lng, feature.zoom || 3.5, function(){
+    drawFeatureHighlight(key, annotColor, 0.55);
+    activeChips[key] = annotColor;
+  });
 }
 
 function showFeatureInfo(key, f){
