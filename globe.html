@@ -216,6 +216,13 @@ input{font-family:inherit;}
 .loading-bar{width:200px;height:2px;background:var(--surface2);border-radius:1px;overflow:hidden;}
 .loading-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;width:0%;}
 
+.opacity-row{display:flex;align-items:center;gap:6px;margin:8px 0 2px;padding:6px 9px;
+  background:var(--surface);border-radius:var(--r-sm);border:1px solid var(--border);}
+.opacity-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.opacity-val{font-size:0.68rem;color:var(--accent);min-width:32px;text-align:right;flex-shrink:0;}
+.opacity-slider{flex:1;height:3px;accent-color:var(--accent);cursor:pointer;min-width:40px;}
+.chip-opacity{width:48px;height:3px;accent-color:var(--accent);cursor:pointer;margin-left:5px;flex-shrink:0;vertical-align:middle;}
+
 /* ── Mobile ── */
 @media(max-width:700px){
   .panel{width:100%;position:absolute;bottom:0;left:0;right:0;
@@ -285,9 +292,14 @@ input{font-family:inherit;}
       <div class="tool-row">
         <button class="tool-btn" id="toolLabel" onclick="setTool('label')" title="Add text label">🏷 Label</button>
         <button class="tool-btn" id="toolArrow" onclick="setTool('arrow')" title="Draw arrow">↗ Arrow</button>
-        <button class="tool-btn" id="toolErase" onclick="setTool('erase')" title="Erase annotation">✕ Erase</button>
+        <button class="tool-btn" id="toolPaint" onclick="setTool('paint')" title="Draw custom highlight region (click points, double-click to close)">🎨 Highlight</button>
+        <button class="tool-btn" id="toolErase" onclick="setTool('erase')" title="Erase annotation or custom highlight">✕ Erase</button>
       </div>
       <div class="color-row-t" id="annotColors"></div>
+      <!-- Paint tool hint — shows only when paint tool is active -->
+      <div id="paintHint" style="display:none;font-size:0.65rem;color:var(--muted);margin-top:5px;line-height:1.5;">
+        Click to add points · Double-click to close · <span id="paintPtCount">0 pts</span>
+      </div>
     </div>
 
     <!-- Export bar -->
@@ -1227,6 +1239,9 @@ var raycaster, mouse;
 var texCanvas, texCtx, globeTexture, globeMat;
 var realTexImage = null;        // cached real Earth image for repainting
 var activeHighlights = {};      // featureKey -> {color, opacity}
+var neCoastlines = null;        // Natural Earth coastline polygons for coast-clipping
+var neCountries = null;         // country polygons
+var neRivers = null;            // river centerlines
 var isDragging = false, lastMouse = {x:0, y:0};
 var autoRotate = true;       // auto-rotation state — stops on search, user can toggle
 var globeGroup;
@@ -1243,6 +1258,10 @@ var annotColor = '#e8d5b0';
 var currentTool = null;
 var arrowStart = null;
 var currentFeature = null;
+// Custom highlight polygon tool state
+var paintPoints = [];         // lat/lng points clicked so far
+var customHighlights = [];    // [{ring:[{lat,lng}...], color, opacity, id}]
+var customHlCounter = 0;
 
 function initGlobe(){
   var canvas = document.getElementById('globeCanvas');
@@ -1634,15 +1653,85 @@ function onResize(){
   resizeAnnotCanvas();
 }
 
+var lastLoDFOV = 45; // track last FOV for LoD updates
 function animate(){
   requestAnimationFrame(animate);
   if(!isDragging && !isAnimating && autoRotate){
     globeGroup.rotation.y += 0.0006; // gentle idle rotation
-    // Keep currentLng in sync so flyTo_ starts from correct position
     currentLng = -(globeGroup.rotation.y * 180 / Math.PI) - 90;
   }
   if(isAnimating) animateStep();
+  // LoD: when zoom level changes significantly, update texture detail
+  if(Math.abs(currentFOV - lastLoDFOV) > 3){
+    lastLoDFOV = currentFOV;
+    updateLoDTexture();
+  }
   renderer.render(scene, camera);
+}
+
+// Level-of-Detail texture update
+// FOV > 30: full-globe 4K texture (default)
+// FOV 12-30: paint a 2x-resolution close-up of the visible region
+// FOV < 12:  paint a 4x-resolution region patch for max sharpness
+function updateLoDTexture(){
+  if(!texCanvas || !texCtx) return;
+  if(currentFOV <= 30){
+    // Zoomed in: repaint at higher effective resolution around current view
+    repaintWithLoD();
+  } else {
+    // Zoomed out: standard repaint
+    repaintTexture();
+  }
+}
+
+function repaintWithLoD(){
+  var W = texCanvas.width, H = texCanvas.height;
+  // Full repaint first (base)
+  texCtx.clearRect(0,0,W,H);
+  if(realTexImage){
+    texCtx.drawImage(realTexImage, 0, 0, W, H);
+  } else {
+    drawGlobeTexture(texCtx, W, H);
+  }
+  // Paint highlights
+  Object.keys(activeHighlights).forEach(function(key){
+    var hi = activeHighlights[key];
+    paintFeatureOnTexture(key, hi.color, hi.opacity);
+  });
+  if(typeof customHighlights !== 'undefined'){
+    customHighlights.forEach(function(ch){ paintCustomPolygon(ch.ring, ch.color, ch.opacity); });
+  }
+
+  // LoD enhancement: when zoomed in, draw a higher-detail patch
+  // over the visible region using sharper strokes
+  if(currentFOV < 25 && realTexImage){
+    // Compute visible lat/lng bounds from current FOV + orientation
+    var fovRad = currentFOV * Math.PI / 180;
+    var angularRadius = fovRad * 0.6 * (180 / Math.PI); // degrees visible
+    var clat = currentLat, clng = currentLng;
+    // Compute texture region
+    var x0 = lngLatToTex(clng - angularRadius, clat + angularRadius * 0.6, W, H);
+    var x1 = lngLatToTex(clng + angularRadius, clat - angularRadius * 0.6, W, H);
+    var rx = Math.max(0, Math.min(x0[0], x1[0]));
+    var ry = Math.max(0, Math.min(x0[1], x1[1]));
+    var rw = Math.min(W, Math.abs(x1[0]-x0[0]));
+    var rh = Math.min(H, Math.abs(x1[1]-x0[1]));
+    if(rw > 10 && rh > 10){
+      // Draw source image patch at 2x effective resolution into region
+      texCtx.save();
+      texCtx.imageSmoothingEnabled = true;
+      texCtx.imageSmoothingQuality = 'high';
+      // Source rect in image coordinates (scale to image size)
+      var iw = realTexImage.naturalWidth || realTexImage.width || W;
+      var ih = realTexImage.naturalHeight || realTexImage.height || H;
+      var sx = (rx/W)*iw, sy = (ry/H)*ih;
+      var sw = (rw/W)*iw, sh = (rh/H)*ih;
+      texCtx.drawImage(realTexImage, sx, sy, sw, sh, rx, ry, rw, rh);
+      texCtx.restore();
+    }
+  }
+
+  globeTexture.needsUpdate = true;
 }
 
 // ── Flyover animation — FOV-based, 3-phase ───────────────────────────
@@ -1830,6 +1919,55 @@ function lngLatToTex(lng, lat, W, H){
   return [x, y];
 }
 
+// ── Load Natural Earth GeoJSON for precision geography ──────────────────
+function loadNaturalEarthData(){
+  // Natural Earth 110m resolution — small file, loads fast, coast-accurate
+  var base = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/';
+  var urls = {
+    coastlines: base + 'ne_110m_land.geojson',
+    rivers:     base + 'ne_110m_rivers_lake_centerlines.geojson'
+  };
+  fetch(urls.coastlines)
+    .then(function(r){ return r.json(); })
+    .then(function(gj){
+      neCoastlines = gj;
+      // If highlights are already active, repaint with clipping
+      if(Object.keys(activeHighlights).length) repaintTexture();
+    })
+    .catch(function(){ /* silently ignore — highlights still work without clipping */ });
+
+  fetch(urls.rivers)
+    .then(function(r){ return r.json(); })
+    .then(function(gj){
+      neRivers = gj;
+    })
+    .catch(function(){ });
+}
+
+// Draw all NE land polygons onto a canvas context (for masking)
+function drawNELand(ctx, W, H){
+  if(!neCoastlines) return;
+  ctx.beginPath();
+  neCoastlines.features.forEach(function(feat){
+    var geom = feat.geometry;
+    if(!geom) return;
+    var polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+    polys.forEach(function(poly){
+      poly.forEach(function(ring){
+        if(!ring.length) return;
+        var p0 = lngLatToTex(ring[0][0], ring[0][1], W, H);
+        ctx.moveTo(p0[0], p0[1]);
+        for(var i=1; i<ring.length; i++){
+          var p = lngLatToTex(ring[i][0], ring[i][1], W, H);
+          ctx.lineTo(p[0], p[1]);
+        }
+        ctx.closePath();
+      });
+    });
+  });
+  ctx.fill();
+}
+
 // Repaint the entire texture from scratch then redraw all active highlights
 function repaintTexture(){
   var W = texCanvas.width, H = texCanvas.height;
@@ -1845,6 +1983,12 @@ function repaintTexture(){
     var hi = activeHighlights[key];
     paintFeatureOnTexture(key, hi.color, hi.opacity);
   });
+  // Also repaint any user-drawn custom highlights on top
+  if(typeof customHighlights !== 'undefined'){
+    customHighlights.forEach(function(ch){
+      paintCustomPolygon(ch.ring, ch.color, ch.opacity);
+    });
+  }
   globeTexture.needsUpdate = true;
 }
 
@@ -1863,19 +2007,46 @@ function paintFeatureOnTexture(featureKey, color, opacity){
 
   if(shape.type === 'polygon'){
     var ring = shape.ring;
-    texCtx.save();
-    // Translucent fill — NO border/stroke (cleaner look)
-    texCtx.globalAlpha = opacity * 0.38;
-    texCtx.fillStyle = 'rgba('+r+','+g+','+b+',1)';
-    texCtx.beginPath();
+    // Determine if land or water feature
+    var waterTypes = ['sea','lake','ocean trench','trench','bay'];
+    var isWater = waterTypes.indexOf(f.type) >= 0;
+
+    // Step 1: Draw feature polygon onto an offscreen canvas
+    var offC = document.createElement('canvas');
+    offC.width = W; offC.height = H;
+    var off = offC.getContext('2d');
+    off.fillStyle = 'rgba('+r+','+g+','+b+',1)';
+    off.beginPath();
     var p0 = lngLatToTex(ring[0][0], ring[0][1], W, H);
-    texCtx.moveTo(p0[0], p0[1]);
+    off.moveTo(p0[0], p0[1]);
     for(var i=1; i<ring.length; i++){
       var p = lngLatToTex(ring[i][0], ring[i][1], W, H);
-      texCtx.lineTo(p[0], p[1]);
+      off.lineTo(p[0], p[1]);
     }
-    texCtx.closePath();
-    texCtx.fill();
+    off.closePath();
+    off.fill();
+
+    // Step 2: Coast-clip using Natural Earth land mask (if loaded)
+    if(neCoastlines){
+      if(!isWater){
+        // Land feature: keep only pixels where land exists
+        off.globalCompositeOperation = 'destination-in';
+        off.fillStyle = 'rgba(0,0,0,1)';
+        drawNELand(off, W, H);
+      } else {
+        // Water feature: keep only pixels where land does NOT exist
+        // Draw land in 'destination-out' to punch it out
+        off.globalCompositeOperation = 'destination-out';
+        off.fillStyle = 'rgba(0,0,0,1)';
+        drawNELand(off, W, H);
+      }
+    }
+
+    // Step 3: Composite clipped result onto main texture at chosen opacity
+    texCtx.save();
+    texCtx.globalAlpha = opacity * 0.42;
+    texCtx.globalCompositeOperation = 'source-over';
+    texCtx.drawImage(offC, 0, 0);
     texCtx.restore();
 
   } else if(shape.type === 'polyline'){
@@ -1883,28 +2054,27 @@ function paintFeatureOnTexture(featureKey, color, opacity){
     texCtx.save();
     texCtx.lineCap = 'round';
     texCtx.lineJoin = 'round';
-    // Crisp core line — sharp and bright
-    texCtx.globalAlpha = 0.92;
+
+    // Build path once, reuse for both passes
+    var c0r = lngLatToTex(coords[0][0], coords[0][1], W, H);
+    var riverPath = new Path2D();
+    riverPath.moveTo(c0r[0], c0r[1]);
+    for(var i=1; i<coords.length; i++){
+      var cp = lngLatToTex(coords[i][0], coords[i][1], W, H);
+      riverPath.lineTo(cp[0], cp[1]);
+    }
+
+    // Pass 1: ultra-thin bright core — high contrast, visible from space
+    texCtx.globalAlpha = 0.98;
     texCtx.strokeStyle = 'rgba('+r+','+g+','+b+',1)';
-    texCtx.lineWidth = Math.max(2.5, W / 900);
-    texCtx.beginPath();
-    var c0 = lngLatToTex(coords[0][0], coords[0][1], W, H);
-    texCtx.moveTo(c0[0], c0[1]);
-    for(var i=1; i<coords.length; i++){
-      var c = lngLatToTex(coords[i][0], coords[i][1], W, H);
-      texCtx.lineTo(c[0], c[1]);
-    }
-    texCtx.stroke();
-    // Subtle glow — just 1.5x wider
-    texCtx.globalAlpha = 0.22;
-    texCtx.lineWidth = Math.max(5, W / 450);
-    texCtx.beginPath();
-    texCtx.moveTo(c0[0], c0[1]);
-    for(var i=1; i<coords.length; i++){
-      var c = lngLatToTex(coords[i][0], coords[i][1], W, H);
-      texCtx.lineTo(c[0], c[1]);
-    }
-    texCtx.stroke();
+    texCtx.lineWidth = Math.max(2, W / 1400);   // ~2.9px on 4K canvas
+    texCtx.stroke(riverPath);
+
+    // Pass 2: very subtle glow halo — barely visible, just adds recognition
+    texCtx.globalAlpha = 0.18;
+    texCtx.lineWidth = Math.max(5, W / 600);    // ~6.8px — subtle, not dominant
+    texCtx.stroke(riverPath);
+
     texCtx.restore();
 
   } else if(shape.type === 'dashed'){
@@ -2078,11 +2248,21 @@ function clearAnnotations(){
 
 // ── Annotation tool interactions ──────────────────────────────────────
 function setTool(tool){
-  currentTool = currentTool === tool ? null : tool;
-  ['label','arrow','erase'].forEach(function(t){
+  // Toggle off if same tool clicked again
+  if(currentTool === tool){
+    // If cancelling paint mid-draw, discard points
+    if(tool === 'paint'){ paintPoints = []; updatePaintPreview(); }
+    currentTool = null;
+  } else {
+    if(currentTool === 'paint'){ paintPoints = []; updatePaintPreview(); }
+    currentTool = tool;
+  }
+  ['label','arrow','paint','erase'].forEach(function(t){
     var btn = document.getElementById('tool'+t.charAt(0).toUpperCase()+t.slice(1));
     if(btn) btn.classList.toggle('active', currentTool===t);
   });
+  var hint = document.getElementById('paintHint');
+  if(hint) hint.style.display = currentTool==='paint' ? 'block' : 'none';
   if(annotC) annotC.classList.toggle('drawing', !!currentTool);
   arrowStart = null;
 }
@@ -2135,16 +2315,136 @@ function setupAnnotInteractions(){
         arrowStart = null;
         document.getElementById('globeTip').style.display = 'none';
       }
+    } else if(currentTool === 'paint'){
+      paintPoints.push(ll);
+      var cntEl = document.getElementById('paintPtCount');
+      if(cntEl) cntEl.textContent = paintPoints.length + ' pts';
+      updatePaintPreview();
     } else if(currentTool === 'erase'){
-      // Remove annotation nearest to click
+      // Remove nearest annotation
       var sc, minD = 25, minI = -1;
       annotations.forEach(function(a, i){
         sc = worldToScreen(a.lat, a.lng);
         var d = Math.hypot(sc.x-px, sc.y-py);
         if(d<minD){minD=d;minI=i;}
       });
-      if(minI>=0) annotations.splice(minI,1);
+      if(minI>=0){ annotations.splice(minI,1); return; }
+      // Also try removing nearest custom highlight
+      removeNearestCustomHighlight(px, py);
     }
+  });
+
+  // Double-click: close polygon and commit custom highlight
+  annotC.addEventListener('dblclick', function(e){
+    if(currentTool !== 'paint') return;
+    e.preventDefault();
+    if(paintPoints.length < 3){
+      paintPoints = [];
+      updatePaintPreview();
+      var cntEl = document.getElementById('paintPtCount');
+      if(cntEl) cntEl.textContent = '0 pts';
+      return;
+    }
+    // Commit: store as custom highlight
+    var id = 'custom_'+(++customHlCounter);
+    var ring = paintPoints.map(function(p){ return [p.lng, p.lat]; });
+    customHighlights.push({id:id, ring:ring, color:annotColor, opacity:0.45});
+    // Paint onto texture
+    paintCustomPolygon(ring, annotColor, 0.45);
+    // Reset
+    paintPoints = [];
+    updatePaintPreview();
+    var cntEl = document.getElementById('paintPtCount');
+    if(cntEl) cntEl.textContent = '0 pts';
+    // Deactivate paint tool
+    setTool('paint'); // toggles off
+  });
+}
+
+// Draw preview dots + connecting lines for paint-in-progress
+function updatePaintPreview(){
+  redrawAnnotations(); // clears then redraws
+  if(!paintPoints.length) return;
+  var pts = paintPoints;
+  // Draw connecting lines
+  if(pts.length > 1){
+    annotCtx.save();
+    annotCtx.strokeStyle = annotColor;
+    annotCtx.lineWidth = 1.5;
+    annotCtx.setLineDash([4,3]);
+    annotCtx.globalAlpha = 0.7;
+    annotCtx.beginPath();
+    for(var i=0;i<pts.length;i++){
+      var sc = worldToScreen(pts[i].lat, pts[i].lng);
+      if(i===0) annotCtx.moveTo(sc.x, sc.y); else annotCtx.lineTo(sc.x, sc.y);
+    }
+    annotCtx.stroke();
+    annotCtx.setLineDash([]);
+    annotCtx.restore();
+  }
+  // Draw vertex dots
+  pts.forEach(function(p, i){
+    var sc = worldToScreen(p.lat, p.lng);
+    annotCtx.save();
+    annotCtx.fillStyle = i===0 ? '#f87171' : annotColor;
+    annotCtx.globalAlpha = 0.9;
+    annotCtx.beginPath();
+    annotCtx.arc(sc.x, sc.y, i===0?6:4, 0, Math.PI*2);
+    annotCtx.fill();
+    annotCtx.restore();
+  });
+}
+
+function paintCustomPolygon(ring, color, opacity){
+  // ring = [[lng,lat],...] — same format as shape.ring
+  var W = texCanvas.width, H = texCanvas.height;
+  var tmp = document.createElement('canvas'); tmp.width=1; tmp.height=1;
+  var tc = tmp.getContext('2d'); tc.fillStyle=color; tc.fillRect(0,0,1,1);
+  var d=tc.getImageData(0,0,1,1).data; var r=d[0],g=d[1],b=d[2];
+
+  var offC = document.createElement('canvas'); offC.width=W; offC.height=H;
+  var off = offC.getContext('2d');
+  off.fillStyle='rgba('+r+','+g+','+b+',1)';
+  off.beginPath();
+  var p0=lngLatToTex(ring[0][0],ring[0][1],W,H);
+  off.moveTo(p0[0],p0[1]);
+  for(var i=1;i<ring.length;i++){
+    var p=lngLatToTex(ring[i][0],ring[i][1],W,H);
+    off.lineTo(p[0],p[1]);
+  }
+  off.closePath(); off.fill();
+
+  texCtx.save();
+  texCtx.globalAlpha = opacity * 0.42;
+  texCtx.drawImage(offC,0,0);
+  texCtx.restore();
+  globeTexture.needsUpdate = true;
+}
+
+function removeNearestCustomHighlight(px, py){
+  // Find custom highlight whose centroid is nearest to click
+  var minD = 60, minI = -1;
+  customHighlights.forEach(function(ch, i){
+    var lats=ch.ring.map(function(c){return c[1];});
+    var lngs=ch.ring.map(function(c){return c[0];});
+    var clat=lats.reduce(function(a,b){return a+b;})/lats.length;
+    var clng=lngs.reduce(function(a,b){return a+b;})/lngs.length;
+    var sc=worldToScreen(clat,clng);
+    var d=Math.hypot(sc.x-px,sc.y-py);
+    if(d<minD){minD=d;minI=i;}
+  });
+  if(minI>=0){
+    customHighlights.splice(minI,1);
+    // Repaint without that custom highlight
+    repaintAllCustom();
+  }
+}
+
+function repaintAllCustom(){
+  // Repaint base + search highlights + all custom highlights
+  repaintTexture(); // handles search highlights
+  customHighlights.forEach(function(ch){
+    paintCustomPolygon(ch.ring, ch.color, ch.opacity);
   });
 }
 
@@ -2233,7 +2533,7 @@ function doSearch(name){
 
 function showFeatureInfo(key, f){
   var statsHtml = '';
-  if(f.stats){
+  if(f.stats && Object.keys(f.stats).length){
     statsHtml = '<div class="feat-stats">';
     Object.keys(f.stats).forEach(function(k){
       statsHtml += '<div class="stat-box"><div class="stat-label">'+esc(k)+'</div>'+
@@ -2242,6 +2542,17 @@ function showFeatureInfo(key, f){
     statsHtml += '</div>';
   }
 
+  // Opacity slider for the main highlighted feature
+  var hi = activeHighlights[key];
+  var curOpacity = hi ? hi.opacity : 0.55;
+  var safeKey = key.replace(/'/g,"\\'");
+  var opSlider = '<div class="opacity-row">'+
+    '<span class="opacity-label">Opacity</span>'+
+    '<input type="range" class="opacity-slider" min="5" max="95" value="'+Math.round(curOpacity*100)+
+    '" oninput="setHighlightOpacity(this,\''+safeKey+'\',this.value/100)" />'+
+    '<span class="opacity-val" id="opv_main">'+Math.round(curOpacity*100)+'%</span>'+
+    '</div>';
+
   var relHtml = '';
   if(f.related && f.related.length){
     relHtml = '<div class="related-label">Related features</div><div class="related-chips">';
@@ -2249,9 +2560,18 @@ function showFeatureInfo(key, f){
       var rf = GEO_FEATURES[rk];
       var rname = rf ? rf.name : rk.split(' ').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join(' ');
       var isActive = !!activeChips[rk];
-      relHtml += '<div class="chip'+(isActive?' active':'')+'" onclick="toggleRelated(\''+esc(rk)+'\')">'+
-        '<div class="chip-dot" style="background:'+(isActive?activeChips[rk]:'var(--muted)')+'"></div>'+
-        esc(rname)+'</div>';
+      var safeRk = rk.replace(/'/g,"\\'");
+      relHtml += '<div class="chip'+(isActive?' active':'')+'" onclick="toggleRelated(this,\''+safeRk+'\')">';
+      relHtml += '<div class="chip-dot" style="background:'+(isActive?activeChips[rk]:'var(--muted)')+'"></div>';
+      relHtml += esc(rname);
+      if(isActive){
+        var rhi = activeHighlights[rk];
+        var rop = rhi ? Math.round(rhi.opacity*100) : 42;
+        relHtml += '<input type="range" class="chip-opacity" min="5" max="95" value="'+rop+
+          '" onclick="event.stopPropagation()" '+
+          'oninput="event.stopPropagation();setHighlightOpacity(this,\''+safeRk+'\',this.value/100)" />';
+      }
+      relHtml += '</div>';
     });
     relHtml += '</div>';
   }
@@ -2260,11 +2580,23 @@ function showFeatureInfo(key, f){
     '<div class="feat-name">'+esc(f.name)+'</div>'+
     '<div class="feat-type-badge">'+typeIcon(f.type)+' '+esc(f.type)+'</div>'+
     '<div class="feat-desc">'+esc(f.desc)+'</div>'+
-    statsHtml+relHtml+
+    statsHtml + opSlider + relHtml +
     '</div>';
   document.getElementById('panelContent').innerHTML = html;
 }
 
+function setHighlightOpacity(sliderEl, key, val){
+  val = Math.max(0.05, Math.min(0.95, parseFloat(val)));
+  if(activeHighlights[key]){
+    activeHighlights[key].opacity = val;
+    repaintTexture();
+  }
+  // Update display next to slider
+  var pct = Math.round(val*100)+'%';
+  if(sliderEl && sliderEl.nextElementSibling) sliderEl.nextElementSibling.textContent = pct;
+  var mainEl = document.getElementById('opv_main');
+  if(mainEl && key === (currentFeature && currentFeature.key)) mainEl.textContent = pct;
+}
 function typeIcon(type){
   var icons = {mountain:'⛰',river:'〰️',plain:'🌾',desert:'🏜',forest:'🌿',country:'🏳',
     plateau:'🗻',sea:'🌊',lake:'💧',volcano:'🌋',trench:'🔽',mountain_range:'⛰',
@@ -2273,9 +2605,10 @@ function typeIcon(type){
   return icons[type] || '📌';
 }
 
-function toggleRelated(rk){
+function toggleRelated(elOrKey, rk){
+  // Support both old signature (rk only) and new (el, rk)
+  if(typeof elOrKey === 'string'){ rk = elOrKey; }
   if(activeChips[rk]){
-    // Remove
     delete activeChips[rk];
     delete activeHighlights[rk];
     repaintTexture();
@@ -2391,6 +2724,8 @@ window.addEventListener('load', function(){
     setupAnnotCanvas();
     setupAnnotInteractions();
     buildColorPicker();
+    // Load Natural Earth data for precise coast-following highlights
+    loadNaturalEarthData();
 
     clearInterval(loadInterval);
     fill.style.width = '100%';
