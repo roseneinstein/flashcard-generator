@@ -1214,6 +1214,275 @@ var GEO_FEATURES = {
     highlights:[],
     shape:{type:'polygon',ring: [[22.0, 48.5], [24.0, 50.5], [26.0, 51.5], [28.0, 52.5], [30.5, 52.5], [33.5, 52.0], [36.5, 51.0], [38.5, 49.0], [38.0, 47.0], [36.5, 46.5], [34.5, 45.5], [33.0, 46.0], [31.5, 46.5], [29.5, 45.5], [28.5, 45.5], [30.0, 46.5], [29.0, 48.0], [27.0, 48.5], [24.5, 48.0], [22.5, 48.0], [22.0, 48.5]]}
   },
+
+  // ── BODIES OF WATER — Missing features ────────────────────────────
+  'persian gulf': {
+    name:'Persian Gulf', type:'sea', region:'Middle East',
+    lat:26.5, lng:51.5, zoom:5.0,
+    desc:'Shallow marginal sea of the Indian Ocean between the Arabian Peninsula and Iran. World\'s largest source of crude oil. Also called the Arabian Gulf.',
+    stats:{Area:'251,000 km²','Max Depth':'90 m','Countries':'Iran, Saudi Arabia, UAE, Kuwait, Qatar, Bahrain'},
+    related:['arabian sea','red sea','indian ocean','iran','saudi arabia'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[48.5,30.0],[50.5,30.5],[52.0,29.5],[53.0,27.5],[55.5,26.0],[57.5,24.0],[56.5,23.5],[54.5,24.5],[53.0,25.5],[51.5,24.5],[50.5,26.0],[49.5,27.0],[48.0,28.5],[48.5,30.0]]}
+  },
+  'red sea': {
+    name:'Red Sea', type:'sea', region:'Middle East/Africa',
+    lat:22.0, lng:37.5, zoom:4.5,
+    desc:'Seawater inlet of the Indian Ocean between Africa and the Arabian Peninsula. One of the world\'s busiest shipping lanes connecting Europe and Asia via the Suez Canal.',
+    stats:{Area:'438,000 km²','Max Depth':'3,040 m','Length':'1,900 km'},
+    related:['arabian sea','indian ocean','persian gulf','suez canal','nile river'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[32.5,30.0],[33.5,28.5],[34.5,27.0],[36.0,25.5],[37.5,24.0],[38.5,22.0],[40.5,20.5],[41.5,18.5],[42.5,16.0],[43.5,14.0],[43.0,13.0],[42.5,14.5],[41.5,16.5],[40.5,18.5],[39.5,20.5],[38.0,22.5],[36.5,24.0],[35.0,25.5],[33.5,27.5],[32.5,30.0]]}
+  },
+  'indian ocean': {
+    name:'Indian Ocean', type:'sea', region:'Global Ocean',
+    lat:5.0, lng:72.0, zoom:2.8,
+    desc:'Third largest ocean, covering ~70 million km². Bounded by Africa to the west, Asia to the north, Australia to the east, and the Southern Ocean to the south. Hosts major shipping lanes.',
+    stats:{Area:'70.56 million km²','Max Depth':'7,258 m (Sunda Trench)','Countries Bordering':'36'},
+    related:['arabian sea','bay of bengal','red sea','persian gulf','southern ocean'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[20.0,-35.0],[30.0,-38.0],[40.0,-38.0],[50.0,-37.0],[60.0,-35.0],[70.0,-32.0],[80.0,-28.0],[90.0,-22.0],[100.0,-18.0],[105.0,-8.0],[100.0,5.0],[90.0,12.0],[80.0,18.0],[70.0,22.0],[60.0,22.0],[50.0,15.0],[45.0,10.0],[42.0,0.0],[38.0,-10.0],[33.0,-22.0],[26.0,-32.0],[20.0,-35.0]]}
+  },
+  'hudson bay': {
+    name:'Hudson Bay', type:'sea', region:'North America',
+    lat:60.0, lng:-86.0, zoom:4.0,
+    desc:'Large body of saltwater in northeastern Canada. Freezes in winter and thaws in summer. Named after explorer Henry Hudson.',
+    stats:{Area:'1.23 million km²','Max Depth':'270 m','Freezes':'November–June'},
+    related:['canada','great lakes','labrador sea','arctic ocean'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-95.0,63.5],[-85.0,63.5],[-79.0,62.5],[-79.5,58.5],[-82.0,56.5],[-85.0,55.5],[-88.0,55.0],[-92.0,55.0],[-95.0,56.5],[-96.5,58.5],[-95.5,61.0],[-95.0,63.5]]}
+  },
+  'gulf of mexico': {
+    name:'Gulf of Mexico', type:'sea', region:'North America',
+    lat:25.0, lng:-90.0, zoom:4.5,
+    desc:'Ocean basin largely surrounded by the North American continent. Bordered by USA to the north, Mexico to the west and south, and Cuba to the southeast.',
+    stats:{Area:'1.55 million km²','Max Depth':'4,384 m','Major Port':'New Orleans, Houston, Veracruz'},
+    related:['usa','mexico','caribbean sea','mississippi river','atlantic ocean'],
+    highlights:['mississippi river'],
+    shape:{type:'polygon',ring:[[-97.5,26.0],[-93.5,29.0],[-90.0,29.0],[-88.5,30.0],[-85.5,30.0],[-83.0,29.5],[-81.5,24.5],[-83.0,22.0],[-85.0,21.5],[-87.0,21.5],[-90.5,21.0],[-92.5,19.5],[-95.0,19.5],[-97.0,22.0],[-97.5,26.0]]}
+  },
+  'mediterranean sea': {
+    name:'Mediterranean Sea', type:'sea', region:'Europe/Africa',
+    lat:35.0, lng:15.0, zoom:4.0,
+    desc:'Nearly landlocked sea connected to the Atlantic via the Strait of Gibraltar. Cradle of Western civilisation. Bordered by 21 countries across three continents.',
+    stats:{Area:'2.5 million km²','Max Depth':'5,267 m','Countries':'21','Major Cities':'Rome, Barcelona, Athens, Cairo'},
+    related:['europe','africa','black sea','red sea','nile river','atlantic ocean'],
+    highlights:['nile river'],
+    shape:{type:'polygon',ring:[[-5.5,36.0],[-1.5,35.5],[2.5,37.5],[6.0,37.5],[9.0,38.0],[12.0,37.5],[15.0,37.5],[18.0,40.0],[20.5,38.5],[23.5,38.5],[25.5,35.5],[28.5,36.5],[31.0,36.5],[32.0,35.5],[36.5,36.5],[36.5,42.0],[28.5,41.5],[23.5,40.5],[19.0,40.5],[15.5,44.0],[12.5,45.0],[9.0,44.0],[5.5,43.5],[2.0,43.5],[-2.0,43.5],[-5.5,36.0]]}
+  },
+  'black sea': {
+    name:'Black Sea', type:'sea', region:'Europe/Asia',
+    lat:43.0, lng:34.0, zoom:5.0,
+    desc:'Inland sea between Eastern Europe and Western Asia. Connected to the Mediterranean via the Bosphorus. One of the world\'s most isolated seas.',
+    stats:{Area:'436,402 km²','Max Depth':'2,212 m','Countries':'Bulgaria, Romania, Ukraine, Russia, Georgia, Turkey'},
+    related:['mediterranean sea','danube river','ukraine','turkey','volga river'],
+    highlights:['danube river'],
+    shape:{type:'polygon',ring:[[28.0,43.0],[30.5,46.0],[33.5,46.5],[37.0,47.0],[41.5,47.0],[41.5,41.5],[40.0,41.0],[38.5,41.5],[36.0,42.5],[32.0,42.0],[28.5,41.5],[28.0,43.0]]}
+  },
+  'north sea': {
+    name:'North Sea', type:'sea', region:'Europe',
+    lat:56.0, lng:4.0, zoom:4.5,
+    desc:'Marginal sea of the Atlantic Ocean between Great Britain and the northwestern European mainland. One of the world\'s most productive fishing areas and a major oil/gas source.',
+    stats:{Area:'575,000 km²','Max Depth':'700 m','Countries':'UK, Norway, Denmark, Germany, Netherlands, Belgium, France'},
+    related:['atlantic ocean','europe','uk','denmark','norway'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-2.0,58.0],[2.0,55.0],[4.0,53.0],[7.0,55.0],[8.5,57.5],[8.0,59.0],[5.0,62.0],[1.0,61.0],[-1.5,60.0],[-2.0,58.0]]}
+  },
+  'caribbean sea': {
+    name:'Caribbean Sea', type:'sea', region:'Central America',
+    lat:15.0, lng:-75.0, zoom:4.0,
+    desc:'Part of the Atlantic Ocean southeast of the Gulf of Mexico. Contains over 700 islands and reefs. Warm tropical waters known for hurricanes and biodiversity.',
+    stats:{Area:'2.75 million km²','Max Depth':'7,686 m (Cayman Trough)'},
+    related:['gulf of mexico','atlantic ocean','central america','cuba'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-87.0,22.0],[-83.0,23.0],[-78.0,24.0],[-72.0,23.0],[-65.0,18.5],[-62.0,15.5],[-62.0,10.5],[-67.0,10.0],[-72.0,11.0],[-76.0,9.0],[-83.0,8.5],[-87.5,14.5],[-88.5,16.5],[-86.0,18.5],[-87.0,22.0]]}
+  },
+
+  // ── WORLD — Missing Rivers ─────────────────────────────────────────
+  'danube river': {
+    name:'Danube River', type:'river', region:'Europe',
+    lat:47.0, lng:19.0, zoom:4.5,
+    desc:'Europe\'s second longest river at 2,860 km. Flows through 10 countries from Germany\'s Black Forest to the Black Sea delta in Romania.',
+    stats:{Length:'2,860 km','Countries':'10 (most of any river)','Source':'Black Forest, Germany','Mouth':'Black Sea, Romania'},
+    related:['black sea','europe','germany','austria','hungary','romania'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[8.2,48.0],[9.5,47.5],[11.0,48.5],[13.5,48.5],[16.5,48.0],[17.5,47.8],[18.5,47.5],[19.0,47.5],[20.5,47.0],[22.0,47.5],[24.0,45.5],[25.5,44.0],[27.0,45.0],[28.0,46.5],[29.5,45.5],[29.5,45.2]]}
+  },
+  'rhine river': {
+    name:'Rhine River', type:'river', region:'Europe',
+    lat:50.5, lng:7.0, zoom:5.0,
+    desc:'One of the most important rivers in Europe. Rises in the Swiss Alps and flows 1,230 km to the North Sea in the Netherlands. Major commercial waterway.',
+    stats:{Length:'1,230 km','Countries':'Switzerland, Liechtenstein, Austria, Germany, France, Netherlands','Source':'Swiss Alps'},
+    related:['north sea','europe','germany','netherlands','alps'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[9.5,47.0],[8.5,47.5],[8.0,48.5],[7.5,49.5],[7.0,51.0],[6.5,51.5],[5.5,52.0],[4.5,52.5]]}
+  },
+  'zambezi river': {
+    name:'Zambezi River', type:'river', region:'Africa',
+    lat:-15.0, lng:28.0, zoom:4.5,
+    desc:'Fourth longest river in Africa, 2,574 km. Source of Victoria Falls, one of the world\'s largest waterfalls. Flows through six countries to the Mozambique Channel.',
+    stats:{Length:'2,574 km','Countries':'Zambia, Angola, Namibia, Botswana, Zimbabwe, Mozambique','Notable':'Victoria Falls'},
+    related:['victoria falls','africa','mozambique','zambia','indian ocean'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[22.5,-12.0],[24.5,-12.5],[26.5,-13.5],[28.5,-15.5],[28.0,-17.0],[25.5,-17.5],[24.5,-18.0],[25.0,-15.5],[27.0,-16.0],[30.5,-18.5],[32.0,-18.0],[34.5,-18.5],[35.5,-19.0],[36.5,-20.0]]}
+  },
+  'murray river': {
+    name:'Murray River', type:'river', region:'Australia',
+    lat:-34.5, lng:139.5, zoom:5.0,
+    desc:'Australia\'s longest river at 2,508 km. Flows from the Australian Alps through South Australia to the Southern Ocean. Critical for irrigation.',
+    stats:{Length:'2,508 km','Countries':'Australia','Source':'Australian Alps'},
+    related:['australia','great victoria desert'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[148.5,-36.5],[146.0,-36.0],[143.5,-35.5],[141.0,-34.5],[138.5,-34.0],[139.5,-35.5]]}
+  },
+  'ganges brahmaputra delta': {
+    name:'Ganges-Brahmaputra Delta', type:'region', region:'South Asia',
+    lat:23.0, lng:89.5, zoom:5.5,
+    desc:'World\'s largest river delta, covering ~105,000 km². Formed by the confluence of the Ganga, Brahmaputra, and Meghna rivers. Contains the Sundarbans mangrove forest.',
+    stats:{Area:'~105,000 km²','Countries':'Bangladesh (80%), India (20%)','Features':'Sundarbans, Padma, Meghna rivers'},
+    related:['ganga river','brahmaputra river','sundarbans','bay of bengal','bangladesh'],
+    highlights:['ganga river','brahmaputra river'],
+    shape:{type:'polygon',ring:[[87.5,24.5],[88.5,24.0],[89.5,23.5],[90.5,23.0],[91.5,22.5],[92.0,22.0],[91.5,22.5],[90.5,22.5],[89.5,22.0],[88.5,22.0],[87.5,22.5],[87.0,23.5],[87.5,24.5]]}
+  },
+
+  // ── WORLD — Missing Countries ──────────────────────────────────────
+  'germany': {
+    name:'Germany', type:'country', region:'Europe',
+    lat:51.0, lng:10.0, zoom:5.0,
+    desc:'Central European nation, Europe\'s largest economy. Federal republic of 16 states. Capital Berlin. Reunified in 1990.',
+    stats:{Area:'357,114 km²',Population:'84 million',Capital:'Berlin'},
+    related:['europe','france','alps','rhine river','danube river'],
+    highlights:['rhine river'],
+    shape:{type:'polygon',ring:[[6.0,51.0],[6.5,52.5],[8.0,55.0],[10.5,55.5],[14.0,54.0],[15.0,51.0],[12.0,50.0],[12.5,48.0],[10.0,47.5],[8.0,47.5],[7.5,48.5],[6.5,49.5],[6.0,51.0]]}
+  },
+  'france': {
+    name:'France', type:'country', region:'Europe',
+    lat:46.5, lng:2.5, zoom:5.0,
+    desc:'Western European country, world\'s most visited nation. Semi-presidential republic. Capital Paris.',
+    stats:{Area:'551,695 km²',Population:'68 million',Capital:'Paris'},
+    related:['europe','mediterranean sea','alps','rhine river','atlantic ocean'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-4.5,48.5],[-1.5,46.5],[-1.5,43.5],[1.5,43.5],[3.0,43.5],[4.5,43.5],[7.0,44.0],[7.5,47.5],[6.5,49.5],[5.5,49.5],[4.0,50.5],[2.5,51.0],[1.5,51.0],[-2.0,48.5],[-4.5,48.5]]}
+  },
+  'egypt': {
+    name:'Egypt', type:'country', region:'Africa/Middle East',
+    lat:26.0, lng:29.5, zoom:5.0,
+    desc:'Transcontinental country spanning northeastern Africa and the Sinai Peninsula of Western Asia. Home to ancient Egyptian civilisation and the Nile Valley.',
+    stats:{Area:'1,002,450 km²',Population:'105 million',Capital:'Cairo'},
+    related:['nile river','mediterranean sea','red sea','sahara desert','sudan'],
+    highlights:['nile river'],
+    shape:{type:'polygon',ring:[[24.5,22.0],[28.0,22.0],[32.0,22.0],[37.0,22.0],[37.0,25.0],[34.5,27.5],[34.0,29.5],[32.0,31.5],[30.5,31.5],[29.0,31.0],[25.5,31.5],[24.5,30.5],[24.5,22.0]]}
+  },
+  'nigeria': {
+    name:'Nigeria', type:'country', region:'Africa',
+    lat:9.0, lng:8.0, zoom:5.0,
+    desc:'Most populous country in Africa (~220 million). Federal republic. Africa\'s largest economy. Oil-rich Niger Delta.',
+    stats:{Area:'923,768 km²',Population:'~220 million',Capital:'Abuja'},
+    related:['niger river','sahel','west africa','cameroon','gulf of guinea'],
+    highlights:['niger river'],
+    shape:{type:'polygon',ring:[[2.5,6.5],[3.0,6.5],[4.5,7.5],[5.5,5.5],[7.5,4.5],[9.0,4.5],[8.5,6.5],[9.5,7.5],[10.5,7.5],[11.5,9.5],[13.5,13.5],[14.5,13.5],[14.0,12.5],[13.5,11.5],[12.5,9.5],[12.0,8.0],[9.5,7.5],[8.5,6.5],[6.0,6.5],[4.0,6.5],[2.5,6.5]]}
+  },
+  'niger': {
+    name:'Niger', type:'country', region:'Africa',
+    lat:17.0, lng:8.5, zoom:5.0,
+    desc:'Landlocked West African nation. Mostly Sahara Desert. Named after the Niger River, though most of the river flows through Nigeria.',
+    stats:{Area:'1,267,000 km²',Population:'25 million',Capital:'Niamey'},
+    related:['niger river','sahara desert','sahel','nigeria','mali','chad'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[2.0,12.0],[4.5,13.0],[7.5,13.5],[12.0,13.5],[14.5,13.5],[15.0,22.0],[12.0,23.5],[9.0,21.0],[6.0,21.0],[2.0,15.5],[2.0,12.0]]}
+  },
+  'argentina': {
+    name:'Argentina', type:'country', region:'South America',
+    lat:-38.0, lng:-63.0, zoom:4.0,
+    desc:'Second largest country in South America, fourth largest Spanish-speaking country. Federal republic.',
+    stats:{Area:'2,780,400 km²',Population:'45 million',Capital:'Buenos Aires'},
+    related:['andes','patagonia','brazil','amazon river','south atlantic'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-73.0,-50.0],[-70.0,-55.0],[-65.0,-55.5],[-63.0,-55.0],[-55.0,-52.0],[-53.5,-33.5],[-58.0,-34.0],[-58.5,-34.5],[-60.5,-33.5],[-62.0,-31.0],[-64.5,-27.5],[-65.0,-22.5],[-66.5,-22.0],[-67.5,-22.5],[-68.5,-25.5],[-68.5,-28.5],[-70.0,-32.0],[-72.0,-36.0],[-73.0,-40.0],[-73.0,-50.0]]}
+  },
+  'mexico': {
+    name:'Mexico', type:'country', region:'North America',
+    lat:24.0, lng:-102.0, zoom:4.5,
+    desc:'Third largest country in Latin America. Federal republic of 31 states. 11th largest economy globally.',
+    stats:{Area:'1,964,375 km²',Population:'130 million',Capital:'Mexico City'},
+    related:['gulf of mexico','pacific ocean','usa','central america','caribbean sea'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-117.0,32.5],[-111.5,31.5],[-108.0,31.5],[-104.5,29.5],[-100.0,28.0],[-97.0,26.0],[-97.5,23.0],[-92.5,19.5],[-90.5,21.0],[-87.5,16.5],[-89.5,18.5],[-90.5,21.0],[-95.0,19.5],[-97.0,22.0],[-100.5,24.5],[-106.5,24.5],[-109.5,24.0],[-114.5,24.5],[-118.5,26.5],[-117.0,32.5]]}
+  },
+  'canada': {
+    name:'Canada', type:'country', region:'North America',
+    lat:60.0, lng:-96.0, zoom:3.0,
+    desc:'Second largest country in the world by area. Federal parliamentary democracy. Ten provinces and three territories.',
+    stats:{Area:'9.98 million km²',Population:'38 million',Capital:'Ottawa'},
+    related:['usa','hudson bay','arctic ocean','great lakes','rocky mountains'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-140.0,60.0],[-120.0,60.0],[-110.0,60.0],[-95.0,60.0],[-84.0,46.0],[-76.5,44.5],[-71.0,45.0],[-67.5,47.5],[-60.5,47.0],[-64.0,44.0],[-60.0,46.0],[-53.5,47.0],[-55.0,51.0],[-64.0,63.5],[-68.0,63.5],[-79.0,62.5],[-95.0,63.5],[-120.0,69.0],[-140.0,69.5],[-140.0,60.0]]}
+  },
+  'south africa': {
+    name:'South Africa', type:'country', region:'Africa',
+    lat:-29.0, lng:25.0, zoom:4.5,
+    desc:'Southernmost country in Africa. Constitutional democracy with three capitals. Known for its diversity in culture, languages, and wildlife.',
+    stats:{Area:'1,219,090 km²',Population:'62 million',Capital:'Pretoria (executive), Cape Town (legislative)'},
+    related:['great rift valley','east africa','indian ocean','namibia','zimbabwe'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[16.5,-29.0],[17.5,-29.5],[20.0,-31.5],[21.5,-34.5],[24.0,-34.0],[26.5,-34.0],[28.5,-33.0],[31.5,-29.5],[33.0,-27.0],[32.5,-25.5],[31.0,-22.5],[29.5,-22.5],[29.0,-22.0],[27.5,-21.5],[26.0,-22.5],[23.5,-17.5],[20.0,-18.0],[19.0,-21.0],[17.0,-22.5],[16.5,-29.0]]}
+  },
+
+  // ── WORLD — More features ──────────────────────────────────────────
+  'victoria falls': {
+    name:'Victoria Falls', type:'mountain', region:'Africa',
+    lat:-17.9243, lng:25.8572, zoom:7.0,
+    desc:'Waterfall on the Zambezi River at the border of Zambia and Zimbabwe. UNESCO World Heritage Site. Over 1,700 m wide and 108 m tall — one of the world\'s largest waterfalls.',
+    stats:{Width:'1,708 m',Height:'108 m',Location:'Zambia/Zimbabwe border','UNESCO':'World Heritage Site 1989'},
+    related:['zambezi river','zambia','zimbabwe','africa'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'amazon delta': {
+    name:'Amazon Delta', type:'region', region:'South America',
+    lat:-1.0, lng:-50.0, zoom:6.0,
+    desc:'Where the Amazon River meets the Atlantic Ocean. One of the largest river mouths in the world, discharging 20% of all freshwater entering oceans.',
+    stats:{Discharge:'209,000 m³/s (20% of global)','Width at mouth':'>320 km'},
+    related:['amazon river','amazon rainforest','brazil','atlantic ocean'],
+    highlights:['amazon river'],
+    shape:{type:'polygon',ring:[[-52.0,-2.0],[-50.5,-1.0],[-49.5,-0.5],[-49.5,1.0],[-51.0,2.0],[-52.0,2.0],[-52.5,0.0],[-52.0,-2.0]]}
+  },
+  'indo-gangetic plain': {
+    name:'Indo-Gangetic Plain', type:'plain', region:'South Asia',
+    lat:26.0, lng:77.0, zoom:4.5,
+    desc:'Vast alluvial plain in South Asia encompassing most of northern India, Pakistan, and Bangladesh. Formed by sediments of the Indus, Ganga, and Brahmaputra rivers.',
+    stats:{Area:'~700,000 km²','Countries':'India, Pakistan, Bangladesh, Nepal'},
+    related:['gangetic plains','ganga river','indus river','himalayas','doab'],
+    highlights:['ganga river','yamuna river','indus river'],
+    shape:{type:'polygon',ring:[[68.5,30.5],[72.0,30.5],[74.5,30.0],[76.5,30.0],[78.0,29.5],[80.0,28.8],[82.0,27.8],[84.0,27.0],[86.0,26.5],[88.0,26.0],[89.5,26.0],[89.5,24.0],[88.0,24.0],[86.0,24.5],[84.0,25.0],[82.0,25.2],[80.0,26.5],[78.0,27.5],[76.5,28.5],[74.0,29.5],[72.0,29.5],[70.0,28.5],[68.5,28.5],[68.5,30.5]]}
+  },
+  'great barrier reef': {
+    name:'Great Barrier Reef', type:'sea', region:'Australia',
+    lat:-18.0, lng:147.5, zoom:5.0,
+    desc:'World\'s largest coral reef system, stretching 2,300 km along Australia\'s northeastern coast. UNESCO World Heritage Site. Contains over 2,900 individual reefs.',
+    stats:{Length:'2,300 km',Area:'344,400 km²','UNESCO':'World Heritage 1981','Biodiversity':'1,500 fish species, 4,000 mollusk species'},
+    related:['australia','pacific ocean','coral sea'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[145.0,-10.5],[147.0,-14.0],[148.5,-18.0],[149.5,-22.5],[152.0,-24.5],[152.0,-22.0],[149.5,-20.5],[147.5,-16.5],[145.5,-12.0],[145.0,-10.5]]}
+  },
+  'coral sea': {
+    name:'Coral Sea', type:'sea', region:'Pacific Ocean',
+    lat:-18.0, lng:154.0, zoom:4.5,
+    desc:'Marginal sea of the south Pacific Ocean off the northeast coast of Australia.',
+    stats:{Area:'4.79 million km²','Max Depth':'9,174 m'},
+    related:['australia','great barrier reef','pacific ocean'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[145.0,-10.0],[147.0,-10.0],[155.0,-14.0],[158.0,-20.0],[158.0,-26.0],[152.5,-25.5],[149.5,-22.5],[148.0,-18.0],[147.0,-14.0],[145.0,-10.0]]}
+  },
+  'arabian peninsula': {
+    name:'Arabian Peninsula', type:'region', region:'Middle East',
+    lat:23.5, lng:44.0, zoom:4.5,
+    desc:'Peninsula in Western Asia, the world\'s largest at ~3.2 million km². Contains Saudi Arabia, UAE, Oman, Yemen, Qatar, Bahrain, and Kuwait. World\'s largest oil reserves.',
+    stats:{Area:'~3.2 million km²','Countries':'7','Resources':'World\'s largest proven oil reserves'},
+    related:['arabian sea','persian gulf','red sea','saudi arabia','iran'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[37.0,28.5],[39.5,24.0],[42.5,19.0],[44.5,12.5],[46.0,11.5],[51.0,12.0],[55.0,15.0],[59.5,20.0],[59.5,23.5],[58.5,26.0],[55.5,26.5],[52.5,25.0],[50.5,27.0],[48.5,30.0],[44.5,29.5],[42.5,29.0],[40.5,29.0],[37.0,28.5]]}
+  },
 };
 
 // Build search index
@@ -1239,9 +1508,9 @@ var raycaster, mouse;
 var texCanvas, texCtx, globeTexture, globeMat;
 var realTexImage = null;        // cached real Earth image for repainting
 var activeHighlights = {};      // featureKey -> {color, opacity}
-var neCoastlines = null;        // Natural Earth coastline polygons for coast-clipping
-var neCountries = null;         // country polygons
-var neRivers = null;            // river centerlines
+var neCoastlines = null;        // NE 50m land polygons for coast-clipping
+var neCountries = null;         // NE country polygons
+var neRivers = null;            // NE river centerlines
 var isDragging = false, lastMouse = {x:0, y:0};
 var autoRotate = true;       // auto-rotation state — stops on search, user can toggle
 var globeGroup;
@@ -1920,28 +2189,122 @@ function lngLatToTex(lng, lat, W, H){
 }
 
 // ── Load Natural Earth GeoJSON for precision geography ──────────────────
-function loadNaturalEarthData(){
-  // Natural Earth 110m resolution — small file, loads fast, coast-accurate
-  var base = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/';
-  var urls = {
-    coastlines: base + 'ne_110m_land.geojson',
-    rivers:     base + 'ne_110m_rivers_lake_centerlines.geojson'
-  };
-  fetch(urls.coastlines)
-    .then(function(r){ return r.json(); })
-    .then(function(gj){
-      neCoastlines = gj;
-      // If highlights are already active, repaint with clipping
-      if(Object.keys(activeHighlights).length) repaintTexture();
-    })
-    .catch(function(){ /* silently ignore — highlights still work without clipping */ });
+// ── Natural Earth GeoJSON indices (built after loading) ───────────────
+var neCountryIndex  = {};   // normalized name → feature
+var neRiverIndex    = {};   // normalized name → feature
+var neMarineIndex   = {};   // normalized name → feature
+var neLakeIndex     = {};   // normalized name → feature
+var neRegionIndex   = {};   // normalized name → feature
 
-  fetch(urls.rivers)
-    .then(function(r){ return r.json(); })
-    .then(function(gj){
-      neRivers = gj;
-    })
-    .catch(function(){ });
+function normName(s){
+  return (s||'').toLowerCase()
+    .replace(/\(.*?\)/g,'').replace(/[^a-z0-9 ]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+
+function buildIndex(gj, index, nameFields){
+  if(!gj || !gj.features) return;
+  gj.features.forEach(function(feat){
+    var p = feat.properties || {};
+    nameFields.forEach(function(f){
+      if(p[f]){ var k=normName(p[f]); if(!index[k]) index[k]=feat; }
+    });
+  });
+}
+
+function loadNaturalEarthData(){
+  var base = '/data/';
+
+  // Helper: fetch JSON, call cb(geoJson) on success
+  function fetchGJ(file, cb){
+    fetch(base + file)
+      .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(cb)
+      .catch(function(e){ console.warn('NE load failed: '+file, e); });
+  }
+
+  // 1. Land mask — for coast clipping (higher-res 50m)
+  fetchGJ('ne_50m_land.geojson', function(gj){
+    neCoastlines = gj;
+    if(Object.keys(activeHighlights).length) repaintTexture();
+  });
+
+  // 2. Countries — exact polygons by name
+  fetchGJ('ne_50m_admin_0_countries.geojson', function(gj){
+    neCountries = gj;
+    buildIndex(gj, neCountryIndex, ['NAME','NAME_LONG','ADMIN','BRK_NAME','FORMAL_EN']);
+    if(Object.keys(activeHighlights).length) repaintTexture();
+  });
+
+  // 3. Rivers — exact centerlines
+  fetchGJ('ne_10m_rivers_lake_centerlines.geojson', function(gj){
+    neRivers = gj;
+    buildIndex(gj, neRiverIndex, ['name','Name','NAME']);
+    if(Object.keys(activeHighlights).length) repaintTexture();
+  });
+
+  // 4. Marine polygons (seas, gulfs, bays, oceans)
+  fetchGJ('ne_50m_geography_marine_polys.geojson', function(gj){
+    buildIndex(gj, neMarineIndex, ['name','Name','NAME']);
+    if(Object.keys(activeHighlights).length) repaintTexture();
+  });
+
+  // 5. Lakes
+  fetchGJ('ne_50m_lakes.geojson', function(gj){
+    buildIndex(gj, neLakeIndex, ['name','Name','NAME']);
+    if(Object.keys(activeHighlights).length) repaintTexture();
+  });
+
+  // 6. Physical regions (mountains, plains, deserts, forests)
+  fetchGJ('ne_50m_geography_regions_polys.geojson', function(gj){
+    buildIndex(gj, neRegionIndex, ['name','Name','NAME','name_en']);
+    if(Object.keys(activeHighlights).length) repaintTexture();
+  });
+}
+
+// Look up a feature name across all NE indices
+// Returns {feature, indexName} or null
+function lookupNE(searchKey, ftype){
+  var q = normName(searchKey);
+  // Also try stripping common suffixes for better matching
+  var q2 = q.replace(/ river$|^river /,'').replace(/ sea$| ocean$| gulf$| bay$| lake$/,'').trim();
+
+  // Route by type first
+  var waterTypes = ['sea','lake','ocean','gulf','bay','lagoon/waterway','mangrove delta'];
+  var riverTypes = ['river'];
+  var countryTypes = ['country','union territory'];
+  var lakeTypes = ['lake'];
+
+  if(lakeTypes.indexOf(ftype)>=0){
+    if(neLakeIndex[q]) return {feat:neLakeIndex[q], src:'lake'};
+    if(neLakeIndex[q2]) return {feat:neLakeIndex[q2], src:'lake'};
+  }
+  if(riverTypes.indexOf(ftype)>=0){
+    if(neRiverIndex[q]) return {feat:neRiverIndex[q], src:'river'};
+    if(neRiverIndex[q2]) return {feat:neRiverIndex[q2], src:'river'};
+    // Try partial match
+    var rkeys=Object.keys(neRiverIndex);
+    for(var i=0;i<rkeys.length;i++){
+      if(rkeys[i].indexOf(q2)>=0||q2.indexOf(rkeys[i])>=0)
+        return {feat:neRiverIndex[rkeys[i]], src:'river'};
+    }
+  }
+  if(countryTypes.indexOf(ftype)>=0){
+    if(neCountryIndex[q]) return {feat:neCountryIndex[q], src:'country'};
+    if(neCountryIndex[q2]) return {feat:neCountryIndex[q2], src:'country'};
+  }
+  // Marine
+  if(neMarineIndex[q]) return {feat:neMarineIndex[q], src:'marine'};
+  if(neMarineIndex[q2]) return {feat:neMarineIndex[q2], src:'marine'};
+  // Region
+  if(neRegionIndex[q]) return {feat:neRegionIndex[q], src:'region'};
+  if(neRegionIndex[q2]) return {feat:neRegionIndex[q2], src:'region'};
+  // Country fallback
+  if(neCountryIndex[q]) return {feat:neCountryIndex[q], src:'country'};
+  if(neCountryIndex[q2]) return {feat:neCountryIndex[q2], src:'country'};
+  // River fallback
+  if(neRiverIndex[q]) return {feat:neRiverIndex[q], src:'river'};
+  return null;
 }
 
 // Draw all NE land polygons onto a canvas context (for masking)
@@ -1992,135 +2355,246 @@ function repaintTexture(){
   globeTexture.needsUpdate = true;
 }
 
+// ── Core drawing helpers ──────────────────────────────────────────────
+
+// Parse any CSS color string to {r,g,b}
+var colorCache = {};
+function parseColor(color){
+  if(colorCache[color]) return colorCache[color];
+  var t=document.createElement('canvas'); t.width=1; t.height=1;
+  var tc=t.getContext('2d'); tc.fillStyle=color; tc.fillRect(0,0,1,1);
+  var d=tc.getImageData(0,0,1,1).data;
+  return (colorCache[color]={r:d[0],g:d[1],b:d[2]});
+}
+
+// Draw a GeoJSON geometry (Polygon/MultiPolygon/LineString/MultiLineString)
+// onto a context in equirectangular projection
+function drawGeoJSONGeom(ctx, geom, W, H, mode){
+  // mode: 'fill' or 'stroke'
+  if(!geom) return;
+  var gtype = geom.type;
+  if(gtype==='Polygon'||gtype==='MultiPolygon'){
+    var polys = gtype==='Polygon' ? [geom.coordinates] : geom.coordinates;
+    polys.forEach(function(poly){
+      poly.forEach(function(ring, ri){
+        ctx.beginPath();
+        ring.forEach(function(coord,i){
+          var pt=lngLatToTex(coord[0],coord[1],W,H);
+          i===0 ? ctx.moveTo(pt[0],pt[1]) : ctx.lineTo(pt[0],pt[1]);
+        });
+        ctx.closePath();
+        if(mode==='fill') ctx.fill('nonzero');
+        else ctx.stroke();
+      });
+    });
+  } else if(gtype==='LineString'||gtype==='MultiLineString'){
+    var lines = gtype==='LineString' ? [geom.coordinates] : geom.coordinates;
+    lines.forEach(function(line){
+      ctx.beginPath();
+      line.forEach(function(coord,i){
+        var pt=lngLatToTex(coord[0],coord[1],W,H);
+        i===0 ? ctx.moveTo(pt[0],pt[1]) : ctx.lineTo(pt[0],pt[1]);
+      });
+      ctx.stroke();
+    });
+  }
+}
+
+// Paint a land polygon (from any GeoJSON feature) onto offscreen canvas,
+// clip to land mask, composite onto main texture
+function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
+  var offC=document.createElement('canvas'); offC.width=W; offC.height=H;
+  var off=offC.getContext('2d');
+  off.fillStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
+
+  if(isRingArray){
+    // Hand-coded ring [[lng,lat],...]
+    off.beginPath();
+    geomOrRing.forEach(function(c,i){
+      var p=lngLatToTex(c[0],c[1],W,H);
+      i===0?off.moveTo(p[0],p[1]):off.lineTo(p[0],p[1]);
+    });
+    off.closePath(); off.fill();
+  } else {
+    // GeoJSON geometry object
+    drawGeoJSONGeom(off, geomOrRing, W, H, 'fill');
+  }
+
+  // Clip to land (destination-in keeps only land pixels)
+  if(neCoastlines){
+    off.globalCompositeOperation='destination-in';
+    off.fillStyle='rgba(0,0,0,1)';
+    drawNELand(off,W,H);
+  }
+
+  texCtx.save();
+  texCtx.globalAlpha=opacity*0.42;
+  texCtx.drawImage(offC,0,0);
+  texCtx.restore();
+}
+
+// Paint a water polygon, clip to ocean (remove land)
+function paintWaterPolygon(geomOrRing, col, opacity, W, H, isRingArray){
+  var offC=document.createElement('canvas'); offC.width=W; offC.height=H;
+  var off=offC.getContext('2d');
+  off.fillStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
+
+  if(isRingArray){
+    off.beginPath();
+    geomOrRing.forEach(function(c,i){
+      var p=lngLatToTex(c[0],c[1],W,H);
+      i===0?off.moveTo(p[0],p[1]):off.lineTo(p[0],p[1]);
+    });
+    off.closePath(); off.fill();
+  } else {
+    drawGeoJSONGeom(off, geomOrRing, W, H, 'fill');
+  }
+
+  // Remove land pixels (destination-out punches out land)
+  if(neCoastlines){
+    off.globalCompositeOperation='destination-out';
+    off.fillStyle='rgba(0,0,0,1)';
+    drawNELand(off,W,H);
+  }
+
+  texCtx.save();
+  texCtx.globalAlpha=opacity*0.42;
+  texCtx.drawImage(offC,0,0);
+  texCtx.restore();
+}
+
+// Paint a river/line feature using NE centerline
+function paintRiverLine(geom, col, W, H){
+  if(!geom) return;
+  texCtx.save();
+  texCtx.strokeStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
+  texCtx.lineCap='round'; texCtx.lineJoin='round';
+  // Core — crisp thin line
+  texCtx.globalAlpha=0.98;
+  texCtx.lineWidth=Math.max(2,W/1400);
+  drawGeoJSONGeom(texCtx,geom,W,H,'stroke');
+  // Subtle glow
+  texCtx.globalAlpha=0.18;
+  texCtx.lineWidth=Math.max(5,W/600);
+  drawGeoJSONGeom(texCtx,geom,W,H,'stroke');
+  texCtx.restore();
+}
+
+// Paint a dashed line (trench)
+function paintDashedLine(coords, col, opacity, W, H){
+  texCtx.save();
+  texCtx.globalAlpha=Math.min(1,opacity*1.8);
+  texCtx.strokeStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
+  texCtx.lineWidth=Math.max(4,W/350);
+  texCtx.lineCap='round';
+  var dashLen=Math.max(16,W/120);
+  texCtx.setLineDash([dashLen,dashLen*0.6]);
+  texCtx.beginPath();
+  coords.forEach(function(c,i){
+    var p=lngLatToTex(c[0],c[1],W,H);
+    i===0?texCtx.moveTo(p[0],p[1]):texCtx.lineTo(p[0],p[1]);
+  });
+  texCtx.stroke();
+  texCtx.setLineDash([]);
+  texCtx.restore();
+}
+
+// Paint a point (mountain peak, volcano)
+function paintPoint(lat, lng, col, opacity, W, H){
+  var p=lngLatToTex(lng,lat,W,H);
+  var sz=Math.max(18,W/100);
+  texCtx.save();
+  texCtx.globalAlpha=Math.min(1,opacity*2);
+  var grad=texCtx.createRadialGradient(p[0],p[1],0,p[0],p[1],sz*1.5);
+  grad.addColorStop(0,'rgba('+col.r+','+col.g+','+col.b+',0.7)');
+  grad.addColorStop(1,'rgba('+col.r+','+col.g+','+col.b+',0)');
+  texCtx.fillStyle=grad;
+  texCtx.beginPath(); texCtx.arc(p[0],p[1],sz*1.5,0,Math.PI*2); texCtx.fill();
+  texCtx.fillStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
+  texCtx.beginPath();
+  texCtx.moveTo(p[0],p[1]-sz);
+  texCtx.lineTo(p[0]-sz*0.8,p[1]+sz*0.5);
+  texCtx.lineTo(p[0]+sz*0.8,p[1]+sz*0.5);
+  texCtx.closePath(); texCtx.fill();
+  texCtx.restore();
+}
+
+// ── Main paint dispatcher ──────────────────────────────────────────────
 // Paint a single feature onto texCtx (already cleared to base)
 function paintFeatureOnTexture(featureKey, color, opacity){
   var f = GEO_FEATURES[featureKey];
-  if(!f || !f.shape) return;
+  if(!f) return;
   var W = texCanvas.width, H = texCanvas.height;
+  var col = parseColor(color);
+
+  // ── TYPE CLASSIFICATION ────────────────────────────────────────────
+  var ftype = f.type || '';
+  var isRiver  = ftype==='river' || ftype==='lagoon/waterway';
+  var isWater  = ['sea','lake','ocean trench','trench','mangrove delta',
+                  'lake (endorheic)'].indexOf(ftype)>=0;
+  var isCountry= ['country','union territory'].indexOf(ftype)>=0;
+  var isPeak   = ftype==='mountain'||ftype==='volcano';
+  var isTrench = ftype==='ocean trench'||ftype==='trench'||ftype==='rift valley';
+
+  // ── TRY GEOJSON LOOKUP FIRST ───────────────────────────────────────
+  var found = lookupNE(f.name, ftype) || lookupNE(featureKey, ftype);
+
+  if(found){
+    var geom = found.feat.geometry;
+    if(!geom) { found = null; } // skip null geometries
+    else if(isRiver || found.src==='river'){
+      paintRiverLine(geom, col, W, H);
+      return;
+    } else if(isWater || found.src==='marine' || found.src==='lake'){
+      paintWaterPolygon(geom, col, opacity, W, H, false);
+      return;
+    } else {
+      // Country, region, mountain range etc. — land polygon
+      paintLandPolygon(geom, col, opacity, W, H, false);
+      return;
+    }
+  }
+
+  // ── FALLBACK: use hand-coded shape data ────────────────────────────
+  if(!f.shape){
+    // No shape at all — just paint a point
+    paintPoint(f.lat, f.lng, col, opacity, W, H);
+    return;
+  }
   var shape = f.shape;
 
-  // Parse CSS color to rgba
-  var tmp = document.createElement('canvas'); tmp.width=1; tmp.height=1;
-  var tc = tmp.getContext('2d'); tc.fillStyle = color; tc.fillRect(0,0,1,1);
-  var d = tc.getImageData(0,0,1,1).data;
-  var r=d[0],g=d[1],b=d[2];
-
-  if(shape.type === 'polygon'){
-    var ring = shape.ring;
-    // Determine if land or water feature
-    var waterTypes = ['sea','lake','ocean trench','trench','bay'];
-    var isWater = waterTypes.indexOf(f.type) >= 0;
-
-    // Step 1: Draw feature polygon onto an offscreen canvas
-    var offC = document.createElement('canvas');
-    offC.width = W; offC.height = H;
-    var off = offC.getContext('2d');
-    off.fillStyle = 'rgba('+r+','+g+','+b+',1)';
-    off.beginPath();
-    var p0 = lngLatToTex(ring[0][0], ring[0][1], W, H);
-    off.moveTo(p0[0], p0[1]);
-    for(var i=1; i<ring.length; i++){
-      var p = lngLatToTex(ring[i][0], ring[i][1], W, H);
-      off.lineTo(p[0], p[1]);
+  if(shape.type==='polygon'){
+    if(isWater){
+      paintWaterPolygon(shape.ring, col, opacity, W, H, true);
+    } else {
+      paintLandPolygon(shape.ring, col, opacity, W, H, true);
     }
-    off.closePath();
-    off.fill();
-
-    // Step 2: Coast-clip using Natural Earth land mask (if loaded)
-    if(neCoastlines){
-      if(!isWater){
-        // Land feature: keep only pixels where land exists
-        off.globalCompositeOperation = 'destination-in';
-        off.fillStyle = 'rgba(0,0,0,1)';
-        drawNELand(off, W, H);
-      } else {
-        // Water feature: keep only pixels where land does NOT exist
-        // Draw land in 'destination-out' to punch it out
-        off.globalCompositeOperation = 'destination-out';
-        off.fillStyle = 'rgba(0,0,0,1)';
-        drawNELand(off, W, H);
-      }
-    }
-
-    // Step 3: Composite clipped result onto main texture at chosen opacity
+  } else if(shape.type==='polyline'){
+    // Fallback river using hand-coded coords
     texCtx.save();
-    texCtx.globalAlpha = opacity * 0.42;
-    texCtx.globalCompositeOperation = 'source-over';
-    texCtx.drawImage(offC, 0, 0);
-    texCtx.restore();
-
-  } else if(shape.type === 'polyline'){
-    var coords = shape.coords;
-    texCtx.save();
-    texCtx.lineCap = 'round';
-    texCtx.lineJoin = 'round';
-
-    // Build path once, reuse for both passes
-    var c0r = lngLatToTex(coords[0][0], coords[0][1], W, H);
-    var riverPath = new Path2D();
-    riverPath.moveTo(c0r[0], c0r[1]);
-    for(var i=1; i<coords.length; i++){
-      var cp = lngLatToTex(coords[i][0], coords[i][1], W, H);
-      riverPath.lineTo(cp[0], cp[1]);
-    }
-
-    // Pass 1: ultra-thin bright core — high contrast, visible from space
-    texCtx.globalAlpha = 0.98;
-    texCtx.strokeStyle = 'rgba('+r+','+g+','+b+',1)';
-    texCtx.lineWidth = Math.max(2, W / 1400);   // ~2.9px on 4K canvas
-    texCtx.stroke(riverPath);
-
-    // Pass 2: very subtle glow halo — barely visible, just adds recognition
-    texCtx.globalAlpha = 0.18;
-    texCtx.lineWidth = Math.max(5, W / 600);    // ~6.8px — subtle, not dominant
-    texCtx.stroke(riverPath);
-
-    texCtx.restore();
-
-  } else if(shape.type === 'dashed'){
-    // Trench: dashed line
-    var coords = shape.coords;
-    texCtx.save();
-    texCtx.globalAlpha = Math.min(1, opacity * 1.8);
-    texCtx.strokeStyle = 'rgba('+r+','+g+','+b+',1)';
-    texCtx.lineWidth = Math.max(4, W / 350);
-    texCtx.lineCap = 'round';
-    var dashLen = Math.max(16, W / 120);
-    texCtx.setLineDash([dashLen, dashLen * 0.6]);
+    texCtx.strokeStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
+    texCtx.lineCap='round'; texCtx.lineJoin='round';
+    texCtx.globalAlpha=0.98;
+    texCtx.lineWidth=Math.max(2,W/1400);
     texCtx.beginPath();
-    var c0 = lngLatToTex(coords[0][0], coords[0][1], W, H);
-    texCtx.moveTo(c0[0], c0[1]);
-    for(var i=1; i<coords.length; i++){
-      var c = lngLatToTex(coords[i][0], coords[i][1], W, H);
-      texCtx.lineTo(c[0], c[1]);
-    }
+    shape.coords.forEach(function(c,i){
+      var p=lngLatToTex(c[0],c[1],W,H);
+      i===0?texCtx.moveTo(p[0],p[1]):texCtx.lineTo(p[0],p[1]);
+    });
     texCtx.stroke();
-    texCtx.setLineDash([]);
-    texCtx.restore();
-
-  } else if(shape.type === 'point'){
-    // Peak / volcano: triangle + glow circle
-    var p = lngLatToTex(f.lat, f.lng, W, H);
-    var sz = Math.max(18, W / 100);
-    texCtx.save();
-    texCtx.globalAlpha = Math.min(1, opacity * 2);
-    // Glow circle
-    var grad = texCtx.createRadialGradient(p[0],p[1],0, p[0],p[1],sz*1.5);
-    grad.addColorStop(0, 'rgba('+r+','+g+','+b+',0.7)');
-    grad.addColorStop(1, 'rgba('+r+','+g+','+b+',0)');
-    texCtx.fillStyle = grad;
+    texCtx.globalAlpha=0.18;
+    texCtx.lineWidth=Math.max(5,W/600);
     texCtx.beginPath();
-    texCtx.arc(p[0], p[1], sz*1.5, 0, Math.PI*2);
-    texCtx.fill();
-    // Triangle (mountain symbol)
-    texCtx.fillStyle = 'rgba('+r+','+g+','+b+',1)';
-    texCtx.beginPath();
-    texCtx.moveTo(p[0], p[1]-sz);
-    texCtx.lineTo(p[0]-sz*0.8, p[1]+sz*0.5);
-    texCtx.lineTo(p[0]+sz*0.8, p[1]+sz*0.5);
-    texCtx.closePath();
-    texCtx.fill();
+    shape.coords.forEach(function(c,i){
+      var p=lngLatToTex(c[0],c[1],W,H);
+      i===0?texCtx.moveTo(p[0],p[1]):texCtx.lineTo(p[0],p[1]);
+    });
+    texCtx.stroke();
     texCtx.restore();
+  } else if(shape.type==='dashed'){
+    paintDashedLine(shape.coords, col, opacity, W, H);
+  } else if(shape.type==='point'){
+    paintPoint(f.lat, f.lng, col, opacity, W, H);
   }
 }
 
