@@ -1026,8 +1026,8 @@ var GEO_FEATURES = {
   },
 
   'k2': {
-    name:'K2', type:'mountain', region:'World',
-    lat:0, lng:0, zoom:4.5,
+    name:'K2', type:'mountain', region:'Central Asia',
+    lat:35.8808, lng:76.5151, zoom:4.5,
     desc:'K2.',
     stats:{},
     related:[],
@@ -1036,8 +1036,8 @@ var GEO_FEATURES = {
   },
 
   'kanchenjunga': {
-    name:'Kanchenjunga', type:'mountain', region:'World',
-    lat:0, lng:0, zoom:4.5,
+    name:'Kanchenjunga', type:'mountain', region:'South Asia',
+    lat:27.7025, lng:88.1475, zoom:6.5,
     desc:'Kanchenjunga.',
     stats:{},
     related:[],
@@ -1482,6 +1482,629 @@ var GEO_FEATURES = {
     related:['arabian sea','persian gulf','red sea','saudi arabia','iran'],
     highlights:[],
     shape:{type:'polygon',ring:[[37.0,28.5],[39.5,24.0],[42.5,19.0],[44.5,12.5],[46.0,11.5],[51.0,12.0],[55.0,15.0],[59.5,20.0],[59.5,23.5],[58.5,26.0],[55.5,26.5],[52.5,25.0],[50.5,27.0],[48.5,30.0],[44.5,29.5],[42.5,29.0],[40.5,29.0],[37.0,28.5]]}
+  },
+
+  // ── EUROPE — Countries missing ────────────────────────────────────
+  'united kingdom': {
+    name:'United Kingdom', type:'country', region:'Europe',
+    lat:54.0, lng:-2.0, zoom:5.0,
+    desc:'Island nation off northwest Europe comprising England, Scotland, Wales, and Northern Ireland.',
+    stats:{Area:'242,495 km²',Population:'67 million',Capital:'London'},
+    related:['north sea','atlantic ocean','ireland','france','europe'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'england': {
+    name:'England', type:'country', region:'Europe',
+    lat:52.5, lng:-1.5, zoom:5.5,
+    desc:'Largest nation of the United Kingdom. Capital London.',
+    stats:{Population:'56 million',Capital:'London'},
+    related:['north sea','united kingdom','france','scotland'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'spain': {
+    name:'Spain', type:'country', region:'Europe',
+    lat:40.0, lng:-4.0, zoom:5.0,
+    desc:'Southwestern European country on the Iberian Peninsula.',
+    stats:{Area:'505,990 km²',Population:'47 million',Capital:'Madrid'},
+    related:['mediterranean sea','atlantic ocean','france','portugal','europe'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'greece': {
+    name:'Greece', type:'country', region:'Europe',
+    lat:39.0, lng:22.0, zoom:5.5,
+    desc:'Southeastern European country at the tip of the Balkan Peninsula.',
+    stats:{Area:'131,957 km²',Population:'10.7 million',Capital:'Athens'},
+    related:['mediterranean sea','aegean sea','italy','turkey','europe'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'norway': {
+    name:'Norway', type:'country', region:'Europe',
+    lat:64.0, lng:10.0, zoom:4.5,
+    desc:'Nordic country in Northwestern Europe with extensive coastline.',
+    stats:{Area:'385,207 km²',Population:'5.4 million',Capital:'Oslo'},
+    related:['north sea','europe','sweden','arctic ocean'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'sweden': {
+    name:'Sweden', type:'country', region:'Europe',
+    lat:62.0, lng:15.0, zoom:4.5,
+    desc:'Nordic country in Northern Europe.',
+    stats:{Area:'450,295 km²',Population:'10.4 million',Capital:'Stockholm'},
+    related:['north sea','norway','finland','europe'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'croatia': {
+    name:'Croatia', type:'country', region:'Europe',
+    lat:45.0, lng:16.5, zoom:6.0,
+    desc:'Country in Southeast Europe on the Adriatic Sea.',
+    stats:{Area:'56,594 km²',Population:'3.9 million',Capital:'Zagreb'},
+    related:['adriatic sea','mediterranean sea','italy','europe'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'portugal': {
+    name:'Portugal', type:'country', region:'Europe',
+    lat:39.5, lng:-8.0, zoom:5.5,
+    desc:'Westernmost country of continental Europe on the Iberian Peninsula.',
+    stats:{Area:'92,212 km²',Population:'10.3 million',Capital:'Lisbon'},
+    related:['atlantic ocean','spain','europe','mediterranean sea'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'italy': {
+    name:'Italy', type:'country', region:'Europe',
+    lat:42.5, lng:12.5, zoom:5.0,
+    desc:'Southern European country shaped like a boot, extending into the Mediterranean.',
+    stats:{Area:'301,340 km²',Population:'60 million',Capital:'Rome'},
+    related:['mediterranean sea','alps','europe','adriatic sea'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'poland': {
+    name:'Poland', type:'country', region:'Europe',
+    lat:52.0, lng:20.0, zoom:5.0,
+    desc:'Central European country bordered by Germany, Czech Republic, Slovakia, Ukraine, Belarus, Lithuania, and Russia.',
+    stats:{Area:'312,679 km²',Population:'38 million',Capital:'Warsaw'},
+    related:['europe','germany','ukraine','baltic sea'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'turkey': {
+    name:'Turkey', type:'country', region:'Europe/Asia',
+    lat:39.0, lng:35.0, zoom:4.5,
+    desc:'Transcontinental country spanning Europe and Asia across the Bosphorus.',
+    stats:{Area:'783,562 km²',Population:'85 million',Capital:'Ankara'},
+    related:['black sea','mediterranean sea','aegean sea','iran','europe','asia'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'saudi arabia': {
+    name:'Saudi Arabia', type:'country', region:'Middle East',
+    lat:24.0, lng:45.0, zoom:4.5,
+    desc:'Largest country in Western Asia. Covers most of the Arabian Peninsula.',
+    stats:{Area:'2,149,690 km²',Population:'35 million',Capital:'Riyadh'},
+    related:['arabian sea','persian gulf','red sea','arabian peninsula','iran'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'japan': {
+    name:'Japan', type:'country', region:'East Asia',
+    lat:36.0, lng:138.0, zoom:4.5,
+    desc:'Island nation in East Asia in the Pacific Ocean.',
+    stats:{Area:'377,975 km²',Population:'125 million',Capital:'Tokyo'},
+    related:['pacific ocean','sea of japan','china','south korea'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'indonesia': {
+    name:'Indonesia', type:'country', region:'Southeast Asia',
+    lat:-2.0, lng:118.0, zoom:4.0,
+    desc:'Archipelago of 17,000+ islands in Southeast Asia. 4th most populous country.',
+    stats:{Area:'1,904,569 km²',Population:'270 million',Capital:'Jakarta'},
+    related:['java trench','south china sea','indian ocean','pacific ocean'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+
+  // ── AFRICA — Missing Countries ─────────────────────────────────────
+  'madagascar': {
+    name:'Madagascar', type:'country', region:'Africa',
+    lat:-19.0, lng:47.0, zoom:5.0,
+    desc:'Island nation in the Indian Ocean off eastern Africa. 4th largest island in the world.',
+    stats:{Area:'587,041 km²',Population:'28 million',Capital:'Antananarivo'},
+    related:['indian ocean','mozambique','east africa'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'ethiopia': {
+    name:'Ethiopia', type:'country', region:'Africa',
+    lat:9.0, lng:40.0, zoom:5.0,
+    desc:'Landlocked country in the Horn of Africa. Most populous landlocked country.',
+    stats:{Area:'1,104,300 km²',Population:'120 million',Capital:'Addis Ababa'},
+    related:['nile river','great rift valley','east africa','kenya','sudan'],
+    highlights:['nile river'],
+    shape:{type:'point'}
+  },
+  'algeria': {
+    name:'Algeria', type:'country', region:'Africa',
+    lat:28.0, lng:3.0, zoom:4.5,
+    desc:'Largest country in Africa. Mostly covered by the Sahara Desert.',
+    stats:{Area:'2,381,741 km²',Population:'44 million',Capital:'Algiers'},
+    related:['sahara desert','mediterranean sea','niger','mali','libya'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'mali': {
+    name:'Mali', type:'country', region:'Africa',
+    lat:17.0, lng:-4.0, zoom:4.5,
+    desc:'Landlocked country in West Africa. Mostly Sahara and Sahel.',
+    stats:{Area:'1,240,192 km²',Population:'22 million',Capital:'Bamako'},
+    related:['sahara desert','sahel','niger river','senegal','mauritania'],
+    highlights:['niger river'],
+    shape:{type:'point'}
+  },
+  'chad': {
+    name:'Chad', type:'country', region:'Africa',
+    lat:15.0, lng:19.0, zoom:4.5,
+    desc:'Landlocked country in north-central Africa.',
+    stats:{Area:'1,284,000 km²',Population:'17 million',Capital:"N\'Djamena"},
+    related:['sahara desert','sahel','niger','sudan','cameroon'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'angola': {
+    name:'Angola', type:'country', region:'Africa',
+    lat:-11.5, lng:17.5, zoom:4.5,
+    desc:'Country in south-central Africa on the Atlantic Ocean.',
+    stats:{Area:'1,246,700 km²',Population:'34 million',Capital:'Luanda'},
+    related:['congo river','congo rainforest','zambia','south africa'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'botswana': {
+    name:'Botswana', type:'country', region:'Africa',
+    lat:-22.0, lng:24.0, zoom:5.0,
+    desc:'Landlocked country in Southern Africa. Known for the Okavango Delta.',
+    stats:{Area:'581,730 km²',Population:'2.6 million',Capital:'Gaborone'},
+    related:['south africa','great rift valley','kalahari desert'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'zambia': {
+    name:'Zambia', type:'country', region:'Africa',
+    lat:-14.5, lng:27.5, zoom:5.0,
+    desc:'Landlocked country in Southern Africa.',
+    stats:{Area:'752,618 km²',Population:'19 million',Capital:'Lusaka'},
+    related:['zambezi river','victoria falls','congo river','tanzania'],
+    highlights:['zambezi river'],
+    shape:{type:'point'}
+  },
+  'mozambique': {
+    name:'Mozambique', type:'country', region:'Africa',
+    lat:-18.0, lng:35.0, zoom:5.0,
+    desc:'Country in Southeast Africa with long Indian Ocean coastline.',
+    stats:{Area:'801,590 km²',Population:'32 million',Capital:'Maputo'},
+    related:['zambezi river','victoria falls','indian ocean','madagascar'],
+    highlights:['zambezi river'],
+    shape:{type:'point'}
+  },
+  'senegal': {
+    name:'Senegal', type:'country', region:'Africa',
+    lat:14.5, lng:-14.5, zoom:5.5,
+    desc:'Westernmost country of mainland Africa.',
+    stats:{Area:'196,722 km²',Population:'17 million',Capital:'Dakar'},
+    related:['atlantic ocean','sahel','mali','niger river'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+
+  // ── SOUTH AMERICA — Missing Countries ─────────────────────────────
+  'peru': {
+    name:'Peru', type:'country', region:'South America',
+    lat:-10.0, lng:-76.0, zoom:4.5,
+    desc:'Country in western South America. Home to the Andes, Amazon rainforest, and Machu Picchu.',
+    stats:{Area:'1,285,216 km²',Population:'33 million',Capital:'Lima'},
+    related:['andes','amazon river','amazon rainforest','brazil','bolivia'],
+    highlights:['amazon river'],
+    shape:{type:'point'}
+  },
+  'chile': {
+    name:'Chile', type:'country', region:'South America',
+    lat:-35.0, lng:-71.0, zoom:4.0,
+    desc:'Long narrow country along the southwestern coast of South America.',
+    stats:{Area:'756,102 km²',Population:'19 million',Capital:'Santiago'},
+    related:['andes','atacama desert','patagonia','argentina','pacific ocean'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'bolivia': {
+    name:'Bolivia', type:'country', region:'South America',
+    lat:-17.0, lng:-65.0, zoom:5.0,
+    desc:'Landlocked country in central South America. World\'s highest capital.',
+    stats:{Area:'1,098,581 km²',Population:'12 million',Capital:'Sucre / La Paz'},
+    related:['andes','amazon river','brazil','peru','argentina'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'colombia': {
+    name:'Colombia', type:'country', region:'South America',
+    lat:4.0, lng:-73.0, zoom:5.0,
+    desc:'Country in northwestern South America. Only country in South America with both Pacific and Caribbean coasts.',
+    stats:{Area:'1,141,748 km²',Population:'51 million',Capital:'Bogotá'},
+    related:['amazon river','andes','caribbean sea','pacific ocean','orinoco river'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'venezuela': {
+    name:'Venezuela', type:'country', region:'South America',
+    lat:8.0, lng:-66.0, zoom:5.0,
+    desc:'Country on the northern coast of South America with the world\'s largest oil reserves.',
+    stats:{Area:'916,445 km²',Population:'29 million',Capital:'Caracas'},
+    related:['orinoco river','caribbean sea','amazon river','brazil','colombia'],
+    highlights:['orinoco river'],
+    shape:{type:'point'}
+  },
+
+  // ── OCEANIA ────────────────────────────────────────────────────────
+  'new zealand': {
+    name:'New Zealand', type:'country', region:'Oceania',
+    lat:-42.0, lng:172.0, zoom:5.0,
+    desc:'Island nation in the southwestern Pacific Ocean, southeast of Australia.',
+    stats:{Area:'268,021 km²',Population:'5 million',Capital:'Wellington'},
+    related:['pacific ocean','australia','tasman sea'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+
+  // ── ASIA — Missing Countries ───────────────────────────────────────
+  'maldives': {
+    name:'Maldives', type:'country', region:'South Asia',
+    lat:3.5, lng:73.5, zoom:6.5,
+    desc:'Island nation in the Indian Ocean. World\'s lowest-lying country.',
+    stats:{Area:'298 km²',Population:'540,000',Capital:'Malé'},
+    related:['indian ocean','arabian sea','sri lanka','india'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'sri lanka': {
+    name:'Sri Lanka', type:'country', region:'South Asia',
+    lat:7.5, lng:80.7, zoom:6.0,
+    desc:'Island nation in the Indian Ocean south of India.',
+    stats:{Area:'65,610 km²',Population:'22 million',Capital:'Sri Jayawardenepura Kotte'},
+    related:['indian ocean','arabian sea','bay of bengal','india'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'myanmar': {
+    name:'Myanmar (Burma)', type:'country', region:'Southeast Asia',
+    lat:19.5, lng:96.5, zoom:5.0,
+    desc:'Country in Southeast Asia, formerly known as Burma.',
+    stats:{Area:'676,578 km²',Population:'55 million',Capital:'Naypyidaw'},
+    related:['brahmaputra river','irrawaddy','india','china','thailand','bay of bengal'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'bangladesh': {
+    name:'Bangladesh', type:'country', region:'South Asia',
+    lat:23.5, lng:90.0, zoom:5.5,
+    desc:'Densely populated country in South Asia. Most of it forms the Bengal Delta.',
+    stats:{Area:'147,570 km²',Population:'170 million',Capital:'Dhaka'},
+    related:['ganga river','brahmaputra river','sundarbans','bay of bengal','india'],
+    highlights:['ganga river','brahmaputra river'],
+    shape:{type:'point'}
+  },
+  'pakistan': {
+    name:'Pakistan', type:'country', region:'South Asia',
+    lat:30.5, lng:69.5, zoom:4.5,
+    desc:'Country in South Asia. World\'s 5th most populous nation.',
+    stats:{Area:'881,913 km²',Population:'220 million',Capital:'Islamabad'},
+    related:['indus river','himalayas','karakoram','thar desert','india','arabian sea'],
+    highlights:['indus river'],
+    shape:{type:'point'}
+  },
+  'nepal': {
+    name:'Nepal', type:'country', region:'South Asia',
+    lat:28.2, lng:84.0, zoom:5.5,
+    desc:'Landlocked country in South Asia containing most of the Himalayas including Mt. Everest.',
+    stats:{Area:'147,181 km²',Population:'30 million',Capital:'Kathmandu'},
+    related:['himalayas','mount everest','gangetic plains','india','china'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'afghanistan': {
+    name:'Afghanistan', type:'country', region:'Central Asia',
+    lat:33.5, lng:66.0, zoom:5.0,
+    desc:'Landlocked country in Central/South Asia.',
+    stats:{Area:'652,230 km²',Population:'40 million',Capital:'Kabul'},
+    related:['himalayas','indus river','iran','pakistan','central asia'],
+    highlights:[],
+    shape:{type:'point'}
+  },
+  'vietnam': {
+    name:'Vietnam', type:'country', region:'Southeast Asia',
+    lat:16.0, lng:107.5, zoom:4.5,
+    desc:'Country in Southeast Asia with a long S-shaped coastline.',
+    stats:{Area:'331,212 km²',Population:'97 million',Capital:'Hanoi'},
+    related:['mekong river','south china sea','china','cambodia','thailand'],
+    highlights:['mekong river'],
+    shape:{type:'point'}
+  },
+  'thailand': {
+    name:'Thailand', type:'country', region:'Southeast Asia',
+    lat:13.5, lng:101.0, zoom:5.0,
+    desc:'Country in Southeast Asia, center of Indochina region.',
+    stats:{Area:'513,120 km²',Population:'72 million',Capital:'Bangkok'},
+    related:['mekong river','south china sea','gulf of thailand','vietnam','cambodia'],
+    highlights:['mekong river'],
+    shape:{type:'point'}
+  },
+  'cambodia': {
+    name:'Cambodia', type:'country', region:'Southeast Asia',
+    lat:12.5, lng:104.5, zoom:5.5,
+    desc:'Country in Southeast Asia. Home to Angkor Wat.',
+    stats:{Area:'181,035 km²',Population:'16 million',Capital:'Phnom Penh'},
+    related:['mekong river','south china sea','vietnam','thailand'],
+    highlights:['mekong river'],
+    shape:{type:'point'}
+  },
+
+  // ── WATER BODIES — Additional ──────────────────────────────────────
+  'strait of hormuz': {
+    name:'Strait of Hormuz', type:'sea', region:'Middle East',
+    lat:26.6, lng:56.5, zoom:6.5,
+    desc:'Narrow strait between the Persian Gulf and the Gulf of Oman. World\'s most strategically important oil chokepoint. About 20% of global oil passes through here.',
+    stats:{Width:'~54 km at narrowest','Oil Transit':'~20% of global supply daily'},
+    related:['persian gulf','arabian sea','iran','oman','uae'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[55.5,25.5],[56.5,25.0],[58.5,23.5],[58.0,22.5],[56.5,23.0],[55.0,24.5],[55.5,25.5]]}
+  },
+  'strait of malacca': {
+    name:'Strait of Malacca', type:'sea', region:'Southeast Asia',
+    lat:3.0, lng:101.0, zoom:5.5,
+    desc:'Narrow waterway between the Malay Peninsula and Sumatra. Busiest shipping lane in the world, connecting the Pacific and Indian Oceans.',
+    stats:{Length:'890 km','Width':'~65 km at narrowest','Ships Per Year':'~100,000+'},
+    related:['south china sea','indian ocean','indonesia','malaysia','singapore'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[99.5,6.0],[100.5,5.5],[102.0,4.5],[104.0,2.0],[104.5,0.5],[103.5,0.5],[102.0,1.5],[100.5,3.0],[99.5,5.0],[99.5,6.0]]}
+  },
+  'bab el mandeb': {
+    name:'Bab-el-Mandeb Strait', type:'sea', region:'Africa/Middle East',
+    lat:12.6, lng:43.3, zoom:6.5,
+    desc:'Strait connecting the Red Sea to the Gulf of Aden and Indian Ocean. Critical chokepoint between Africa and the Arabian Peninsula.',
+    stats:{Width:'~29 km'},
+    related:['red sea','arabian sea','indian ocean','gulf of aden','somalia','yemen'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[42.5,13.0],[43.0,12.5],[44.0,12.0],[44.0,11.5],[43.0,11.5],[42.5,12.0],[42.5,13.0]]}
+  },
+  'bering sea': {
+    name:'Bering Sea', type:'sea', region:'Pacific Ocean',
+    lat:58.0, lng:-175.0, zoom:4.0,
+    desc:'Marginal sea of the Pacific Ocean between Russia and Alaska. Named after Vitus Bering.',
+    stats:{Area:'2.29 million km²','Max Depth':'4,773 m'},
+    related:['arctic ocean','pacific ocean','alaska','russia'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-180.0,52.0],[-170.0,53.0],[-162.0,55.0],[-165.0,60.0],[-168.0,66.0],[172.0,65.0],[170.0,58.0],[165.0,53.0],[180.0,52.0],[-180.0,52.0]]}
+  },
+  'sea of okhotsk': {
+    name:'Sea of Okhotsk', type:'sea', region:'Pacific Ocean',
+    lat:55.0, lng:150.0, zoom:4.0,
+    desc:'Sea bounded by Russia\'s Kamchatka Peninsula, the Kuril Islands, Japan\'s Hokkaido, and Sakhalin Island.',
+    stats:{Area:'1.58 million km²','Max Depth':'3,372 m'},
+    related:['pacific ocean','russia','japan','bering sea'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[135.0,46.0],[138.0,45.5],[141.0,45.5],[143.0,46.0],[145.0,43.5],[146.0,43.0],[152.0,48.0],[156.0,52.0],[160.0,56.5],[152.0,59.5],[148.0,59.5],[142.0,56.5],[138.0,53.0],[135.0,49.0],[135.0,46.0]]}
+  },
+  'philippine sea': {
+    name:'Philippine Sea', type:'sea', region:'Pacific Ocean',
+    lat:15.0, lng:132.0, zoom:4.0,
+    desc:'Marginal sea of the Pacific Ocean east of the Philippines.',
+    stats:{Area:'~5 million km²'},
+    related:['pacific ocean','philippines','japan','mariana trench','south china sea'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[122.0,7.0],[125.0,7.0],[130.0,10.0],[135.0,15.0],[140.0,20.0],[145.0,25.0],[142.0,25.0],[138.0,20.0],[133.0,15.0],[128.0,10.0],[122.0,7.0]]}
+  },
+  'sea of japan': {
+    name:'Sea of Japan', type:'sea', region:'East Asia',
+    lat:40.0, lng:135.0, zoom:4.5,
+    desc:'Marginal sea between Japan, Korea, and Russia.',
+    stats:{Area:'978,000 km²','Max Depth':'3,742 m'},
+    related:['pacific ocean','japan','south korea','russia','north korea'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[128.0,34.0],[129.0,34.0],[131.5,32.5],[134.0,34.0],[138.0,39.0],[141.0,45.5],[138.0,47.5],[134.0,45.5],[130.0,40.0],[128.0,36.0],[128.0,34.0]]}
+  },
+  'gulf of guinea': {
+    name:'Gulf of Guinea', type:'sea', region:'Africa',
+    lat:2.0, lng:2.5, zoom:4.5,
+    desc:'Northeastern part of the Atlantic Ocean on the western African coast.',
+    stats:{Area:'~2.35 million km²'},
+    related:['atlantic ocean','nigeria','ghana','cameroon','ivory coast'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-5.0,5.5],[-1.0,4.5],[2.5,2.5],[5.0,1.5],[8.0,1.5],[9.0,3.0],[9.5,4.5],[9.0,5.0],[5.0,3.5],[1.5,4.0],[-2.0,5.0],[-5.0,5.5]]}
+  },
+  'gulf of aden': {
+    name:'Gulf of Aden', type:'sea', region:'Africa/Middle East',
+    lat:12.5, lng:47.0, zoom:5.0,
+    desc:'Extension of the Arabian Sea between Yemen (north) and Somalia (south).',
+    stats:{Area:'410,000 km²'},
+    related:['arabian sea','red sea','bab el mandeb','somalia','yemen','indian ocean'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[43.0,12.5],[44.0,11.5],[46.0,11.5],[49.0,11.5],[52.0,12.0],[54.0,13.0],[52.5,14.5],[50.0,14.5],[47.0,14.0],[44.0,13.5],[43.0,12.5]]}
+  },
+  'gulf of bengal': {
+    name:'Gulf of Bengal', type:'sea', region:'Indian Ocean',
+    lat:15.0, lng:87.0, zoom:4.0,
+    desc:'Alternative reference to the Bay of Bengal.',
+    stats:{},
+    related:['bay of bengal','indian ocean','india','bangladesh'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[80.5,22.5],[82.5,21.0],[85.0,19.5],[87.0,17.0],[88.0,14.0],[87.5,11.5],[85.5,10.0],[83.0,9.5],[81.0,9.5],[80.0,10.5],[80.0,12.5],[79.5,14.0],[80.0,16.5],[80.0,18.5],[80.5,22.5]]}
+  },
+  'arabian gulf': {
+    name:'Arabian Gulf', type:'sea', region:'Middle East',
+    lat:26.5, lng:51.5, zoom:5.0,
+    desc:'Alternative name for the Persian Gulf, preferred by Arab nations.',
+    stats:{Area:'251,000 km²','Max Depth':'90 m'},
+    related:['persian gulf','arabian sea','iran','saudi arabia','uae'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[48.5,30.0],[50.5,30.5],[52.0,29.5],[53.0,27.5],[55.5,26.0],[57.5,24.0],[56.5,23.5],[54.5,24.5],[53.0,25.5],[51.5,24.5],[50.5,26.0],[49.5,27.0],[48.0,28.5],[48.5,30.0]]}
+  },
+
+  // ── INDIA — States & Regions ───────────────────────────────────────
+  'rajasthan': {
+    name:'Rajasthan', type:'region', region:'India',
+    lat:27.0, lng:74.5, zoom:5.0,
+    desc:'Largest state of India by area. Mostly covered by the Thar Desert. Known for its forts, palaces, and desert landscape.',
+    stats:{Area:'342,239 km²',Capital:'Jaipur'},
+    related:['thar desert','aravalli range','luni river','india','gujarat'],
+    highlights:['luni river','aravalli range'],
+    shape:{type:'point'}
+  },
+  'assam': {
+    name:'Assam', type:'region', region:'India',
+    lat:26.0, lng:92.5, zoom:5.5,
+    desc:'Northeastern state of India in the Brahmaputra valley. Famous for tea and biodiversity.',
+    stats:{Area:'78,438 km²',Capital:'Dispur'},
+    related:['brahmaputra river','northeast india','india','kaziranga'],
+    highlights:['brahmaputra river'],
+    shape:{type:'point'}
+  },
+  'kerala': {
+    name:'Kerala', type:'region', region:'India',
+    lat:10.5, lng:76.5, zoom:5.5,
+    desc:'State on India\'s southwest Malabar coast. Highest literacy rate in India. Known for backwaters, spices, and Ayurveda.',
+    stats:{Area:'38,852 km²',Capital:'Thiruvananthapuram'},
+    related:['western ghats','kerala backwaters','arabian sea','nilgiri hills','periyar river'],
+    highlights:['periyar river'],
+    shape:{type:'point'}
+  },
+
+  // ── PHYSICAL FEATURES — Mountains ─────────────────────────────────
+  'appalachian mountains': {
+    name:'Appalachian Mountains', type:'mountain range', region:'North America',
+    lat:37.5, lng:-81.5, zoom:4.5,
+    desc:'Mountain range in eastern North America stretching ~2,400 km from Alabama to Newfoundland. One of the oldest mountain ranges on Earth.',
+    stats:{Length:'~2,400 km','Highest Peak':'Mt. Mitchell 2,037 m','Age':'~480 million years'},
+    related:['usa','canada','great plains','mississippi river'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[-86.5,34.0],[-84.0,35.0],[-82.5,36.5],[-81.0,37.5],[-80.0,38.5],[-79.0,39.5],[-77.5,40.5],[-75.5,41.5],[-73.0,43.5],[-71.5,45.0],[-71.5,44.0],[-72.5,43.0],[-74.0,42.0],[-76.0,41.0],[-78.5,39.5],[-79.5,38.5],[-80.5,37.5],[-81.5,36.5],[-83.0,35.5],[-84.5,34.5],[-86.5,34.0]]}
+  },
+  'drakensberg': {
+    name:'Drakensberg Mountains', type:'mountain range', region:'Africa',
+    lat:-29.5, lng:29.5, zoom:5.0,
+    desc:'Great Escarpment forming the eastern face of the Southern African Plateau. Highest range in southern Africa.',
+    stats:{Length:'~1,000 km','Highest Peak':'Thabana Ntlenyana 3,482 m','Countries':'South Africa, Lesotho, Eswatini'},
+    related:['south africa','east africa','indian ocean'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[29.0,-25.0],[30.5,-26.0],[31.5,-27.5],[31.5,-29.5],[30.5,-31.0],[29.5,-31.5],[28.5,-30.5],[28.0,-29.0],[28.0,-27.5],[28.5,-26.0],[29.0,-25.0]]}
+  },
+  'kjolen mountains': {
+    name:'Kjølen Mountains (Scandinavian Mountains)', type:'mountain range', region:'Europe',
+    lat:64.0, lng:14.5, zoom:4.5,
+    desc:'Mountain range forming the spine of the Scandinavian Peninsula, running through Norway, Sweden, and northern Finland.',
+    stats:{Length:'~1,700 km','Highest Peak':'Galdhøpiggen 2,469 m','Countries':'Norway, Sweden, Finland'},
+    related:['norway','sweden','north sea','arctic ocean','europe'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[5.0,58.0],[6.5,59.5],[8.0,61.5],[10.5,63.0],[13.0,65.5],[16.0,68.0],[18.5,70.0],[20.0,69.5],[18.5,67.5],[16.0,65.5],[14.5,63.5],[12.0,61.5],[10.5,60.0],[8.5,58.5],[6.5,57.5],[5.0,58.0]]}
+  },
+  'chhotanagpur plateau': {
+    name:'Chhotanagpur Plateau', type:'plateau', region:'India',
+    lat:23.5, lng:85.5, zoom:5.5,
+    desc:'Plateau in the eastern Indian states of Jharkhand, Odisha, and West Bengal. Rich in mineral resources — coal, iron ore, copper, mica.',
+    stats:{Area:'~65,000 km²',States:'Jharkhand, Odisha, West Bengal, Chhattisgarh',Resources:'Coal, iron ore, copper, mica'},
+    related:['damodar river','india','gangetic plains','eastern ghats','son river'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[83.5,22.0],[85.0,21.5],[86.5,21.5],[87.5,22.0],[88.0,23.0],[87.5,24.5],[86.0,24.5],[84.5,24.0],[83.5,23.5],[83.5,22.0]]}
+  },
+
+  // ── INDIA — More rivers ────────────────────────────────────────────
+  'damodar river': {
+    name:'Damodar River', type:'river', region:'India',
+    lat:23.5, lng:87.0, zoom:5.5,
+    desc:'River in Jharkhand and West Bengal. Historically called the "Sorrow of Bengal" due to floods. Now managed by Damodar Valley Corporation.',
+    stats:{Length:'592 km','States':'Jharkhand, West Bengal'},
+    related:['chhotanagpur plateau','india','gangetic plains','west bengal'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[85.5,23.5],[86.5,23.5],[87.5,23.0],[88.0,23.0],[88.5,23.2],[88.2,22.5]]}
+  },
+  'kosi river': {
+    name:'Kosi River', type:'river', region:'India/Nepal',
+    lat:26.5, lng:87.0, zoom:5.5,
+    desc:'Major tributary of the Ganga originating in Nepal. Called the "Sorrow of Bihar" due to frequent devastating floods.',
+    stats:{Length:'~729 km','States':'Bihar','Origin':'Nepal Himalayas'},
+    related:['ganga river','gangetic plains','nepal','bihar','himalayas'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[87.0,28.0],[87.2,27.0],[87.1,26.0],[87.0,25.5],[87.2,25.0],[87.0,26.5]]}
+  },
+  'teesta river': {
+    name:'Teesta River', type:'river', region:'India',
+    lat:26.5, lng:88.7, zoom:6.0,
+    desc:'River rising in Sikkim, flowing through Darjeeling, and joining the Brahmaputra in Bangladesh. Important for irrigation in North Bengal.',
+    stats:{Length:'315 km','States':'Sikkim, West Bengal','Mouth':'Joins Brahmaputra in Bangladesh'},
+    related:['brahmaputra river','sikkim','india','gangetic plains'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[88.5,27.5],[88.5,27.0],[88.6,26.5],[88.5,25.5],[88.7,25.0],[88.9,24.5]]}
+  },
+  'sutlej river': {
+    name:'Sutlej River', type:'river', region:'India',
+    lat:31.0, lng:74.5, zoom:5.0,
+    desc:'Longest of the five rivers of Punjab. Originates near Mansarovar Lake in Tibet and joins the Indus in Pakistan.',
+    stats:{Length:'1,450 km','States':'Himachal Pradesh, Punjab (India)','Tributaries':'Beas (joins near Harike)'},
+    related:['indus river','beas river','punjab','himalayas','pakistan'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[82.5,31.0],[79.5,31.5],[77.0,31.5],[75.5,31.5],[74.5,31.0],[73.5,30.5],[72.5,30.5],[71.5,30.0]]}
+  },
+  'beas river': {
+    name:'Beas River', type:'river', region:'India',
+    lat:31.8, lng:75.5, zoom:5.5,
+    desc:'One of the five rivers of Punjab. Originates in the Himalayas and joins the Sutlej near Harike.',
+    stats:{Length:'470 km','States':'Himachal Pradesh, Punjab'},
+    related:['sutlej river','indus river','punjab','himalayas'],
+    highlights:[],
+    shape:{type:'polyline',coords:[[77.2,32.2],[76.5,31.8],[75.5,31.5],[75.0,31.8],[74.8,31.3]]}
+  },
+
+  // ── INDIA — Lakes ─────────────────────────────────────────────────
+  'pangong lake': {
+    name:'Pangong Tso', type:'lake', region:'India/China',
+    lat:33.75, lng:78.75, zoom:6.5,
+    desc:'High-altitude endorheic lake at 4,350 m in Ladakh. About 60% is in Tibet (China), 40% in India. Famous for its changing colors.',
+    stats:{Length:'134 km',Elevation:'4,350 m','Indian Control':'~40%','Chinese Control':'~60%'},
+    related:['ladakh','india','himalayas','karakoram'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[77.8,33.7],[78.5,33.75],[79.5,33.8],[80.2,33.75],[80.5,33.6],[79.5,33.55],[78.5,33.6],[77.8,33.7]]}
+  },
+  'chilika lake': {
+    name:'Chilika Lake', type:'lake', region:'India',
+    lat:19.7, lng:85.3, zoom:6.5,
+    desc:'Largest coastal lagoon in India and second largest in the world. Ramsar Wetland of International Importance. Home to Irrawaddy dolphins.',
+    stats:{Area:'1,165 km²',State:'Odisha','UNESCO':'Ramsar Site'},
+    related:['bay of bengal','odisha','india','eastern ghats'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[85.0,19.4],[85.2,19.3],[85.6,19.4],[85.8,19.6],[85.5,19.9],[85.2,20.0],[85.0,19.8],[85.0,19.4]]}
+  },
+  'wular lake': {
+    name:'Wular Lake', type:'lake', region:'India',
+    lat:34.35, lng:74.55, zoom:7.0,
+    desc:'One of the largest freshwater lakes in Asia. Located in Kashmir valley.',
+    stats:{Area:'189 km²',State:'Jammu & Kashmir'},
+    related:['kashmir','india','jhelum river'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[74.4,34.3],[74.6,34.3],[74.7,34.4],[74.6,34.45],[74.4,34.45],[74.3,34.35],[74.4,34.3]]}
+  },
+  'loktak lake': {
+    name:'Loktak Lake', type:'lake', region:'India',
+    lat:24.5, lng:93.8, zoom:7.0,
+    desc:'Largest freshwater lake in northeastern India. Home to the floating phumdis (vegetation islands).',
+    stats:{Area:'287 km²',State:'Manipur'},
+    related:['northeast india','manipur','india'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[93.6,24.4],[93.8,24.35],[94.0,24.4],[94.0,24.55],[93.8,24.6],[93.6,24.55],[93.6,24.4]]}
   },
 };
 
@@ -2189,12 +2812,49 @@ function lngLatToTex(lng, lat, W, H){
 }
 
 // ── Load Natural Earth GeoJSON for precision geography ──────────────────
-// ── Natural Earth GeoJSON indices (built after loading) ───────────────
+// ── Natural Earth GeoJSON indices ────────────────────────────────────
 var neCountryIndex  = {};   // normalized name → feature
-var neRiverIndex    = {};   // normalized name → feature
+var neCountry10Index= {};   // 10m country index (higher precision)
+var neRiverIndex    = {};   // normalized name → [features] (ALL segments)
+var neRiver50Index  = {};   // 50m river fallback
 var neMarineIndex   = {};   // normalized name → feature
+var neMarine10Index = {};   // 10m marine (more water bodies)
 var neLakeIndex     = {};   // normalized name → feature
 var neRegionIndex   = {};   // normalized name → feature
+var neIndiaStates   = {};   // India states index
+var neIndiaRivers   = {};   // India rivers index
+
+// River name aliases — NE uses different names than common usage
+var RIVER_ALIASES = {
+  'ganga':       ['ganges','ganga'],
+  'ganges':      ['ganges','ganga'],
+  'ganga ganges':['ganges'],
+  'brahmaputra': ['brahmaputra','yarlung tsangpo','jamuna'],
+  'yamuna':      ['yamuna','jumna'],
+  'indus':       ['indus'],
+  'nile':        ['nile','white nile','blue nile','bahr al jabal'],
+  'amazon':      ['amazon','amazonas','solimoes'],
+  'yangtze':     ['yangtze','chang jiang','chang'],
+  'mississippi': ['mississippi'],
+  'congo':       ['congo','zaire'],
+  'niger':       ['niger'],
+  'ob':          ['ob','ob   irtysh','ob irtysh'],
+  'volga':       ['volga'],
+  'yellow':      ['huang he','yellow','huang'],
+  'mekong':      ['mekong','lancang'],
+  'zambezi':     ['zambezi','zambesi'],
+  'danube':      ['danube','donau'],
+  'rhine':       ['rhine','rhein'],
+  'satluj':      ['sutlej','satluj'],
+  'sutlej':      ['sutlej','satluj'],
+  'beas':        ['beas','vipasa'],
+  'tungabhadra': ['tungabhadra'],
+  'godavari':    ['godavari'],
+  'krishna':     ['krishna'],
+  'mahanadi':    ['mahanadi'],
+  'kaveri':      ['kaveri','cauvery'],
+  'narmada':     ['narmada'],
+};
 
 function normName(s){
   return (s||'').toLowerCase()
@@ -2202,108 +2862,185 @@ function normName(s){
     .replace(/\s+/g,' ').trim();
 }
 
-function buildIndex(gj, index, nameFields){
+// buildIndex: stores arrays for rivers (collect ALL segments), single feat for others
+function buildIndex(gj, index, nameFields, collectAll){
   if(!gj || !gj.features) return;
   gj.features.forEach(function(feat){
     var p = feat.properties || {};
     nameFields.forEach(function(f){
-      if(p[f]){ var k=normName(p[f]); if(!index[k]) index[k]=feat; }
+      if(!p[f]) return;
+      var k = normName(p[f]);
+      if(!k) return;
+      if(collectAll){
+        if(!index[k]) index[k]=[];
+        index[k].push(feat);
+      } else {
+        if(!index[k]) index[k]=feat;
+      }
     });
   });
 }
 
+// Merge all LineString/MultiLineString segments into one geometry
+function mergeRiverFeatures(feats){
+  if(!feats || !feats.length) return null;
+  if(feats.length === 1) return feats[0].geometry;
+  var allLines = [];
+  feats.forEach(function(feat){
+    var geom = feat.geometry;
+    if(!geom) return;
+    if(geom.type === 'LineString') allLines.push(geom.coordinates);
+    else if(geom.type === 'MultiLineString') geom.coordinates.forEach(function(l){ allLines.push(l); });
+  });
+  return {type:'MultiLineString', coordinates:allLines};
+}
+
 function loadNaturalEarthData(){
   var base = '/data/';
-
-  // Helper: fetch JSON, call cb(geoJson) on success
+  var pendingCount = 0;
   function fetchGJ(file, cb){
+    pendingCount++;
     fetch(base + file)
       .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
-      .then(cb)
-      .catch(function(e){ console.warn('NE load failed: '+file, e); });
+      .then(function(gj){
+        cb(gj);
+        pendingCount--;
+        if(pendingCount === 0 && Object.keys(activeHighlights).length) repaintTexture();
+      })
+      .catch(function(e){
+        console.warn('NE load failed (will use fallback): '+file);
+        pendingCount--;
+      });
   }
 
-  // 1. Land mask — for coast clipping (higher-res 50m)
-  fetchGJ('ne_50m_land.geojson', function(gj){
-    neCoastlines = gj;
-    if(Object.keys(activeHighlights).length) repaintTexture();
-  });
+  // 1. Land mask (50m) — coast clipping
+  fetchGJ('ne_50m_land.geojson', function(gj){ neCoastlines = gj; });
 
-  // 2. Countries — exact polygons by name
-  fetchGJ('ne_50m_admin_0_countries.geojson', function(gj){
+  // 2. Countries 10m (more precise — island nations, small countries)
+  fetchGJ('ne_10m_admin_0_countries.geojson', function(gj){
     neCountries = gj;
-    buildIndex(gj, neCountryIndex, ['NAME','NAME_LONG','ADMIN','BRK_NAME','FORMAL_EN']);
-    if(Object.keys(activeHighlights).length) repaintTexture();
+    buildIndex(gj, neCountry10Index,
+      ['NAME','NAME_LONG','ADMIN','BRK_NAME','FORMAL_EN','NAME_EN','SOVEREIGNT'], false);
   });
 
-  // 3. Rivers — exact centerlines
+  // 3. Countries 50m fallback
+  fetchGJ('ne_50m_admin_0_countries.geojson', function(gj){
+    buildIndex(gj, neCountryIndex,
+      ['NAME','NAME_LONG','ADMIN','BRK_NAME','FORMAL_EN','NAME_EN'], false);
+  });
+
+  // 4. Rivers 10m — collect ALL segments per name for complete river path
   fetchGJ('ne_10m_rivers_lake_centerlines.geojson', function(gj){
     neRivers = gj;
-    buildIndex(gj, neRiverIndex, ['name','Name','NAME']);
-    if(Object.keys(activeHighlights).length) repaintTexture();
+    buildIndex(gj, neRiverIndex, ['name','Name','NAME','name_en'], true); // collectAll=true
   });
 
-  // 4. Marine polygons (seas, gulfs, bays, oceans)
+  // 5. Rivers 50m fallback (wider coverage)
+  fetchGJ('ne_50m_rivers_lake_centerlines.geojson', function(gj){
+    buildIndex(gj, neRiver50Index, ['name','Name','NAME'], true);
+  });
+
+  // 6. Marine polygons 10m (includes straits, more gulfs, bays)
+  fetchGJ('ne_10m_geography_marine_polys.geojson', function(gj){
+    buildIndex(gj, neMarine10Index, ['name','Name','NAME'], false);
+  });
+
+  // 7. Marine polygons 50m
   fetchGJ('ne_50m_geography_marine_polys.geojson', function(gj){
-    buildIndex(gj, neMarineIndex, ['name','Name','NAME']);
-    if(Object.keys(activeHighlights).length) repaintTexture();
+    buildIndex(gj, neMarineIndex, ['name','Name','NAME'], false);
   });
 
-  // 5. Lakes
+  // 8. Lakes
   fetchGJ('ne_50m_lakes.geojson', function(gj){
-    buildIndex(gj, neLakeIndex, ['name','Name','NAME']);
-    if(Object.keys(activeHighlights).length) repaintTexture();
+    buildIndex(gj, neLakeIndex, ['name','Name','NAME'], false);
   });
 
-  // 6. Physical regions (mountains, plains, deserts, forests)
+  // 9. Physical regions
   fetchGJ('ne_50m_geography_regions_polys.geojson', function(gj){
-    buildIndex(gj, neRegionIndex, ['name','Name','NAME','name_en']);
-    if(Object.keys(activeHighlights).length) repaintTexture();
+    buildIndex(gj, neRegionIndex, ['name','Name','NAME','name_en'], false);
+  });
+
+  // 10+11. India-specific datasets (if uploaded)
+  fetchGJ('india_states.geojson', function(gj){
+    buildIndex(gj, neIndiaStates, ['ST_NM','NAME','name','state_name'], false);
+  });
+  fetchGJ('india_rivers.geojson', function(gj){
+    buildIndex(gj, neIndiaRivers, ['name','Name','NAME','RIVER_NAME'], true);
   });
 }
 
-// Look up a feature name across all NE indices
-// Returns {feature, indexName} or null
+// Look up a feature across all NE indices with alias support
+// Returns {geom, src} or null
 function lookupNE(searchKey, ftype){
-  var q = normName(searchKey);
-  // Also try stripping common suffixes for better matching
-  var q2 = q.replace(/ river$|^river /,'').replace(/ sea$| ocean$| gulf$| bay$| lake$/,'').trim();
+  var q  = normName(searchKey);
+  var q2 = q.replace(/ river$|rivers?$/,'').replace(/^river /,'')
+             .replace(/ sea$| ocean$| gulf$| bay$| lake$/,'').trim();
 
-  // Route by type first
-  var waterTypes = ['sea','lake','ocean','gulf','bay','lagoon/waterway','mangrove delta'];
-  var riverTypes = ['river'];
-  var countryTypes = ['country','union territory'];
-  var lakeTypes = ['lake'];
-
-  if(lakeTypes.indexOf(ftype)>=0){
-    if(neLakeIndex[q]) return {feat:neLakeIndex[q], src:'lake'};
-    if(neLakeIndex[q2]) return {feat:neLakeIndex[q2], src:'lake'};
-  }
-  if(riverTypes.indexOf(ftype)>=0){
-    if(neRiverIndex[q]) return {feat:neRiverIndex[q], src:'river'};
-    if(neRiverIndex[q2]) return {feat:neRiverIndex[q2], src:'river'};
-    // Try partial match
-    var rkeys=Object.keys(neRiverIndex);
-    for(var i=0;i<rkeys.length;i++){
-      if(rkeys[i].indexOf(q2)>=0||q2.indexOf(rkeys[i])>=0)
-        return {feat:neRiverIndex[rkeys[i]], src:'river'};
+  // ── River lookup (with aliases + all-segment merging) ─────────────
+  if(ftype === 'river' || ftype === 'lagoon/waterway'){
+    var aliases = RIVER_ALIASES[q] || RIVER_ALIASES[q2] || [q, q2];
+    var found = null;
+    aliases.forEach(function(alias){
+      if(found) return;
+      var segs = neRiverIndex[alias] || neIndiaRivers[alias];
+      if(segs && segs.length) found = segs;
+    });
+    // Also try partial key match in river index
+    if(!found){
+      var rkeys = Object.keys(neRiverIndex);
+      for(var i=0;i<rkeys.length && !found;i++){
+        var rk = rkeys[i];
+        if(rk === q || rk === q2 || rk.indexOf(q2) >= 0 || q2.indexOf(rk) >= 0){
+          if(q2.length >= 4) found = neRiverIndex[rk]; // avoid short false matches
+        }
+      }
     }
+    // Fallback: 50m river index
+    if(!found){
+      aliases.forEach(function(alias){
+        if(found) return;
+        var segs = neRiver50Index[alias];
+        if(segs && segs.length) found = segs;
+      });
+    }
+    if(found){
+      var geom = mergeRiverFeatures(found);
+      return geom ? {geom:geom, src:'river'} : null;
+    }
+    return null;
   }
-  if(countryTypes.indexOf(ftype)>=0){
-    if(neCountryIndex[q]) return {feat:neCountryIndex[q], src:'country'};
-    if(neCountryIndex[q2]) return {feat:neCountryIndex[q2], src:'country'};
+
+  // ── Lake lookup ────────────────────────────────────────────────────
+  if(ftype === 'lake' || ftype === 'lake (endorheic)'){
+    var lf = neLakeIndex[q] || neLakeIndex[q2];
+    if(lf) return {geom:lf.geometry, src:'lake'};
   }
-  // Marine
-  if(neMarineIndex[q]) return {feat:neMarineIndex[q], src:'marine'};
-  if(neMarineIndex[q2]) return {feat:neMarineIndex[q2], src:'marine'};
-  // Region
-  if(neRegionIndex[q]) return {feat:neRegionIndex[q], src:'region'};
-  if(neRegionIndex[q2]) return {feat:neRegionIndex[q2], src:'region'};
-  // Country fallback
-  if(neCountryIndex[q]) return {feat:neCountryIndex[q], src:'country'};
-  if(neCountryIndex[q2]) return {feat:neCountryIndex[q2], src:'country'};
-  // River fallback
-  if(neRiverIndex[q]) return {feat:neRiverIndex[q], src:'river'};
+
+  // ── Country lookup — 10m first, then 50m ──────────────────────────
+  if(ftype === 'country' || ftype === 'union territory'){
+    var cf = neCountry10Index[q] || neCountry10Index[q2]
+          || neCountryIndex[q]   || neCountryIndex[q2];
+    if(cf) return {geom:cf.geometry, src:'country'};
+  }
+
+  // ── Marine (sea/gulf/bay/strait/ocean) ────────────────────────────
+  var mf = neMarine10Index[q] || neMarine10Index[q2]
+         || neMarineIndex[q]  || neMarineIndex[q2];
+  if(mf) return {geom:mf.geometry, src:'marine'};
+
+  // ── Physical region ───────────────────────────────────────────────
+  var rf = neRegionIndex[q] || neRegionIndex[q2];
+  if(rf) return {geom:rf.geometry, src:'region'};
+
+  // ── India states fallback ─────────────────────────────────────────
+  var isf = neIndiaStates[q] || neIndiaStates[q2];
+  if(isf) return {geom:isf.geometry, src:'region'};
+
+  // ── Country fallback (any type) ───────────────────────────────────
+  var cff = neCountry10Index[q] || neCountry10Index[q2]
+          || neCountryIndex[q]  || neCountryIndex[q2];
+  if(cff) return {geom:cff.geometry, src:'country'};
+
   return null;
 }
 
@@ -2502,19 +3239,23 @@ function paintDashedLine(coords, col, opacity, W, H){
 // Paint a point (mountain peak, volcano)
 function paintPoint(lat, lng, col, opacity, W, H){
   var p=lngLatToTex(lng,lat,W,H);
-  var sz=Math.max(18,W/100);
+  // sz: visible but not huge — ~7px on 4K canvas, well-proportioned on globe
+  var sz=Math.max(6, W/600);
   texCtx.save();
   texCtx.globalAlpha=Math.min(1,opacity*2);
-  var grad=texCtx.createRadialGradient(p[0],p[1],0,p[0],p[1],sz*1.5);
-  grad.addColorStop(0,'rgba('+col.r+','+col.g+','+col.b+',0.7)');
+  // Subtle glow halo
+  var grad=texCtx.createRadialGradient(p[0],p[1],0,p[0],p[1],sz*2.5);
+  grad.addColorStop(0,'rgba('+col.r+','+col.g+','+col.b+',0.5)');
   grad.addColorStop(1,'rgba('+col.r+','+col.g+','+col.b+',0)');
   texCtx.fillStyle=grad;
-  texCtx.beginPath(); texCtx.arc(p[0],p[1],sz*1.5,0,Math.PI*2); texCtx.fill();
+  texCtx.beginPath(); texCtx.arc(p[0],p[1],sz*2.5,0,Math.PI*2); texCtx.fill();
+  // Crisp triangle (mountain symbol) — proportionate to globe scale
+  texCtx.globalAlpha=Math.min(1,opacity*2.2);
   texCtx.fillStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
   texCtx.beginPath();
-  texCtx.moveTo(p[0],p[1]-sz);
-  texCtx.lineTo(p[0]-sz*0.8,p[1]+sz*0.5);
-  texCtx.lineTo(p[0]+sz*0.8,p[1]+sz*0.5);
+  texCtx.moveTo(p[0], p[1]-sz*1.4);          // apex
+  texCtx.lineTo(p[0]-sz, p[1]+sz*0.6);       // bottom-left
+  texCtx.lineTo(p[0]+sz, p[1]+sz*0.6);       // bottom-right
   texCtx.closePath(); texCtx.fill();
   texCtx.restore();
 }
@@ -2539,18 +3280,15 @@ function paintFeatureOnTexture(featureKey, color, opacity){
   // ── TRY GEOJSON LOOKUP FIRST ───────────────────────────────────────
   var found = lookupNE(f.name, ftype) || lookupNE(featureKey, ftype);
 
-  if(found){
-    var geom = found.feat.geometry;
-    if(!geom) { found = null; } // skip null geometries
-    else if(isRiver || found.src==='river'){
-      paintRiverLine(geom, col, W, H);
+  if(found && found.geom){
+    if(isRiver || found.src==='river'){
+      paintRiverLine(found.geom, col, W, H);
       return;
     } else if(isWater || found.src==='marine' || found.src==='lake'){
-      paintWaterPolygon(geom, col, opacity, W, H, false);
+      paintWaterPolygon(found.geom, col, opacity, W, H, false);
       return;
     } else {
-      // Country, region, mountain range etc. — land polygon
-      paintLandPolygon(geom, col, opacity, W, H, false);
+      paintLandPolygon(found.geom, col, opacity, W, H, false);
       return;
     }
   }
