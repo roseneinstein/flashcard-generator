@@ -266,6 +266,13 @@ input{font-family:inherit;}
           autocomplete="off" oninput="onSearch(this.value)" onkeydown="onSearchKey(event)"/>
         <button class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none">✕</button>
       </div>
+      <div style="display:flex;gap:5px;margin-top:6px;align-items:center;">
+        <input id="wikiInput" class="search-input"
+          style="font-size:0.72rem;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);outline:none;flex:1;"
+          placeholder="Or paste a Wikipedia URL to locate any feature…"
+          onkeydown="if(event.key==='Enter')wikiSearch()"/>
+        <button onclick="wikiSearch()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:5px 10px;color:var(--muted);font-size:0.7rem;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Locate this Wikipedia article on the globe">🌐 Locate</button>
+      </div>
       <div class="suggestions" id="suggestions" style="display:none"></div>
     </div>
 
@@ -2725,33 +2732,19 @@ function initGlobe(){
     if(idx >= urls.length) return;
     textureLoader.load(urls[idx], function(t){
       var img = t.image;
-      // Resize texCanvas to match the actual image resolution to avoid upscaling blur
-      var iw = img.naturalWidth || img.width || 2048;
-      var ih = img.naturalHeight || img.height || 1024;
-      // Use image native size (up to 4096) for sharpest result
-      var targetW = Math.min(4096, iw);
-      var targetH = Math.min(2048, ih);
-      if(texCanvas.width !== targetW || texCanvas.height !== targetH){
-        texCanvas.width  = targetW;
-        texCanvas.height = targetH;
-        // Rebuild land mask cache at new resolution
-        _landMaskCanvas = null;
-        _offscreenCanvas = null;
-        if(neCoastlines) _buildLandMaskCache();
-      }
+      // Draw real texture onto our fixed-size 4096x2048 canvas
       texCtx.imageSmoothingEnabled = true;
       texCtx.imageSmoothingQuality = 'high';
       texCtx.clearRect(0, 0, texCanvas.width, texCanvas.height);
       texCtx.drawImage(img, 0, 0, texCanvas.width, texCanvas.height);
       realTexImage = img;
-      // Update Three.js texture settings for maximum quality
-      globeTexture.needsUpdate = true;
+      // Three.js texture quality settings
       globeTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
       globeTexture.minFilter = THREE.LinearMipMapLinearFilter;
       globeTexture.magFilter = THREE.LinearFilter;
       globeTexture.generateMipmaps = true;
       globeTexture.needsUpdate = true;
-      // Repaint any existing highlights at new resolution
+      // Repaint highlights on new base
       if(Object.keys(activeHighlights).length) scheduleRepaint();
       // Dim coast lines since real texture has own detail
       globeGroup.children.forEach(function(c){
@@ -3451,6 +3444,8 @@ var neRegionIndex   = {};   // normalized name → feature
 var neIndiaStates   = {};   // India states/regions index (from india_state.geojson)
 var neIndiaRivers   = {};   // India rivers (from india_state.geojson linear features)
 var neIndiaOutline  = null; // GOI-aligned India boundary (from india_composite.geojson)
+var neIndiaSoI      = null; // Survey of India official boundary (india-soi.geojson)
+var neIndiaSoIIndex = {};   // Indexed by state/feature name
 var _landMaskCanvas = null; // cached land mask for coast-clipping (computed once)
 var _offscreenCanvas= null; // reusable offscreen canvas (not recreated per paint)
 var _repaintPending = false;// debounce flag
@@ -3673,11 +3668,33 @@ function loadNaturalEarthData(){
     buildIndex(gj, neRegion10Index, ['name','Name','NAME','name_en'], false);
   });
 
-  // 12. India composite boundary (GOI-aligned, from datameet)
-  // File: india_composite.geojson — GOI boundary for India incl disputed territories
+  // 12a. Survey of India (SoI) official boundary — HIGHEST PRIORITY for India
+  // File: india-soi.geojson — GOI official position including POK, Aksai Chin
+  fetchGJ('india-soi.geojson', function(gj){
+    if(!gj || !gj.features) return;
+    neIndiaSoI = gj;
+    // Index all features in SoI file
+    gj.features.forEach(function(feat){
+      var p = feat.properties || {};
+      var geom = feat.geometry;
+      if(!geom) return;
+      // Index by every string property
+      Object.keys(p).forEach(function(pk){
+        if(typeof p[pk]==='string' && p[pk].length >= 2){
+          var k=normName(p[pk]);
+          if(k && !neIndiaSoIIndex[k]) neIndiaSoIIndex[k]=feat;
+        }
+      });
+      // The whole-country feature (largest polygon) becomes the India outline
+      if(!neIndiaSoIIndex['india']) neIndiaSoIIndex['india']=feat;
+    });
+    console.log('SoI boundary loaded: '+Object.keys(neIndiaSoIIndex).length+' features');
+    if(Object.keys(activeHighlights).length) scheduleRepaint();
+  });
+
+  // 12b. India composite boundary (fallback for SoI)
   fetchGJ('india_composite.geojson', function(gj){
     if(!gj || !gj.features) return;
-    // Store as India land mask — overrides NE land mask for Indian subcontinent
     neIndiaOutline = gj;
   });
 
@@ -3828,10 +3845,31 @@ function lookupNE(searchKey, ftype){
     'gilgit baltistan':1, 'gilgit':1
   };
 
+  // ── SoI (Survey of India) — HIGHEST PRIORITY for India/disputed territories ──
+  // Checked before ALL other sources for any Indian feature
+  var INDIA_QUERIES = ['india','indian subcontinent','bharat'];
+  var isIndiaQuery = INDIA_QUERIES.indexOf(q)>=0 || INDIA_QUERIES.indexOf(q2)>=0;
+  if(neIndiaSoI && (isIndiaQuery || GOI_OVERRIDE[q] || GOI_OVERRIDE[q2])){
+    // Use the SoI full boundary for India
+    var soiF = neIndiaSoIIndex[q] || neIndiaSoIIndex[q2] || neIndiaSoIIndex[q3]
+             || neIndiaSoIIndex['india'];
+    if(soiF && soiF.geometry) return {geom:soiF.geometry, src:'country'};
+  }
+  // For any state/region WITHIN India, SoI takes priority over NE
+  if(neIndiaSoI){
+    var soiState = neIndiaSoIIndex[q] || neIndiaSoIIndex[q2] || neIndiaSoIIndex[q3];
+    if(soiState && soiState.geometry){
+      var g = soiState.geometry;
+      // Verify it's actually a polygon (state/region), not a point
+      if(g.type==='Polygon'||g.type==='MultiPolygon')
+        return {geom:g, src:'region'};
+    }
+  }
+
   // ── Country lookup — 10m first ────────────────────────────────────
   if(ftype === 'country' || ftype === 'union territory' || ftype === 'region'){
     if(GOI_OVERRIDE[q] || GOI_OVERRIDE[q2] || GOI_OVERRIDE[q3])
-      return null; // use hand-coded GOI shape
+      return null; // GOI override: fall through to hand-coded shape
     var cf = neCountry10Index[q] || neCountry10Index[q2] || neCountry10Index[q3]
           || neCountryIndex[q]   || neCountryIndex[q2]  || neCountryIndex[q3];
     if(cf) return {geom:cf.geometry, src:'country'};
@@ -3947,12 +3985,13 @@ function _buildLandMaskCache(){
   console.log('Land mask cache built');
 }
 
-// Get (or lazily create) shared offscreen canvas
+// Get shared offscreen canvas — always sized to match current texCanvas
 function _getOffscreen(){
-  if(!_offscreenCanvas){
+  var W = texCanvas.width, H = texCanvas.height;
+  if(!_offscreenCanvas || _offscreenCanvas.width !== W || _offscreenCanvas.height !== H){
     _offscreenCanvas = document.createElement('canvas');
-    _offscreenCanvas.width  = texCanvas.width;
-    _offscreenCanvas.height = texCanvas.height;
+    _offscreenCanvas.width  = W;
+    _offscreenCanvas.height = H;
   }
   return _offscreenCanvas;
 }
@@ -4053,15 +4092,23 @@ function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
     drawGeoJSONGeom(off, geomOrRing, W, H, 'fill');
   }
 
-  // Clip using cached land mask (no re-iteration of GeoJSON)
-  if(_landMaskCanvas){
+  // Clip to land — use cached mask if correct size, else rebuild
+  if(_landMaskCanvas && _landMaskCanvas.width===W && _landMaskCanvas.height===H){
     off.globalCompositeOperation='destination-in';
     off.drawImage(_landMaskCanvas, 0, 0);
+  } else if(_landMaskCanvas && neCoastlines){
+    // Size mismatch — rebuild cache then use it
+    _buildLandMaskCache();
+    if(_landMaskCanvas){
+      off.globalCompositeOperation='destination-in';
+      off.drawImage(_landMaskCanvas, 0, 0);
+    }
   } else if(neCoastlines){
     off.globalCompositeOperation='destination-in';
     off.fillStyle='rgba(0,0,0,1)';
     drawNELand(off,W,H);
   }
+  // If no land mask available — paint without clipping (better than invisible)
 
   texCtx.save();
   texCtx.globalAlpha=opacity*0.42;
@@ -4089,7 +4136,7 @@ function paintWaterPolygon(geomOrRing, col, opacity, W, H, isRingArray){
   }
 
   // Remove land pixels using cached mask
-  if(_landMaskCanvas){
+  if(_landMaskCanvas && _landMaskCanvas.width===W && _landMaskCanvas.height===H){
     off.globalCompositeOperation='destination-out';
     off.drawImage(_landMaskCanvas, 0, 0);
   } else if(neCoastlines){
@@ -4968,6 +5015,128 @@ function getEmptyState(){
     '<span class="hint-example" onclick="doSearch(\'Western Ghats\')">Western Ghats</span>'+
     '<span class="hint-example" onclick="doSearch(\'Mariana Trench\')">Mariana Trench</span>'+
     '</div></div>';
+}
+
+// ── Wikipedia URL → Globe feature ─────────────────────────────────────
+// Strategy: extract article title from URL, call Wikipedia REST API
+// to get coordinates from the article's infobox.
+// Then fly to those coordinates and mark a custom point/highlight.
+function wikiSearch(){
+  var inp = document.getElementById('wikiInput');
+  if(!inp) return;
+  var raw = inp.value.trim();
+  if(!raw){ alert('Paste a Wikipedia URL first'); return; }
+
+  // Extract article title from URL
+  // e.g. https://en.wikipedia.org/wiki/Gangetic_Plains → Gangetic_Plains
+  var titleMatch = raw.match(/wikipedia\.org\/wiki\/([^#?]+)/);
+  var title = titleMatch ? decodeURIComponent(titleMatch[1].replace(/_/g,' ')) : raw;
+
+  // Show loading state
+  inp.style.borderColor = 'var(--accent)';
+  var panelContent = document.getElementById('panelContent');
+  panelContent.innerHTML = '<div class="empty-state"><div class="empty-icon" style="animation:spin 1s linear infinite">🌐</div><div>Locating "'+esc(title)+'" via Wikipedia…</div></div>';
+
+  // Call Wikipedia Geosearch API to get coordinates
+  var apiUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g,'_'));
+
+  fetch(apiUrl)
+    .then(function(r){ if(!r.ok) throw new Error('Wikipedia: '+r.status); return r.json(); })
+    .then(function(data){
+      inp.style.borderColor = '';
+      var lat = data.coordinates ? data.coordinates.lat : null;
+      var lng = data.coordinates ? data.coordinates.lon : null;
+      var desc = data.extract || '';
+      var pageTitle = data.title || title;
+      var thumb = data.thumbnail ? data.thumbnail.source : null;
+
+      if(!lat || !lng){
+        // Try Wikidata coordinates endpoint as fallback
+        return fetchWikidataCoords(data.wikibase_item, pageTitle, desc, thumb);
+      }
+      showWikiResult(lat, lng, pageTitle, desc, thumb, data.type || 'standard');
+    })
+    .catch(function(e){
+      inp.style.borderColor = 'var(--red)';
+      panelContent.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>'+
+        '<div>Could not locate "'+esc(title)+'" on Wikipedia.</div>'+
+        '<div class="empty-hint">Check the URL or try a different spelling.</div></div>';
+    });
+}
+
+function fetchWikidataCoords(wikidataId, title, desc, thumb){
+  if(!wikidataId){
+    document.getElementById('panelContent').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">📍</div>'+
+      '<div>No coordinates found for this article.</div>'+
+      '<div class="empty-hint">Try searching by name instead.</div></div>';
+    return;
+  }
+  // Wikidata SPARQL for coordinates
+  var sparql = 'SELECT ?coord WHERE { wd:'+wikidataId+' wdt:P625 ?coord. }';
+  var url = 'https://query.wikidata.org/sparql?format=json&query='+encodeURIComponent(sparql);
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var results = data.results && data.results.bindings;
+      if(!results || !results.length) throw new Error('No coords');
+      var coordStr = results[0].coord.value; // "Point(lng lat)"
+      var m = coordStr.match(/Point\(([0-9.-]+)\s+([0-9.-]+)\)/);
+      if(!m) throw new Error('Parse fail');
+      showWikiResult(parseFloat(m[2]), parseFloat(m[1]), title, desc, thumb, 'standard');
+    })
+    .catch(function(){
+      document.getElementById('panelContent').innerHTML =
+        '<div class="empty-state"><div class="empty-icon">📍</div>'+
+        '<div>No coordinates found for this article.</div></div>';
+    });
+}
+
+function showWikiResult(lat, lng, title, desc, thumb, type){
+  // Add to GEO_FEATURES dynamically
+  var key = 'wiki_'+normName(title);
+  GEO_FEATURES[key] = {
+    name: title, type: 'region', region: 'Wikipedia',
+    lat: lat, lng: lng, zoom: 5.5,
+    desc: desc.slice(0,300)+(desc.length>300?'…':''),
+    stats: {'Source':'Wikipedia', 'Coordinates': lat.toFixed(4)+'°, '+lng.toFixed(4)+'°'},
+    related: [],
+    highlights: [],
+    shape: {type:'point'}
+  };
+
+  // Rebuild search index to include new entry
+  SEARCH_INDEX.push({
+    key:key, name:title, type:'region', region:'Wikipedia', country:'',
+    searchStr:(title+' wikipedia region').toLowerCase()
+  });
+
+  // Show info panel
+  var thumbHtml = thumb ? '<img src="'+thumb+'" style="width:100%;border-radius:6px;margin-bottom:8px;max-height:120px;object-fit:cover;" />' : '';
+  document.getElementById('panelContent').innerHTML =
+    '<div class="feat-card">'+thumbHtml+
+    '<div class="feat-name">'+esc(title)+'</div>'+
+    '<div class="feat-type-badge">🌐 Wikipedia</div>'+
+    '<div class="feat-desc">'+esc(desc.slice(0,250))+'…</div>'+
+    '<div class="feat-stats">'+
+    '<div class="stat-box"><div class="stat-label">Latitude</div><div class="stat-val">'+lat.toFixed(4)+'°</div></div>'+
+    '<div class="stat-box"><div class="stat-label">Longitude</div><div class="stat-val">'+lng.toFixed(4)+'°</div></div>'+
+    '</div>'+
+    '</div>';
+
+  // Fly to location
+  autoRotate = false;
+  updateAutoRotateBtn();
+  document.getElementById('toolbar').style.display = 'block';
+  document.getElementById('exportBar').style.display = 'flex';
+
+  // Fly and mark
+  flyTo_(lat, lng, 5.5, function(){
+    drawFeatureHighlight(key, annotColor, 0.7);
+    activeChips[key] = annotColor;
+  });
+
+  document.getElementById('wikiInput').value = '';
 }
 
 function updateAutoRotateBtn(){
