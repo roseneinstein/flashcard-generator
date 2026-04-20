@@ -682,7 +682,16 @@ var GEO_FEATURES = {
     highlights:[],
     shape:{type:'polygon',ring:[[60.5,70.0],[65.0,72.0],[70.0,73.0],[75.0,72.5],[80.0,71.0],[82.0,68.5],[80.0,65.5],[78.0,62.0],[76.0,59.5],[73.5,56.5],[71.0,54.0],[70.5,56.5],[69.5,59.0],[68.0,62.0],[65.5,64.5],[62.5,67.0],[60.5,70.0]]}
   },
-  'tibetan plateau': {
+    'tibet plateau': {
+    name:'Tibetan Plateau', type:'plateau', region:'Asia',
+    lat:32.0, lng:88.0, zoom:4.0,
+    desc:'World\'s highest and largest plateau, averaging over 4,500 m elevation. Source of major Asian rivers.',
+    stats:{Area:'~2.5 million km²','Avg Elevation':'4,500 m',Rivers:'Indus, Ganga, Yangtze, Brahmaputra',Country:'China (Tibet)'},
+    related:['himalayas','brahmaputra river','indus river','yangtze river','china'],
+    highlights:[],
+    shape:{type:'polygon',ring:[[78.0,32.0],[81.0,33.0],[84.0,33.0],[87.0,32.5],[90.0,32.0],[93.0,31.5],[96.0,30.5],[98.5,30.5],[100.5,31.5],[102.0,33.0],[101.5,35.5],[99.5,36.5],[97.0,37.0],[94.0,37.5],[91.0,37.5],[88.0,37.0],[85.0,37.5],[82.5,36.5],[80.0,35.0],[78.0,34.0],[78.0,32.0]]}
+  },
+    'tibetan plateau': {
     name:'Tibetan Plateau (Roof of the World)', type:'plateau', region:'Asia',
     lat:32.0, lng:88.0, zoom:4.0,
     desc:'World\'s highest and largest plateau, averaging over 4,500 m elevation. Source of 10 of Asia\'s major rivers. Politically part of China; significant in Indian context as headwaters of Indian rivers.',
@@ -702,14 +711,29 @@ var GEO_FEATURES = {
   },
 
   // ── WORLD — Countries / Regions ───────────────────────────────────
-  'india': {
+    'india': {
     name:'India', type:'country', region:'South Asia',
     lat:22.0, lng:79.0, zoom:3.5,
-    desc:'World\'s most populous country (1.44 billion) and 7th largest by area. Federal constitutional republic with 28 states and 8 Union Territories. Major emerging economy.',
+    desc:'World\'s most populous country (1.44 billion) and 7th largest by area. Federal constitutional republic with 28 states and 8 Union Territories. Shown per Government of India (GOI) boundaries including J&K, Aksai Chin, and Arunachal Pradesh.',
     stats:{Area:'3.29 million km²', Population:'1.44 billion (2024)', States:'28 states + 8 UTs', Capital:'New Delhi'},
     related:['himalayas','gangetic plains','deccan plateau','western ghats','bay of bengal','arabian sea'],
     highlights:['ganga river','brahmaputra river','indus river','godavari river'],
-    shape:{type:'polygon',ring:[[68.2,23.7],[70.2,22.5],[72.0,20.5],[73.2,18.0],[73.5,15.5],[74.5,13.5],[76.5,8.5],[77.5,8.0],[78.5,8.5],[80.0,9.5],[80.5,12.5],[79.5,14.0],[80.5,16.5],[80.5,17.5],[82.0,18.5],[84.0,19.5],[85.5,20.0],[86.5,21.5],[88.5,22.5],[89.5,22.5],[91.5,22.0],[92.0,22.5],[93.5,24.0],[94.5,25.5],[96.0,27.0],[97.0,28.5],[96.5,28.5],[94.0,28.0],[92.0,27.5],[90.0,27.5],[88.5,27.5],[87.0,28.0],[85.5,28.5],[83.5,29.0],[82.0,30.5],[80.0,31.5],[78.5,32.5],[77.0,33.5],[76.0,34.0],[75.5,35.0],[79.5,34.5],[80.5,34.0],[79.0,35.5],[77.5,35.5],[75.5,35.5],[73.5,36.0],[72.5,35.5],[71.5,35.0],[70.0,36.0],[71.0,34.5],[70.5,32.5],[69.5,29.5],[68.5,27.0],[68.2,23.7]]}
+    shape:{type:'polygon',ring:[
+      [68.2,23.7],[70.2,22.5],[72.0,20.5],[73.2,18.0],[73.5,15.5],
+      [74.5,13.5],[76.5,8.5],[77.5,8.0],[78.5,8.5],[80.0,9.5],
+      [80.5,12.5],[79.5,14.0],[80.5,16.5],[80.5,17.5],[82.0,18.5],
+      [84.0,19.5],[85.5,20.0],[86.5,21.5],[88.5,22.5],[89.5,22.5],
+      [91.5,22.0],[92.0,22.5],[93.5,24.0],[94.5,25.5],[96.0,27.0],
+      [97.0,28.5],
+      [96.5,28.5],[94.5,28.0],[92.5,27.5],[90.0,27.5],[88.5,27.5],
+      [87.0,28.0],[85.5,28.5],[83.5,29.0],[82.0,30.5],[80.0,31.5],
+      [78.5,32.5],[77.0,33.5],[76.0,34.0],[75.5,35.0],
+      [76.5,35.5],[78.0,35.5],[79.0,35.5],[80.5,35.0],[81.0,36.0],
+      [83.0,36.5],[84.0,36.5],[85.0,36.0],[86.0,36.5],[87.0,36.0],
+      [79.5,36.5],[79.5,35.5],[80.5,34.0],[79.0,35.0],[77.5,35.5],
+      [76.0,35.5],[75.5,35.0],[74.0,35.5],[73.5,36.5],[72.5,36.0],
+      [72.0,36.5],[71.0,36.0],[70.0,37.0],[70.5,35.5],[71.0,34.5],
+      [70.5,32.5],[69.5,29.5],[68.5,27.0],[68.2,23.7]]}
   },
   'brazil': {
     name:'Brazil', type:'country', region:'South America',
@@ -885,14 +909,14 @@ var GEO_FEATURES = {
     shape:{type:'polyline',coords: [[75.5, 12.5], [76.0, 12.0], [77.0, 11.8], [78.0, 11.5], [78.8, 11.2], [79.5, 11.0], [79.8, 10.5], [79.2, 10.8]]}
   },
 
-  'mahanadi river': {
-    name:'Mahanadi', type:'river', region:'World',
-    lat:20.8, lng:80.0, zoom:4.5,
-    desc:'Mahanadi.',
-    stats:{},
-    related:[],
+    'mahanadi river': {
+    name:'Mahanadi River', type:'river', region:'India',
+    lat:20.5, lng:82.0, zoom:5.5,
+    desc:'Major river of eastern India, originating in Chhattisgarh. Flows through Odisha to the Bay of Bengal. Hirakud Dam on this river is one of the longest dams in India.',
+    stats:{Length:'858 km',Origin:'Sihawa, Chhattisgarh',Mouth:'Bay of Bengal (Odisha)',States:'Chhattisgarh, Odisha'},
+    related:['godavari river','eastern ghats','bay of bengal','odisha','chilika lake'],
     highlights:[],
-    shape:{type:'polyline',coords: [[82.5, 20.5], [82.0, 20.0], [81.5, 19.5], [81.0, 19.0], [80.5, 20.0], [80.0, 20.8], [80.5, 21.5], [81.0, 21.5], [82.0, 21.0], [82.5, 20.5]]}
+    shape:{type:'polyline',coords:[[82.0,20.5],[81.5,20.2],[81.0,20.8],[80.5,21.2],[80.0,21.5],[80.5,22.0],[81.0,21.8],[81.5,21.0],[82.0,20.5]]}
   },
 
   'luni river': {
@@ -3296,6 +3320,9 @@ function zoomGlobe(factor){
 function resetView(){
   clearHighlights();
   clearAnnotations();
+  searchCards = [];
+  cardColorIdx = 0;
+  annotColor = '#e8d5b0'; // reset to default color
   document.getElementById('panelContent').innerHTML = getEmptyState();
   document.getElementById('toolbar').style.display = 'none';
   document.getElementById('exportBar').style.display = 'none';
@@ -3331,7 +3358,8 @@ var neMarine10Index = {};   // 10m marine (more water bodies)
 var neLakeIndex     = {};   // normalized name → feature
 var neRegionIndex   = {};   // normalized name → feature
 var neIndiaStates   = {};   // India states/regions index (from india_state.geojson)
-var neIndiaRivers   = {};   // India rivers index (fallback, unused now)
+var neIndiaRivers   = {};   // India rivers (from india_state.geojson linear features)
+var neIndiaOutline  = null; // GOI-aligned India boundary (from india_composite.geojson)
 var neLake10Index   = {};   // 10m lakes (more precise)
 var neRegion10Index = {};   // 10m physical regions
 
@@ -3341,13 +3369,17 @@ var RIVER_ALIASES = {
   'ganga':            ['ganges','ganga','ganga ganges'],
   'ganges':           ['ganges','ganga'],
   'ganga ganges':     ['ganges'],
-  'brahmaputra':      ['brahmaputra','yarlung tsangpo','jamuna','brahmaputra tsangpo'],
+  'brahmaputra':      ['brahmaputra','yarlung tsangpo','yarlung','tsangpo','jamuna','dihang','brahmaputra tsangpo','lohit','siang','dibang'],
+  'brahmaputra river':['brahmaputra','yarlung tsangpo','yarlung','tsangpo','jamuna','dihang','lohit'],
   'yamuna':           ['yamuna','jumna'],
   'indus':            ['indus','sindh'],
-  'godavari':         ['godavari'],
+  'godavari':         ['godavari','godavari river'],
+  'godavari river':   ['godavari','godavari river'],
   'krishna':          ['krishna'],
-  'mahanadi':         ['mahanadi'],
-  'kaveri':           ['kaveri','cauvery','kaveri cauvery'],
+  'mahanadi':         ['mahanadi','mahanadi river'],
+  'mahanadi river':   ['mahanadi'],
+  'kaveri':           ['kaveri','cauvery','kaveri cauvery','kaveri river'],
+  'kaveri river':     ['kaveri','cauvery'],
   'narmada':          ['narmada','nerbudda'],
   'tungabhadra':      ['tungabhadra'],
   'chambal':          ['chambal'],
@@ -3366,8 +3398,9 @@ var RIVER_ALIASES = {
   'teesta':           ['teesta','tista'],
   'subansiri':        ['subansiri'],
   // World rivers
-  'nile':             ['nile','white nile','blue nile','bahr al jabal','nile river'],
-  'amazon':           ['amazon','amazonas','solimoes','amazon river'],
+  'nile':             ['nile','white nile','blue nile','bahr al jabal','nile river','bahr al abyad','bahr el jebel','victoria nile','albert nile','mountain nile','nile r','nile river'],
+  'nile river':       ['nile','white nile','blue nile','bahr al jabal','victoria nile','albert nile'],
+  'amazon':           ['amazon','amazonas','solimoes','amazon river','rio amazonas','maranon','ucayali'],
   'yangtze':          ['yangtze','chang jiang','chang','chang-jiang'],
   'mississippi':      ['mississippi'],
   'missouri':         ['missouri','missouri river'],
@@ -3381,7 +3414,7 @@ var RIVER_ALIASES = {
   'zambezi':          ['zambezi','zambesi'],
   'limpopo':          ['limpopo'],
   'orange':           ['orange','orange river'],
-  'ob':               ['ob','ob irtysh','irtysh'],
+  'ob':               ['ob','ob irtysh','irtysh','irtysh river','ob river'],
   'yenisei':          ['yenisei','yenisey'],
   'lena':             ['lena'],
   'volga':            ['volga'],
@@ -3437,18 +3470,35 @@ function buildIndex(gj, index, nameFields, collectAll){
   });
 }
 
-// Merge all LineString/MultiLineString segments into one geometry
+// Merge arrays-of-features OR single feature arrays into one MultiLineString
 function mergeRiverFeatures(feats){
-  if(!feats || !feats.length) return null;
-  if(feats.length === 1) return feats[0].geometry;
+  if(!feats) return null;
+  // Normalise: if it's an array-of-arrays (multiple alias groups), flatten
+  var flatFeats = [];
+  feats.forEach(function(item){
+    if(Array.isArray(item)) item.forEach(function(f){ flatFeats.push(f); });
+    else flatFeats.push(item);
+  });
+  if(!flatFeats.length) return null;
   var allLines = [];
-  feats.forEach(function(feat){
-    var geom = feat.geometry;
+  flatFeats.forEach(function(feat){
+    var geom = feat && feat.geometry;
     if(!geom) return;
     if(geom.type === 'LineString') allLines.push(geom.coordinates);
     else if(geom.type === 'MultiLineString') geom.coordinates.forEach(function(l){ allLines.push(l); });
   });
+  if(!allLines.length) return null;
   return {type:'MultiLineString', coordinates:allLines};
+}
+
+// Collect river segments from an index for ALL given aliases (not just first hit)
+function collectAllRiverSegs(index, aliases){
+  var all = [];
+  aliases.forEach(function(alias){
+    var segs = index[alias];
+    if(segs && segs.length) segs.forEach(function(s){ all.push(s); });
+  });
+  return all.length ? all : null;
 }
 
 function loadNaturalEarthData(){
@@ -3526,9 +3576,16 @@ function loadNaturalEarthData(){
     buildIndex(gj, neRegion10Index, ['name','Name','NAME','name_en'], false);
   });
 
-  // 12. India composite (22MB — state boundaries, rivers, national parks)
+  // 12. India composite boundary (GOI-aligned, from datameet)
+  // File: india_composite.geojson — GOI boundary for India incl disputed territories
+  fetchGJ('india_composite.geojson', function(gj){
+    if(!gj || !gj.features) return;
+    // Store as India land mask — overrides NE land mask for Indian subcontinent
+    neIndiaOutline = gj;
+  });
+
+  // 13. India state details (22MB — state boundaries, rivers, national parks)
   // File: india_state.geojson from github.com/geohacker/india
-  // Contains state polygons AND linear features (rivers) in the same file
   fetchGJ('india_state.geojson', function(gj){
     if(!gj || !gj.features) return;
     gj.features.forEach(function(feat){
@@ -3566,59 +3623,76 @@ function lookupNE(searchKey, ftype){
   var q  = normName(searchKey);
   var q2 = q.replace(/ river$|rivers?$/,'').replace(/^river /,'')
              .replace(/ sea$| ocean$| gulf$| bay$| lake$/,'').trim();
-  // Also try without country suffix (e.g. "ganga river india" → "ganga")
-  var q3 = q2.replace(/ india$| river$| lake$| mountains?$| range$/,'').trim();
+  var q3 = q2.replace(/ india$| river$| lake$| mountains?$| range$|tso$| plateau$|lake$/,'').trim();
 
-  // ── River lookup ──────────────────────────────────────────────────
+  // ── River lookup ─────────────────────────────────────────────────
   if(ftype === 'river' || ftype === 'lagoon/waterway'){
-    var aliases = RIVER_ALIASES[q] || RIVER_ALIASES[q2] || RIVER_ALIASES[q3] || [q, q2, q3];
-    var found = null;
+    var aliases = RIVER_ALIASES[q] || RIVER_ALIASES[q2] || RIVER_ALIASES[q3] || [q,q2,q3];
+    var seen = {}; var uAliases = [];
+    aliases.forEach(function(a){ if(a&&!seen[a]){seen[a]=1;uAliases.push(a);} });
 
-    // 1. Try India rivers first (most accurate for Indian rivers)
-    aliases.forEach(function(alias){
-      if(found) return;
-      var segs = neIndiaRivers[alias];
-      if(segs && segs.length) found = segs;
+    var allSegs = [];
+
+    // 1. India rivers — exact aliases + safe partial match
+    var indSegs = collectAllRiverSegs(neIndiaRivers, uAliases);
+    if(indSegs) indSegs.forEach(function(s){ allSegs.push(s); });
+    // Partial match in India rivers (safe — controlled dataset)
+    var irkeys = Object.keys(neIndiaRivers);
+    irkeys.forEach(function(irk){
+      if(q3.length >= 5 && !seen['_ir_'+irk]){
+        // Only match if the keys are substantially the same (not just substring)
+        var matchScore = (irk === q3) ? 3
+          : (irk.indexOf(q3) === 0 || q3.indexOf(irk) === 0) ? 2   // prefix match
+          : (irk.indexOf(q3) >= 0 && q3.length >= irk.length*0.7) ? 1  // strong substring
+          : 0;
+        if(matchScore >= 2){
+          seen['_ir_'+irk] = 1;
+          var s = neIndiaRivers[irk];
+          if(s) s.forEach(function(f){ allSegs.push(f); });
+        }
+      }
     });
-    // Partial match in India rivers
-    if(!found){
-      var irkeys = Object.keys(neIndiaRivers);
-      for(var i=0;i<irkeys.length&&!found;i++){
-        var irk=irkeys[i];
-        if(q3.length>=4 && (irk===q3||irk.indexOf(q3)>=0||q3.indexOf(irk)>=0))
-          found=neIndiaRivers[irk];
-      }
+
+    // 2. NE 10m rivers — EXACT aliases ONLY (no partial — prevents wrong country matches)
+    var ne10Segs = collectAllRiverSegs(neRiverIndex, uAliases);
+    if(ne10Segs) ne10Segs.forEach(function(s){ allSegs.push(s); });
+
+    // 3. NE 50m fallback — EXACT aliases ONLY
+    if(!allSegs.length){
+      var ne50Segs = collectAllRiverSegs(neRiver50Index, uAliases);
+      if(ne50Segs) ne50Segs.forEach(function(s){ allSegs.push(s); });
     }
 
-    // 2. NE 10m rivers (global)
-    if(!found){
-      aliases.forEach(function(alias){
-        if(found) return;
-        var segs = neRiverIndex[alias];
-        if(segs && segs.length) found = segs;
-      });
-    }
-    // 3. Partial match in NE 10m
-    if(!found){
-      var rkeys = Object.keys(neRiverIndex);
-      for(var i=0;i<rkeys.length&&!found;i++){
-        var rk=rkeys[i];
-        if(q3.length>=4&&(rk===q2||rk===q3||rk.indexOf(q3)>=0||q3.indexOf(rk)>=0))
-          found=neRiverIndex[rk];
-      }
-    }
-    // 4. NE 50m fallback
-    if(!found){
-      aliases.forEach(function(alias){
-        if(found) return;
-        var segs = neRiver50Index[alias];
-        if(segs && segs.length) found = segs;
-      });
-    }
+    if(allSegs.length){
+      var geom = mergeRiverFeatures(allSegs);
+      if(!geom) return null;
 
-    if(found){
-      var geom = mergeRiverFeatures(found);
-      return geom ? {geom:geom, src:'river'} : null;
+      // Sanity check: at least SOME coordinate must be near expected location
+      // Check bounding box of ALL coordinates, not just midpoint
+      var f0 = GEO_FEATURES[normName(searchKey)];
+      if(f0 && f0.lat && f0.lng){
+        var allCoords = [];
+        if(geom.type==='LineString') allCoords = geom.coordinates;
+        else if(geom.type==='MultiLineString')
+          geom.coordinates.forEach(function(l){ l.forEach(function(c){allCoords.push(c);}); });
+
+        if(allCoords.length){
+          // Find the coordinate CLOSEST to expected location
+          var minDist = Infinity;
+          allCoords.forEach(function(c){
+            var dlat = Math.abs(c[1] - f0.lat);
+            var dlng = Math.abs(c[0] - f0.lng);
+            if(dlng > 180) dlng = 360 - dlng;
+            var dist = dlat + dlng;
+            if(dist < minDist) minDist = dist;
+          });
+          // Reject only if NO coordinate is within 45° of expected location
+          if(minDist > 45){
+            return null; // completely wrong geography
+          }
+        }
+      }
+      return {geom:geom, src:'river'};
     }
     return null;
   }
@@ -3630,11 +3704,49 @@ function lookupNE(searchKey, ftype){
     if(lf) return {geom:lf.geometry, src:'lake'};
   }
 
+  // ── GOI OVERRIDE: Never use NE for India-disputed territories ─────
+  // NE uses Pakistani/Chinese boundaries for these — use hand-coded GOI shapes
+  var GOI_OVERRIDE = {
+    'india':1,'jammu kashmir':1,'jammu and kashmir':1,'kashmir':1,
+    'ladakh':1,'arunachal pradesh':1,'aksai chin':1,'pok':1,
+    'pakistan occupied kashmir':1,'gilgit baltistan':1,'gilgit':1,
+    'northeastern india':1,'north east india':1,'sikkim':1,
+    'northeast india':1
+  };
+
   // ── Country lookup — 10m first ────────────────────────────────────
-  if(ftype === 'country' || ftype === 'union territory'){
+  if(ftype === 'country' || ftype === 'union territory' || ftype === 'region'){
+    if(GOI_OVERRIDE[q] || GOI_OVERRIDE[q2] || GOI_OVERRIDE[q3])
+      return null; // use hand-coded GOI shape
     var cf = neCountry10Index[q] || neCountry10Index[q2] || neCountry10Index[q3]
           || neCountryIndex[q]   || neCountryIndex[q2]  || neCountryIndex[q3];
     if(cf) return {geom:cf.geometry, src:'country'};
+  }
+
+  // ── Physical region — 10m first ───────────────────────────────────
+  // Check region aliases (e.g. "tibet plateau" → "tibetan plateau")
+  var REGION_ALIASES = {
+    'tibet plateau':   'tibetan plateau',
+    'tibetan plateau': 'tibetan plateau',
+    'himalayas':       'himalayas',
+    'himalaya':        'himalayas',
+    'sahara':          'sahara desert',
+    'gobi':            'gobi desert',
+    'amazon':          'amazon rainforest',
+    'congo':           'congo rainforest',
+  };
+  var rq = REGION_ALIASES[q] ? normName(REGION_ALIASES[q]) : null;
+  var rq2 = REGION_ALIASES[q2] ? normName(REGION_ALIASES[q2]) : null;
+
+  var rf = neRegion10Index[q]   || (rq?neRegion10Index[rq]:null)
+         || neRegion10Index[q2]  || (rq2?neRegion10Index[rq2]:null)
+         || neRegion10Index[q3]
+         || neRegionIndex[q]    || (rq?neRegionIndex[rq]:null)
+         || neRegionIndex[q2]   || (rq2?neRegionIndex[rq2]:null)
+         || neRegionIndex[q3];
+  // GOI override: don't use NE for Indian disputed physical regions
+  if(rf && !GOI_OVERRIDE[q] && !GOI_OVERRIDE[q2]){
+    return {geom:rf.geometry, src:'region'};
   }
 
   // ── Marine — 10m first (includes straits) ─────────────────────────
@@ -3642,22 +3754,23 @@ function lookupNE(searchKey, ftype){
          || neMarineIndex[q]  || neMarineIndex[q2]  || neMarineIndex[q3];
   if(mf) return {geom:mf.geometry, src:'marine'};
 
-  // ── Physical region — 10m first ───────────────────────────────────
-  var rf = neRegion10Index[q] || neRegion10Index[q2] || neRegion10Index[q3]
-         || neRegionIndex[q]  || neRegionIndex[q2]  || neRegionIndex[q3];
-  if(rf) return {geom:rf.geometry, src:'region'};
-
   // ── India states (from india_state.geojson) ───────────────────────
-  var isf = neIndiaStates[q] || neIndiaStates[q2] || neIndiaStates[q3];
-  if(isf) return {geom:isf.geometry, src:'region'};
+  // Only for non-disputed states
+  if(!GOI_OVERRIDE[q] && !GOI_OVERRIDE[q2] && !GOI_OVERRIDE[q3]){
+    var isf = neIndiaStates[q] || neIndiaStates[q2] || neIndiaStates[q3];
+    if(isf) return {geom:isf.geometry, src:'region'};
+  }
 
-  // ── Country fallback (catches any-type country searches) ──────────
-  var cff = neCountry10Index[q] || neCountry10Index[q2] || neCountry10Index[q3]
-          || neCountryIndex[q]  || neCountryIndex[q2]  || neCountryIndex[q3];
-  if(cff) return {geom:cff.geometry, src:'country'};
+  // ── Country fallback (any type) ───────────────────────────────────
+  if(!GOI_OVERRIDE[q] && !GOI_OVERRIDE[q2] && !GOI_OVERRIDE[q3]){
+    var cff = neCountry10Index[q] || neCountry10Index[q2] || neCountry10Index[q3]
+            || neCountryIndex[q]  || neCountryIndex[q2]  || neCountryIndex[q3];
+    if(cff) return {geom:cff.geometry, src:'country'};
+  }
 
   return null;
 }
+
 
 // Draw all NE land polygons onto a canvas context (for masking)
 function drawNELand(ctx, W, H){
@@ -4320,6 +4433,12 @@ function clearSearch(){
   document.getElementById('suggestions').style.display = 'none';
 }
 
+// Stack of active search cards (each has key, data, color)
+var searchCards = [];
+// Colors cycle for successive searches
+var CARD_COLORS = ['#e8d5b0','#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#34d399','#f472b6','#a78bfa','#facc15'];
+var cardColorIdx = 0;
+
 function doSearch(name){
   document.getElementById('suggestions').style.display = 'none';
   document.getElementById('searchInput').value = name;
@@ -4329,33 +4448,162 @@ function doSearch(name){
   var key = name.toLowerCase().trim();
   var feature = GEO_FEATURES[key];
   if(!feature){
-    // Fuzzy match
     var best = SEARCH_INDEX.find(function(r){ return r.name.toLowerCase() === key; }) ||
                SEARCH_INDEX.find(function(r){ return r.searchStr.indexOf(key) >= 0; });
-    if(best) feature = GEO_FEATURES[best.key];
-    if(best) key = best.key;
+    if(best){ feature = GEO_FEATURES[best.key]; key = best.key; }
   }
   if(!feature){
-    document.getElementById('panelContent').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">🔎</div><div>No results for "'+esc(name)+'"</div>'+
-      '<div class="empty-hint">Try broader terms like country names, major rivers, or well-known mountain ranges</div></div>';
+    // Show error as a temporary card
+    var errDiv = document.createElement('div');
+    errDiv.className = 'feat-card';
+    errDiv.style.cssText = 'border-color:var(--red);opacity:0.7;';
+    errDiv.innerHTML = '<div class="feat-name" style="color:var(--red)">Not found</div>'+
+      '<div class="feat-desc">No results for "'+esc(name)+'". Try broader terms.</div>';
+    document.getElementById('panelContent').appendChild(errDiv);
+    setTimeout(function(){ errDiv.remove(); }, 3000);
     return;
   }
 
-  currentFeature = {key:key, data:feature};
-  clearHighlights();
-  clearAnnotations();
+  // If feature already in stack — just fly to it
+  var existing = searchCards.find(function(c){ return c.key === key; });
+  if(existing){
+    flyTo_(feature.lat, feature.lng, feature.zoom || 3.5);
+    return;
+  }
 
-  // Show info immediately (panel updates right away)
-  showFeatureInfo(key, feature);
+  // Assign a color for this search card
+  var cardColor = CARD_COLORS[cardColorIdx % CARD_COLORS.length];
+  cardColorIdx++;
+
+  // Add to stack
+  searchCards.push({key:key, data:feature, color:cardColor});
+  currentFeature = {key:key, data:feature};
+
+  // Show toolbar + export bar if first card
   document.getElementById('toolbar').style.display = 'block';
   document.getElementById('exportBar').style.display = 'flex';
 
-  // Start flyover — highlight added AFTER flyover ends so disc is at correct position
+  // If first search, clear the empty state
+  var panelContent = document.getElementById('panelContent');
+  var emptyState = panelContent.querySelector('.empty-state');
+  if(emptyState) emptyState.remove();
+
+  // Add card to panel (appended, not replaced)
+  appendFeatureCard(key, feature, cardColor);
+
+  // Fly to feature and highlight with assigned color
+  annotColor = cardColor; // set color for highlight
   flyTo_(feature.lat, feature.lng, feature.zoom || 3.5, function(){
-    drawFeatureHighlight(key, annotColor, 0.55);
-    activeChips[key] = annotColor;
+    drawFeatureHighlight(key, cardColor, 0.55);
+    activeChips[key] = cardColor;
+    // Refresh card to show opacity slider active
+    updateCardOpacitySlider(key);
   });
+}
+
+function appendFeatureCard(key, f, color){
+  var panelContent = document.getElementById('panelContent');
+  var cardEl = document.createElement('div');
+  cardEl.className = 'feat-card';
+  cardEl.id = 'card_' + key.replace(/[^a-z0-9]/g,'_');
+  cardEl.dataset.key = key;
+  cardEl.style.cssText = 'border-left:3px solid '+color+';';
+
+  // Build stats
+  var statsHtml = '';
+  if(f.stats && Object.keys(f.stats).length){
+    statsHtml = '<div class="feat-stats">';
+    Object.keys(f.stats).slice(0,4).forEach(function(k){
+      statsHtml += '<div class="stat-box"><div class="stat-label">'+esc(k)+'</div>'+
+        '<div class="stat-val">'+esc(f.stats[k])+'</div></div>';
+    });
+    statsHtml += '</div>';
+  }
+
+  // Opacity slider
+  var hi = activeHighlights[key];
+  var curOpacity = hi ? hi.opacity : 0.55;
+  var safeKeyId = key.replace(/[^a-z0-9]/g,'_');
+  var opSlider = '<div class="opacity-row">' +
+    '<span class="opacity-label">Opacity</span>' +
+    '<input type="range" class="opacity-slider" min="5" max="95" value="' + Math.round(curOpacity*100) +
+    '" id="opslider_'+safeKeyId+'" />' +
+    '<span class="opacity-val" id="opv_'+safeKeyId+'">' + Math.round(curOpacity*100) + '%</span>' +
+    '</div>';
+
+  // Related chips
+  var relHtml = '';
+  if(f.related && f.related.length){
+    relHtml = '<div class="related-label">Related</div><div class="related-chips">';
+    f.related.forEach(function(rk){
+      var rf = GEO_FEATURES[rk];
+      var rname = rf ? rf.name : rk.split(' ').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join(' ');
+      var isActive = !!activeChips[rk];
+      var rkId = rk.replace(/[^a-z0-9]/g,'_');
+      relHtml += '<div class="chip'+(isActive?' active':'')+'" id="chip_'+rkId+'">' +
+        '<div class="chip-dot" style="background:'+(isActive?activeChips[rk]:color)+'"></div>' +
+        esc(rname) + '</div>';
+    });
+    relHtml += '</div>';
+  }
+
+  cardEl.innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">' +
+      '<div>' +
+        '<div class="feat-name" style="color:'+color+'">'+esc(f.name)+'</div>' +
+        '<div class="feat-type-badge">'+typeIcon(f.type)+' '+esc(f.type)+'</div>' +
+      '</div>' +
+      '<button id="rm_'+safeKeyId+'" style="background:none;border:none;color:var(--muted);font-size:0.85rem;cursor:pointer;padding:2px 4px;flex-shrink:0;" title="Remove this highlight">✕</button>' +
+    '</div>' +
+    '<div class="feat-desc" style="margin-bottom:6px">'+esc(f.desc)+'</div>' +
+    statsHtml + opSlider + relHtml;
+
+  panelContent.appendChild(cardEl);
+
+  // Wire up event listeners AFTER inserting (avoids inline handler quoting issues)
+  document.getElementById('rm_'+safeKeyId).addEventListener('click', function(){ removeSearchCard(key); });
+  document.getElementById('opslider_'+safeKeyId).addEventListener('input', function(){
+    setHighlightOpacity(this, key, this.value/100);
+  });
+  // Wire related chip clicks
+  if(f.related){
+    f.related.forEach(function(rk){
+      var chipEl = document.getElementById('chip_'+rk.replace(/[^a-z0-9]/g,'_'));
+      if(chipEl){
+        chipEl.addEventListener('click', function(){ toggleRelated(this, rk); });
+      }
+    });
+  }
+
+  cardEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function updateCardOpacitySlider(key){
+  var hi = activeHighlights[key];
+  if(!hi) return;
+  var id = 'opv_' + key.replace(/[^a-z0-9]/g,'_');
+  var el = document.getElementById(id);
+  if(el) el.textContent = Math.round(hi.opacity*100)+'%';
+}
+
+function removeSearchCard(key){
+  // Remove from stack
+  searchCards = searchCards.filter(function(c){ return c.key !== key; });
+  // Remove highlight from globe
+  delete activeHighlights[key];
+  delete activeChips[key];
+  repaintTexture();
+  // Remove card element
+  var cardEl = document.getElementById('card_' + key.replace(/[^a-z0-9]/g,'_'));
+  if(cardEl) cardEl.remove();
+  // If no cards left, show empty state
+  var panelContent = document.getElementById('panelContent');
+  if(!panelContent.querySelector('.feat-card')){
+    panelContent.innerHTML = getEmptyState();
+    document.getElementById('toolbar').style.display = 'none';
+    document.getElementById('exportBar').style.display = 'none';
+    currentFeature = null;
+  }
 }
 
 function showFeatureInfo(key, f){
@@ -4433,20 +4681,51 @@ function typeIcon(type){
 }
 
 function toggleRelated(elOrKey, rk){
-  // Support both old signature (rk only) and new (el, rk)
   if(typeof elOrKey === 'string'){ rk = elOrKey; }
   if(activeChips[rk]){
     delete activeChips[rk];
     delete activeHighlights[rk];
     repaintTexture();
+    // Update all chip elements with this key across all cards
+    document.querySelectorAll('#chip_'+rk.replace(/[^a-z0-9]/g,'_')).forEach(function(el){
+      el.classList.remove('active');
+      // Remove inline slider if present
+      var sl = el.querySelector('.chip-opacity');
+      if(sl) sl.remove();
+      var dot = el.querySelector('.chip-dot');
+      if(dot){
+        // Restore dot color to parent card color
+        var card = el.closest('.feat-card');
+        var parentKey = card ? card.dataset.key : null;
+        var card_color = parentKey && activeChips[parentKey] ? activeChips[parentKey] : 'var(--muted)';
+        // Find card color from searchCards
+        var sc = searchCards.find(function(c){ return c.key === parentKey; });
+        dot.style.background = sc ? sc.color : 'var(--muted)';
+      }
+    });
   } else {
-    var colors = ['#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#34d399','#f472b6'];
-    var usedColors = Object.keys(activeChips).map(function(k){return activeChips[k];});
+    // Assign next available color
+    var colors = ['#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#34d399','#f472b6','#a78bfa'];
+    var usedColors = Object.values(activeChips);
     var col = colors.find(function(c){ return usedColors.indexOf(c)<0; }) || colors[0];
     activeChips[rk] = col;
     drawFeatureHighlight(rk, col, 0.42);
+    // Update all chip elements with this key
+    document.querySelectorAll('#chip_'+rk.replace(/[^a-z0-9]/g,'_')).forEach(function(el){
+      el.classList.add('active');
+      var dot = el.querySelector('.chip-dot');
+      if(dot) dot.style.background = col;
+      // Add opacity slider if not already present
+      if(!el.querySelector('.chip-opacity')){
+        var safeRk = rk.replace(/'/g,"\'");
+        var sl = document.createElement('input');
+        sl.type='range'; sl.className='chip-opacity'; sl.min=5; sl.max=95; sl.value=42;
+        sl.onclick = function(e){ e.stopPropagation(); };
+        sl.oninput = function(e){ e.stopPropagation(); setHighlightOpacity(this,rk,this.value/100); };
+        el.appendChild(sl);
+      }
+    });
   }
-  if(currentFeature) showFeatureInfo(currentFeature.key, currentFeature.data);
 }
 
 // ══════════════════════════════════════════════════════════════════════
