@@ -61,7 +61,7 @@ input{font-family:inherit;}
 
 /* ── Layout ── */
 .layout{position:fixed;top:52px;bottom:0;left:0;right:0;display:flex;}
-#globeCanvas{position:absolute;top:0;right:0;display:block;cursor:grab;}
+#globeCanvas{position:absolute;top:0;right:0;display:block;cursor:grab;image-rendering:crisp-edges;}
 #globeCanvas.dragging{cursor:grabbing;}
 
 /* ── Left Panel ── */
@@ -455,20 +455,20 @@ var GEO_FEATURES = {
   'godavari river': {
     name:'Godavari River', type:'river', region:'India',
     lat:17.5, lng:80.5, zoom:5.0,
-    desc:'The second longest river of India ("Dakshin Ganga" or Ganges of the South). Originates in Nashik, Maharashtra, and flows 1,465 km to the Bay of Bengal through the Eastern Ghats.',
-    stats:{Length:'1,465 km', Origin:'Nashik, Maharashtra', Mouth:'Bay of Bengal (Andhra Pradesh)', States:'MH, Telangana, AP'},
+    desc:'Second longest river of India. Originates in Nashik, Maharashtra, flows 1,465 km to the Bay of Bengal.',
+    stats:{Length:'1,465 km', Origin:'Nashik, Maharashtra', Mouth:'Bay of Bengal, Andhra Pradesh', States:'MH, Telangana, AP'},
     related:['krishna river','eastern ghats','deccan plateau','mahanadi river','andhra pradesh'],
     highlights:[],
-    shape:{type:'polyline',coords:[[73.8,19.8],[75.0,19.5],[76.5,19.0],[77.5,18.5],[78.5,18.0],[79.8,17.5],[81.0,17.2],[81.8,17.0],[82.2,17.0],[82.5,16.8],[82.0,16.5]]}
+    shape:{type:'point'}
   },
   'krishna river': {
     name:'Krishna River', type:'river', region:'India',
     lat:16.5, lng:78.0, zoom:5.0,
-    desc:'Originates at Mahabaleshwar in the Western Ghats and flows 1,400 km eastward to the Bay of Bengal. Major irrigation source for Karnataka, Telangana, and Andhra Pradesh.',
+    desc:'Originates at Mahabaleshwar in the Western Ghats and flows 1,400 km eastward to the Bay of Bengal.',
     stats:{Length:'1,400 km', Origin:'Mahabaleshwar, MH', Mouth:'Bay of Bengal', States:'MH, Karnataka, Telangana, AP'},
     related:['godavari river','tungabhadra river','eastern ghats','deccan plateau'],
     highlights:[],
-    shape:{type:'polyline',coords:[[74.5,17.5],[75.5,17.0],[77.0,16.5],[78.5,16.0],[79.5,15.8],[80.5,16.0],[81.2,16.2],[80.8,15.5],[80.5,14.8]]}
+    shape:{type:'point'}
   },
 
   // ── INDIA — Other Major Features ──────────────────────────────────
@@ -714,26 +714,11 @@ var GEO_FEATURES = {
     'india': {
     name:'India', type:'country', region:'South Asia',
     lat:22.0, lng:79.0, zoom:3.5,
-    desc:'World\'s most populous country (1.44 billion) and 7th largest by area. Federal constitutional republic with 28 states and 8 Union Territories. Shown per Government of India (GOI) boundaries including J&K, Aksai Chin, and Arunachal Pradesh.',
+    desc:'World\'s most populous country and 7th largest by area. Federal constitutional republic.',
     stats:{Area:'3.29 million km²', Population:'1.44 billion (2024)', States:'28 states + 8 UTs', Capital:'New Delhi'},
     related:['himalayas','gangetic plains','deccan plateau','western ghats','bay of bengal','arabian sea'],
     highlights:['ganga river','brahmaputra river','indus river','godavari river'],
-    shape:{type:'polygon',ring:[
-      [68.2,23.7],[70.2,22.5],[72.0,20.5],[73.2,18.0],[73.5,15.5],
-      [74.5,13.5],[76.5,8.5],[77.5,8.0],[78.5,8.5],[80.0,9.5],
-      [80.5,12.5],[79.5,14.0],[80.5,16.5],[80.5,17.5],[82.0,18.5],
-      [84.0,19.5],[85.5,20.0],[86.5,21.5],[88.5,22.5],[89.5,22.5],
-      [91.5,22.0],[92.0,22.5],[93.5,24.0],[94.5,25.5],[96.0,27.0],
-      [97.0,28.5],
-      [96.5,28.5],[94.5,28.0],[92.5,27.5],[90.0,27.5],[88.5,27.5],
-      [87.0,28.0],[85.5,28.5],[83.5,29.0],[82.0,30.5],[80.0,31.5],
-      [78.5,32.5],[77.0,33.5],[76.0,34.0],[75.5,35.0],
-      [76.5,35.5],[78.0,35.5],[79.0,35.5],[80.5,35.0],[81.0,36.0],
-      [83.0,36.5],[84.0,36.5],[85.0,36.0],[86.0,36.5],[87.0,36.0],
-      [79.5,36.5],[79.5,35.5],[80.5,34.0],[79.0,35.0],[77.5,35.5],
-      [76.0,35.5],[75.5,35.0],[74.0,35.5],[73.5,36.5],[72.5,36.0],
-      [72.0,36.5],[71.0,36.0],[70.0,37.0],[70.5,35.5],[71.0,34.5],
-      [70.5,32.5],[69.5,29.5],[68.5,27.0],[68.2,23.7]]}
+    shape:{type:'point'}
   },
   'brazil': {
     name:'Brazil', type:'country', region:'South America',
@@ -912,11 +897,11 @@ var GEO_FEATURES = {
     'mahanadi river': {
     name:'Mahanadi River', type:'river', region:'India',
     lat:20.5, lng:82.0, zoom:5.5,
-    desc:'Major river of eastern India, originating in Chhattisgarh. Flows through Odisha to the Bay of Bengal. Hirakud Dam on this river is one of the longest dams in India.',
-    stats:{Length:'858 km',Origin:'Sihawa, Chhattisgarh',Mouth:'Bay of Bengal (Odisha)',States:'Chhattisgarh, Odisha'},
+    desc:'Major river of eastern India originating in Chhattisgarh, flowing to the Bay of Bengal.',
+    stats:{Length:'858 km', Origin:'Sihawa, Chhattisgarh', Mouth:'Bay of Bengal (Odisha)', States:'Chhattisgarh, Odisha'},
     related:['godavari river','eastern ghats','bay of bengal','odisha','chilika lake'],
     highlights:[],
-    shape:{type:'polyline',coords:[[82.0,20.5],[81.5,20.2],[81.0,20.8],[80.5,21.2],[80.0,21.5],[80.5,22.0],[81.0,21.8],[81.5,21.0],[82.0,20.5]]}
+    shape:{type:'point'}
   },
 
   'luni river': {
@@ -2715,6 +2700,9 @@ function initGlobe(){
   texCtx = texCanvas.getContext('2d');
   drawGlobeTexture(texCtx, 4096, 2048);
   globeTexture = new THREE.CanvasTexture(texCanvas);
+  globeTexture.anisotropy = 4; // initial anisotropy (upgraded when real tex loads)
+  globeTexture.minFilter = THREE.LinearMipMapLinearFilter;
+  globeTexture.magFilter = THREE.LinearFilter;
   var texture = globeTexture;
 
   // Try loading a real Earth texture — fall back to procedural if blocked
@@ -2736,13 +2724,35 @@ function initGlobe(){
   function tryLoadTexture(urls, idx){
     if(idx >= urls.length) return;
     textureLoader.load(urls[idx], function(t){
-      // Draw the loaded real texture onto our texCanvas so highlights still work
       var img = t.image;
+      // Resize texCanvas to match the actual image resolution to avoid upscaling blur
+      var iw = img.naturalWidth || img.width || 2048;
+      var ih = img.naturalHeight || img.height || 1024;
+      // Use image native size (up to 4096) for sharpest result
+      var targetW = Math.min(4096, iw);
+      var targetH = Math.min(2048, ih);
+      if(texCanvas.width !== targetW || texCanvas.height !== targetH){
+        texCanvas.width  = targetW;
+        texCanvas.height = targetH;
+        // Rebuild land mask cache at new resolution
+        _landMaskCanvas = null;
+        _offscreenCanvas = null;
+        if(neCoastlines) _buildLandMaskCache();
+      }
+      texCtx.imageSmoothingEnabled = true;
+      texCtx.imageSmoothingQuality = 'high';
       texCtx.clearRect(0, 0, texCanvas.width, texCanvas.height);
       texCtx.drawImage(img, 0, 0, texCanvas.width, texCanvas.height);
-      // Store clean base image for repainting highlights on top
       realTexImage = img;
+      // Update Three.js texture settings for maximum quality
       globeTexture.needsUpdate = true;
+      globeTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      globeTexture.minFilter = THREE.LinearMipMapLinearFilter;
+      globeTexture.magFilter = THREE.LinearFilter;
+      globeTexture.generateMipmaps = true;
+      globeTexture.needsUpdate = true;
+      // Repaint any existing highlights at new resolution
+      if(Object.keys(activeHighlights).length) scheduleRepaint();
       // Dim coast lines since real texture has own detail
       globeGroup.children.forEach(function(c){
         if(c.isLine && c.material && c.material.opacity !== undefined){
@@ -2812,15 +2822,96 @@ function initGlobe(){
 }
 
 function drawGlobeTexture(ctx, W, H){
-  // Ocean base — deep navy blue
-  var oceanGrad = ctx.createLinearGradient(0, 0, 0, H);
-  oceanGrad.addColorStop(0,   '#0a1529');
-  oceanGrad.addColorStop(0.25,'#0d2040');
-  oceanGrad.addColorStop(0.5, '#0e2448');
-  oceanGrad.addColorStop(0.75,'#0d2040');
-  oceanGrad.addColorStop(1,   '#0a1529');
-  ctx.fillStyle = oceanGrad;
+  // ── Bathymetric ocean base (depth-aware coloring) ──────────────────
+  // Deep ocean floor: very dark blue-black
+  ctx.fillStyle = '#07101f';
   ctx.fillRect(0, 0, W, H);
+
+  // Mid-ocean basins (2000-5000m depth) — dominant ocean color
+  var deepGrad = ctx.createLinearGradient(0, 0, 0, H);
+  deepGrad.addColorStop(0,    '#081525'); // polar deep
+  deepGrad.addColorStop(0.18, '#0a1e35'); // N Atlantic / N Pacific deep
+  deepGrad.addColorStop(0.35, '#0c2240'); // tropical deep basins
+  deepGrad.addColorStop(0.50, '#0d2448'); // equatorial
+  deepGrad.addColorStop(0.65, '#0c2240');
+  deepGrad.addColorStop(0.82, '#0a1e35');
+  deepGrad.addColorStop(1.0,  '#081525');
+  ctx.fillStyle = deepGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── Shallow continental shelf zones (0-200m) — lighter blue ─────────
+  // Paint shelf zones as lighter overlapping ellipses around continents
+  // This approximates bathymetric contours without actual depth data
+  function paintShelf(regions, alpha){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    regions.forEach(function(r){
+      var px = (r[0]+180)/360*W, py = (90-r[1])/180*H;
+      var rx = r[2]/360*W, ry = r[3]/180*H;
+      var grad = ctx.createRadialGradient(px,py,0, px,py,Math.max(rx,ry));
+      grad.addColorStop(0, '#1a4a7a');   // shallow coastal water
+      grad.addColorStop(0.4, '#123560');
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(px, py, rx, ry, 0, 0, Math.PI*2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // Continental shelf zones [lng_center, lat_center, lng_radius, lat_radius]
+  paintShelf([
+    // Indian subcontinent shelf
+    [76, 14, 8, 6], [82, 8, 6, 4],
+    // Bay of Bengal / Gulf of Bengal shallow
+    [88, 20, 4, 4],
+    // Arabian Sea coastal shelf
+    [67, 22, 5, 4],
+    // Southeast Asia shelves (Sunda shelf — very shallow)
+    [105, 5, 12, 8], [118, 5, 8, 6],
+    // East China Sea / Yellow Sea (very shallow)
+    [122, 32, 6, 5], [121, 24, 5, 4],
+    // N European shelf (North Sea very shallow)
+    [4, 56, 6, 5], [-5, 48, 4, 4],
+    // West Africa shelf
+    [3, 4, 4, 5], [-15, 10, 4, 5],
+    // Caribbean / Gulf of Mexico shelf
+    [-85, 24, 8, 5], [-65, 15, 6, 4],
+    // Australian Great Barrier Reef / Arafura shelf
+    [147, -17, 5, 5], [135, -12, 6, 4],
+    // Arctic / Barents shelf
+    [40, 72, 14, 6],
+    // Bering shelf
+    [-168, 60, 8, 5],
+    // East coast USA shelf
+    [-72, 38, 4, 5],
+    // Persian Gulf (entire is shallow)
+    [51, 26, 5, 3],
+  ], 0.55);
+
+  // ── Deep trench zones — extra dark ────────────────────────────────
+  function paintTrench(t, alpha){
+    var px = (t[0]+180)/360*W, py = (90-t[1])/180*H;
+    var grad = ctx.createRadialGradient(px,py,0, px,py,t[2]/360*W);
+    grad.addColorStop(0, 'rgba(2,6,14,0.8)');
+    grad.addColorStop(0.5, 'rgba(4,10,22,0.4)');
+    grad.addColorStop(1, 'transparent');
+    ctx.save(); ctx.globalAlpha=alpha;
+    ctx.fillStyle=grad;
+    ctx.beginPath(); ctx.ellipse(px,py,t[2]/360*W,t[3]/180*H,0,0,Math.PI*2);
+    ctx.fill(); ctx.restore();
+  }
+  // Major trench zones [lng, lat, lng_r, lat_r]
+  [
+    [142, 13, 3, 8],   // Mariana Trench
+    [125, -7, 2, 4],   // Java/Sunda Trench
+    [-73, -20, 1.5, 8],// Peru-Chile Trench
+    [-65, 15, 1.5, 6], // Puerto Rico Trench
+    [135, 28, 1.5, 6], // Ryukyu Trench
+    [155, -5, 1.5, 5], // New Britain Trench
+    [30, -5, 1.5, 5],  // Romanche gap (Atlantic deepest)
+  ].forEach(function(t){ paintTrench(t, 1.0); });
 
   // Draw continents using simplified polygon outlines
   // Coordinates: [lng, lat] arrays, equirectangular projection
@@ -3360,6 +3451,9 @@ var neRegionIndex   = {};   // normalized name → feature
 var neIndiaStates   = {};   // India states/regions index (from india_state.geojson)
 var neIndiaRivers   = {};   // India rivers (from india_state.geojson linear features)
 var neIndiaOutline  = null; // GOI-aligned India boundary (from india_composite.geojson)
+var _landMaskCanvas = null; // cached land mask for coast-clipping (computed once)
+var _offscreenCanvas= null; // reusable offscreen canvas (not recreated per paint)
+var _repaintPending = false;// debounce flag
 var neLake10Index   = {};   // 10m lakes (more precise)
 var neRegion10Index = {};   // 10m physical regions
 
@@ -3520,7 +3614,10 @@ function loadNaturalEarthData(){
   }
 
   // 1. Land mask (50m) — coast clipping
-  fetchGJ('ne_50m_land.geojson', function(gj){ neCoastlines = gj; });
+  fetchGJ('ne_50m_land.geojson', function(gj){
+    neCoastlines = gj;
+    _buildLandMaskCache(); // build cached land mask immediately
+  });
 
   // 2. Countries 10m (more precise — island nations, small countries)
   fetchGJ('ne_10m_admin_0_countries.geojson', function(gj){
@@ -3592,12 +3689,28 @@ function loadNaturalEarthData(){
       var p = feat.properties || {};
       var geom = feat.geometry;
       if(!geom) return;
-      // Index state/region polygons
-      var nameFields = ['NAME_1','NAME','name','st_nm','STATE','state_name','statename'];
+      // Index state/region polygons — try ALL known property variants
+      // geohacker/india uses: NAME_1, name; datameet uses: ST_NM, statename; etc.
+      var nameFields = [
+        'NAME_1','NAME_2','name','Name','NAME',
+        'ST_NM','ST_CODE','statename','state_name',
+        'STATE','STNAME','dtname','DISTRICT',
+        'GEO_NAME','admin_name','region'
+      ];
       nameFields.forEach(function(f){
-        if(p[f]){
+        if(p[f] && typeof p[f]==='string'){
           var k=normName(p[f]);
-          if(k && !neIndiaStates[k]) neIndiaStates[k]=feat;
+          if(k.length >= 2 && !neIndiaStates[k]) neIndiaStates[k]=feat;
+        }
+      });
+      // Also index by every non-null string property (catch-all for unknown schemas)
+      Object.keys(p).forEach(function(pk){
+        if(typeof p[pk]==='string' && p[pk].length >= 3){
+          var k=normName(p[pk]);
+          // Only index plausible place names (no numbers-only, URLs, etc.)
+          if(k.length >= 3 && !/^[0-9]/.test(k) && !neIndiaStates[k]){
+            neIndiaStates[k]=feat;
+          }
         }
       });
       // Index rivers (LineString/MultiLineString features)
@@ -3706,12 +3819,13 @@ function lookupNE(searchKey, ftype){
 
   // ── GOI OVERRIDE: Never use NE for India-disputed territories ─────
   // NE uses Pakistani/Chinese boundaries for these — use hand-coded GOI shapes
+  // GOI_OVERRIDE: only use hand-coded shapes for genuinely disputed territories
+  // where NE uses a boundary India disputes.
+  // India itself uses the UN-recognized boundary (NE is fine for this).
   var GOI_OVERRIDE = {
-    'india':1,'jammu kashmir':1,'jammu and kashmir':1,'kashmir':1,
-    'ladakh':1,'arunachal pradesh':1,'aksai chin':1,'pok':1,
-    'pakistan occupied kashmir':1,'gilgit baltistan':1,'gilgit':1,
-    'northeastern india':1,'north east india':1,'sikkim':1,
-    'northeast india':1
+    'aksai chin':1, 'pok':1,
+    'pakistan occupied kashmir':1,
+    'gilgit baltistan':1, 'gilgit':1
   };
 
   // ── Country lookup — 10m first ────────────────────────────────────
@@ -3755,9 +3869,16 @@ function lookupNE(searchKey, ftype){
   if(mf) return {geom:mf.geometry, src:'marine'};
 
   // ── India states (from india_state.geojson) ───────────────────────
-  // Only for non-disputed states
   if(!GOI_OVERRIDE[q] && !GOI_OVERRIDE[q2] && !GOI_OVERRIDE[q3]){
     var isf = neIndiaStates[q] || neIndiaStates[q2] || neIndiaStates[q3];
+    // Also try partial key match in India states
+    if(!isf){
+      var ikeys = Object.keys(neIndiaStates);
+      for(var ii=0;ii<ikeys.length&&!isf;ii++){
+        var ik=ikeys[ii];
+        if(ik===q||ik===q2||ik===q3) isf=neIndiaStates[ik];
+      }
+    }
     if(isf) return {geom:isf.geometry, src:'region'};
   }
 
@@ -3797,25 +3918,72 @@ function drawNELand(ctx, W, H){
 }
 
 // Repaint the entire texture from scratch then redraw all active highlights
+// Build the land mask cache once (expensive — iterates all NE land coords)
+function _buildLandMaskCache(){
+  if(!neCoastlines || !texCanvas) return;
+  var W = texCanvas.width, H = texCanvas.height;
+  _landMaskCanvas = document.createElement('canvas');
+  _landMaskCanvas.width = W; _landMaskCanvas.height = H;
+  var mCtx = _landMaskCanvas.getContext('2d');
+  mCtx.fillStyle = 'rgba(0,0,0,1)';
+  // Draw all land polygons onto mask canvas
+  neCoastlines.features.forEach(function(feat){
+    var geom = feat.geometry;
+    if(!geom) return;
+    var polys = geom.type==='Polygon' ? [geom.coordinates] : geom.coordinates;
+    polys.forEach(function(poly){
+      poly.forEach(function(ring){
+        if(!ring.length) return;
+        mCtx.beginPath();
+        ring.forEach(function(coord,i){
+          var pt = lngLatToTex(coord[0],coord[1],W,H);
+          i===0 ? mCtx.moveTo(pt[0],pt[1]) : mCtx.lineTo(pt[0],pt[1]);
+        });
+        mCtx.closePath();
+      });
+    });
+    mCtx.fill();
+  });
+  console.log('Land mask cache built');
+}
+
+// Get (or lazily create) shared offscreen canvas
+function _getOffscreen(){
+  if(!_offscreenCanvas){
+    _offscreenCanvas = document.createElement('canvas');
+    _offscreenCanvas.width  = texCanvas.width;
+    _offscreenCanvas.height = texCanvas.height;
+  }
+  return _offscreenCanvas;
+}
+
+// Debounced repaint — coalesces rapid successive calls into one
+function scheduleRepaint(){
+  if(_repaintPending) return;
+  _repaintPending = true;
+  // requestAnimationFrame ensures we repaint at most once per frame
+  requestAnimationFrame(function(){
+    _repaintPending = false;
+    repaintTexture();
+  });
+}
+
 function repaintTexture(){
   var W = texCanvas.width, H = texCanvas.height;
-  // Base layer: real texture image or procedural
   texCtx.clearRect(0, 0, W, H);
   if(realTexImage){
+    texCtx.imageSmoothingEnabled = true;
+    texCtx.imageSmoothingQuality = 'high';
     texCtx.drawImage(realTexImage, 0, 0, W, H);
   } else {
     drawGlobeTexture(texCtx, W, H);
   }
-  // Paint each active highlight on top
   Object.keys(activeHighlights).forEach(function(key){
     var hi = activeHighlights[key];
     paintFeatureOnTexture(key, hi.color, hi.opacity);
   });
-  // Also repaint any user-drawn custom highlights on top
   if(typeof customHighlights !== 'undefined'){
-    customHighlights.forEach(function(ch){
-      paintCustomPolygon(ch.ring, ch.color, ch.opacity);
-    });
+    customHighlights.forEach(function(ch){ paintCustomPolygon(ch.ring, ch.color, ch.opacity); });
   }
   globeTexture.needsUpdate = true;
 }
@@ -3868,12 +4036,13 @@ function drawGeoJSONGeom(ctx, geom, W, H, mode){
 // Paint a land polygon (from any GeoJSON feature) onto offscreen canvas,
 // clip to land mask, composite onto main texture
 function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
-  var offC=document.createElement('canvas'); offC.width=W; offC.height=H;
-  var off=offC.getContext('2d');
+  // Reuse shared offscreen canvas — no allocation per call
+  var offC = _getOffscreen();
+  var off = offC.getContext('2d');
+  off.clearRect(0, 0, W, H);
   off.fillStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
 
   if(isRingArray){
-    // Hand-coded ring [[lng,lat],...]
     off.beginPath();
     geomOrRing.forEach(function(c,i){
       var p=lngLatToTex(c[0],c[1],W,H);
@@ -3881,12 +4050,14 @@ function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
     });
     off.closePath(); off.fill();
   } else {
-    // GeoJSON geometry object
     drawGeoJSONGeom(off, geomOrRing, W, H, 'fill');
   }
 
-  // Clip to land (destination-in keeps only land pixels)
-  if(neCoastlines){
+  // Clip using cached land mask (no re-iteration of GeoJSON)
+  if(_landMaskCanvas){
+    off.globalCompositeOperation='destination-in';
+    off.drawImage(_landMaskCanvas, 0, 0);
+  } else if(neCoastlines){
     off.globalCompositeOperation='destination-in';
     off.fillStyle='rgba(0,0,0,1)';
     drawNELand(off,W,H);
@@ -3894,14 +4065,16 @@ function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
 
   texCtx.save();
   texCtx.globalAlpha=opacity*0.42;
+  texCtx.globalCompositeOperation='source-over';
   texCtx.drawImage(offC,0,0);
   texCtx.restore();
 }
 
 // Paint a water polygon, clip to ocean (remove land)
 function paintWaterPolygon(geomOrRing, col, opacity, W, H, isRingArray){
-  var offC=document.createElement('canvas'); offC.width=W; offC.height=H;
-  var off=offC.getContext('2d');
+  var offC = _getOffscreen();
+  var off = offC.getContext('2d');
+  off.clearRect(0, 0, W, H);
   off.fillStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
 
   if(isRingArray){
@@ -3915,8 +4088,11 @@ function paintWaterPolygon(geomOrRing, col, opacity, W, H, isRingArray){
     drawGeoJSONGeom(off, geomOrRing, W, H, 'fill');
   }
 
-  // Remove land pixels (destination-out punches out land)
-  if(neCoastlines){
+  // Remove land pixels using cached mask
+  if(_landMaskCanvas){
+    off.globalCompositeOperation='destination-out';
+    off.drawImage(_landMaskCanvas, 0, 0);
+  } else if(neCoastlines){
     off.globalCompositeOperation='destination-out';
     off.fillStyle='rgba(0,0,0,1)';
     drawNELand(off,W,H);
@@ -3924,6 +4100,7 @@ function paintWaterPolygon(geomOrRing, col, opacity, W, H, isRingArray){
 
   texCtx.save();
   texCtx.globalAlpha=opacity*0.42;
+  texCtx.globalCompositeOperation='source-over';
   texCtx.drawImage(offC,0,0);
   texCtx.restore();
 }
@@ -4069,10 +4246,8 @@ function drawFeatureHighlight(featureKey, color, opacity){
   if(!f) return;
   color = color || annotColor;
   opacity = opacity || 0.52;
-  // Store in active highlights
   activeHighlights[featureKey] = {color:color, opacity:opacity};
-  // Repaint texture with all highlights
-  repaintTexture();
+  scheduleRepaint(); // debounced — coalesces rapid successive calls
 }
 
 function clearHighlights(){
@@ -4664,7 +4839,7 @@ function setHighlightOpacity(sliderEl, key, val){
   val = Math.max(0.05, Math.min(0.95, parseFloat(val)));
   if(activeHighlights[key]){
     activeHighlights[key].opacity = val;
-    repaintTexture();
+    scheduleRepaint();
   }
   // Update display next to slider
   var pct = Math.round(val*100)+'%';
