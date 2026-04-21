@@ -3934,25 +3934,25 @@ function lookupNE(searchKey, ftype){
 // Draw all NE land polygons onto a canvas context (for masking)
 function drawNELand(ctx, W, H){
   if(!neCoastlines) return;
-  ctx.beginPath();
+  ctx.fillStyle = '#000';
+  // One beginPath+fill per polygon — avoids the "single fill at end" bug
   neCoastlines.features.forEach(function(feat){
     var geom = feat.geometry;
     if(!geom) return;
     var polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
     polys.forEach(function(poly){
+      ctx.beginPath();
       poly.forEach(function(ring){
         if(!ring.length) return;
-        var p0 = lngLatToTex(ring[0][0], ring[0][1], W, H);
-        ctx.moveTo(p0[0], p0[1]);
-        for(var i=1; i<ring.length; i++){
-          var p = lngLatToTex(ring[i][0], ring[i][1], W, H);
-          ctx.lineTo(p[0], p[1]);
-        }
+        ring.forEach(function(coord,i){
+          var pt = lngLatToTex(coord[0],coord[1],W,H);
+          i===0 ? ctx.moveTo(pt[0],pt[1]) : ctx.lineTo(pt[0],pt[1]);
+        });
         ctx.closePath();
       });
+      ctx.fill('evenodd');
     });
   });
-  ctx.fill();
 }
 
 // Repaint the entire texture from scratch then redraw all active highlights
@@ -3963,26 +3963,27 @@ function _buildLandMaskCache(){
   _landMaskCanvas = document.createElement('canvas');
   _landMaskCanvas.width = W; _landMaskCanvas.height = H;
   var mCtx = _landMaskCanvas.getContext('2d');
-  mCtx.fillStyle = 'rgba(0,0,0,1)';
-  // Draw all land polygons onto mask canvas
+  mCtx.fillStyle = '#000';
+  // ── CORRECT: one beginPath per feature polygon, fill per polygon ──
+  // Using evenodd fill rule so island holes are correctly transparent
   neCoastlines.features.forEach(function(feat){
     var geom = feat.geometry;
     if(!geom) return;
     var polys = geom.type==='Polygon' ? [geom.coordinates] : geom.coordinates;
     polys.forEach(function(poly){
+      mCtx.beginPath(); // ONE beginPath per polygon
       poly.forEach(function(ring){
         if(!ring.length) return;
-        mCtx.beginPath();
         ring.forEach(function(coord,i){
           var pt = lngLatToTex(coord[0],coord[1],W,H);
           i===0 ? mCtx.moveTo(pt[0],pt[1]) : mCtx.lineTo(pt[0],pt[1]);
         });
-        mCtx.closePath();
+        mCtx.closePath(); // close each ring
       });
+      mCtx.fill('evenodd'); // fill per polygon with evenodd rule
     });
-    mCtx.fill();
   });
-  console.log('Land mask cache built');
+  console.log('Land mask cache built: '+W+'x'+H);
 }
 
 // Get shared offscreen canvas — always sized to match current texCanvas
@@ -4092,23 +4093,21 @@ function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
     drawGeoJSONGeom(off, geomOrRing, W, H, 'fill');
   }
 
-  // Clip to land — use cached mask if correct size, else rebuild
+  // Clip to land — always paint something; clipping is enhancement not requirement
   if(_landMaskCanvas && _landMaskCanvas.width===W && _landMaskCanvas.height===H){
+    // Use pre-built cache (fast path)
     off.globalCompositeOperation='destination-in';
     off.drawImage(_landMaskCanvas, 0, 0);
-  } else if(_landMaskCanvas && neCoastlines){
-    // Size mismatch — rebuild cache then use it
+  } else if(neCoastlines){
+    // Build cache now (first time or size changed), then use it
     _buildLandMaskCache();
     if(_landMaskCanvas){
       off.globalCompositeOperation='destination-in';
       off.drawImage(_landMaskCanvas, 0, 0);
     }
-  } else if(neCoastlines){
-    off.globalCompositeOperation='destination-in';
-    off.fillStyle='rgba(0,0,0,1)';
-    drawNELand(off,W,H);
+    // else: paint unclipped — visible but may slightly extend to ocean
   }
-  // If no land mask available — paint without clipping (better than invisible)
+  // No neCoastlines yet: paint unclipped (highlight visible immediately)
 
   texCtx.save();
   texCtx.globalAlpha=opacity*0.42;
@@ -4247,11 +4246,24 @@ function paintFeatureOnTexture(featureKey, color, opacity){
 
   // ── FALLBACK: use hand-coded shape data ────────────────────────────
   if(!f.shape){
-    // No shape at all — just paint a point
     paintPoint(f.lat, f.lng, col, opacity, W, H);
     return;
   }
   var shape = f.shape;
+
+  // GeoJSON shape from Wikipedia/OSM lookup
+  if(shape.type==='geojson' && shape.geom){
+    var g = shape.geom;
+    var gtype = g.type || '';
+    if(gtype==='LineString'||gtype==='MultiLineString'){
+      paintRiverLine(g, col, W, H);
+    } else if(isWater){
+      paintWaterPolygon(g, col, opacity, W, H, false);
+    } else {
+      paintLandPolygon(g, col, opacity, W, H, false);
+    }
+    return;
+  }
 
   if(shape.type==='polygon'){
     if(isWater){
@@ -5017,127 +5029,260 @@ function getEmptyState(){
     '</div></div>';
 }
 
-// ── Wikipedia URL → Globe feature ─────────────────────────────────────
-// Strategy: extract article title from URL, call Wikipedia REST API
-// to get coordinates from the article's infobox.
-// Then fly to those coordinates and mark a custom point/highlight.
+// ════════════════════════════════════════════════════════════════
+// WIKIPEDIA + OSM WATERFALL SEARCH
+// Strategy:
+// 1. Wikipedia REST API → coordinates + description
+// 2. Wikidata → OSM Relation ID → Overpass API → exact polygon
+// 3. If no polygon → OSM Nominatim → polygon
+// 4. Fallback → point marker
+// Wikipedia results integrate into the panel ALONGSIDE other features
+// ════════════════════════════════════════════════════════════════
+
 function wikiSearch(){
   var inp = document.getElementById('wikiInput');
   if(!inp) return;
   var raw = inp.value.trim();
-  if(!raw){ alert('Paste a Wikipedia URL first'); return; }
+  if(!raw){ return; }
 
-  // Extract article title from URL
-  // e.g. https://en.wikipedia.org/wiki/Gangetic_Plains → Gangetic_Plains
+  // Extract article title from URL or use as search term
   var titleMatch = raw.match(/wikipedia\.org\/wiki\/([^#?]+)/);
   var title = titleMatch ? decodeURIComponent(titleMatch[1].replace(/_/g,' ')) : raw;
 
-  // Show loading state
-  inp.style.borderColor = 'var(--accent)';
-  var panelContent = document.getElementById('panelContent');
-  panelContent.innerHTML = '<div class="empty-state"><div class="empty-icon" style="animation:spin 1s linear infinite">🌐</div><div>Locating "'+esc(title)+'" via Wikipedia…</div></div>';
+  inp.style.opacity = '0.5';
+  inp.disabled = true;
 
-  // Call Wikipedia Geosearch API to get coordinates
-  var apiUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g,'_'));
-
-  fetch(apiUrl)
-    .then(function(r){ if(!r.ok) throw new Error('Wikipedia: '+r.status); return r.json(); })
+  // Step 1: Wikipedia summary API
+  fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g,'_')))
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(data){
-      inp.style.borderColor = '';
       var lat = data.coordinates ? data.coordinates.lat : null;
       var lng = data.coordinates ? data.coordinates.lon : null;
       var desc = data.extract || '';
       var pageTitle = data.title || title;
       var thumb = data.thumbnail ? data.thumbnail.source : null;
+      var wikidataId = data.wikibase_item || null;
 
-      if(!lat || !lng){
-        // Try Wikidata coordinates endpoint as fallback
-        return fetchWikidataCoords(data.wikibase_item, pageTitle, desc, thumb);
+      // Get exactly 5 complete sentences
+      var sentences = _extractSentences(desc, 5);
+
+      // Step 2: Try to get a polygon shape via Wikidata → OSM
+      if(wikidataId){
+        _fetchOsmViaWikidata(wikidataId, function(osmGeom){
+          if(osmGeom){
+            _addWikiFeature(pageTitle, lat||0, lng||0, sentences, thumb, osmGeom);
+          } else if(lat && lng){
+            // Step 3: Try Nominatim
+            _fetchNominatim(pageTitle, lat, lng, function(nomGeom){
+              _addWikiFeature(pageTitle, lat, lng, sentences, thumb, nomGeom);
+            });
+          } else {
+            _addWikiFeature(pageTitle, 0, 0, sentences, thumb, null);
+          }
+        });
+      } else if(lat && lng){
+        _fetchNominatim(pageTitle, lat, lng, function(nomGeom){
+          _addWikiFeature(pageTitle, lat, lng, sentences, thumb, nomGeom);
+        });
+      } else {
+        _addWikiFeature(pageTitle, 0, 0, sentences, thumb, null);
       }
-      showWikiResult(lat, lng, pageTitle, desc, thumb, data.type || 'standard');
     })
-    .catch(function(e){
-      inp.style.borderColor = 'var(--red)';
-      panelContent.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>'+
-        '<div>Could not locate "'+esc(title)+'" on Wikipedia.</div>'+
-        '<div class="empty-hint">Check the URL or try a different spelling.</div></div>';
+    .catch(function(){
+      inp.style.opacity='1'; inp.disabled=false;
+      inp.style.borderColor='var(--red)';
+      setTimeout(function(){ inp.style.borderColor=''; },2000);
     });
 }
 
-function fetchWikidataCoords(wikidataId, title, desc, thumb){
-  if(!wikidataId){
-    document.getElementById('panelContent').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">📍</div>'+
-      '<div>No coordinates found for this article.</div>'+
-      '<div class="empty-hint">Try searching by name instead.</div></div>';
-    return;
-  }
-  // Wikidata SPARQL for coordinates
-  var sparql = 'SELECT ?coord WHERE { wd:'+wikidataId+' wdt:P625 ?coord. }';
+// Extract exactly N complete sentences from text
+function _extractSentences(text, n){
+  if(!text) return '';
+  // Split on sentence-ending punctuation followed by space or end
+  var parts = text.match(/[^.!?]+[.!?]+/g) || [text];
+  return parts.slice(0, n).join(' ').trim();
+}
+
+// Fetch OSM relation via Wikidata P402 (OSM relation ID)
+function _fetchOsmViaWikidata(wikidataId, cb){
+  var sparql = 'SELECT ?osm WHERE { wd:'+wikidataId+' wdt:P402 ?osm. }';
   var url = 'https://query.wikidata.org/sparql?format=json&query='+encodeURIComponent(sparql);
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(data){
-      var results = data.results && data.results.bindings;
-      if(!results || !results.length) throw new Error('No coords');
-      var coordStr = results[0].coord.value; // "Point(lng lat)"
-      var m = coordStr.match(/Point\(([0-9.-]+)\s+([0-9.-]+)\)/);
-      if(!m) throw new Error('Parse fail');
-      showWikiResult(parseFloat(m[2]), parseFloat(m[1]), title, desc, thumb, 'standard');
+      var bindings = data.results && data.results.bindings;
+      if(!bindings || !bindings.length){ cb(null); return; }
+      var osmId = bindings[0].osm.value;
+      // Fetch polygon from Overpass API
+      _fetchOverpassPolygon(osmId, cb);
     })
-    .catch(function(){
-      document.getElementById('panelContent').innerHTML =
-        '<div class="empty-state"><div class="empty-icon">📍</div>'+
-        '<div>No coordinates found for this article.</div></div>';
-    });
+    .catch(function(){ cb(null); });
 }
 
-function showWikiResult(lat, lng, title, desc, thumb, type){
-  // Add to GEO_FEATURES dynamically
-  var key = 'wiki_'+normName(title);
+// Fetch polygon from Overpass API for an OSM relation ID
+function _fetchOverpassPolygon(relationId, cb){
+  var query = '[out:json];relation('+relationId+');out geom;';
+  var url = 'https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query);
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data.elements || !data.elements.length){ cb(null); return; }
+      var el = data.elements[0];
+      // Build a rough polygon from the outer members
+      var geom = _osmRelationToGeom(el);
+      cb(geom);
+    })
+    .catch(function(){ cb(null); });
+}
+
+// Convert OSM relation element to a GeoJSON-like geometry
+function _osmRelationToGeom(el){
+  if(!el.members) return null;
+  var outerRings = [];
+  el.members.forEach(function(m){
+    if(m.type==='way' && m.role==='outer' && m.geometry){
+      var ring = m.geometry.map(function(pt){ return [pt.lon, pt.lat]; });
+      outerRings.push(ring);
+    }
+  });
+  if(!outerRings.length) return null;
+  if(outerRings.length===1) return {type:'Polygon', coordinates:[outerRings[0]]};
+  return {type:'MultiPolygon', coordinates:outerRings.map(function(r){return [r];})};
+}
+
+// Fetch polygon from OSM Nominatim
+function _fetchNominatim(name, lat, lng, cb){
+  // Nominatim search with polygon output
+  var url = 'https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(name)+
+    '&format=json&polygon_geojson=1&limit=1&viewbox='+(lng-5)+','+(lat+5)+','+(lng+5)+','+(lat-5)+'&bounded=0';
+  fetch(url, {headers:{'Accept-Language':'en'}})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data || !data.length){ cb(null); return; }
+      var gj = data[0].geojson;
+      // Only use polygon results (not just a point)
+      if(gj && (gj.type==='Polygon'||gj.type==='MultiPolygon')){
+        cb(gj);
+      } else {
+        cb(null);
+      }
+    })
+    .catch(function(){ cb(null); });
+}
+
+// Add a Wikipedia-sourced feature to the panel and globe
+// Integrates alongside existing highlights — never wipes them
+function _addWikiFeature(title, lat, lng, sentences, thumb, geom){
+  var inp = document.getElementById('wikiInput');
+  if(inp){ inp.style.opacity='1'; inp.disabled=false; inp.value=''; }
+
+  // Unique key for this wiki feature
+  var key = 'wiki_'+normName(title).replace(/\s+/g,'_').slice(0,40)+'_'+Date.now();
+
+  // Register in GEO_FEATURES so the highlight system can paint it
+  var ftype = geom ? (
+    (geom.type==='Polygon'||geom.type==='MultiPolygon') ? 'region' : 'river'
+  ) : 'mountain';
+
   GEO_FEATURES[key] = {
-    name: title, type: 'region', region: 'Wikipedia',
+    name: title, type: ftype, region: 'Wikipedia',
     lat: lat, lng: lng, zoom: 5.5,
-    desc: desc.slice(0,300)+(desc.length>300?'…':''),
+    desc: sentences,
     stats: {'Source':'Wikipedia', 'Coordinates': lat.toFixed(4)+'°, '+lng.toFixed(4)+'°'},
-    related: [],
-    highlights: [],
-    shape: {type:'point'}
+    related: [], highlights: [],
+    shape: geom ? {type:'geojson', geom:geom} : {type:'point'},
+    _wikiThumb: thumb
   };
 
-  // Rebuild search index to include new entry
+  // Add to search index
   SEARCH_INDEX.push({
-    key:key, name:title, type:'region', region:'Wikipedia', country:'',
-    searchStr:(title+' wikipedia region').toLowerCase()
+    key:key, name:title, type:ftype, region:'Wikipedia', country:'',
+    searchStr:(title+' wikipedia').toLowerCase()
   });
 
-  // Show info panel
-  var thumbHtml = thumb ? '<img src="'+thumb+'" style="width:100%;border-radius:6px;margin-bottom:8px;max-height:120px;object-fit:cover;" />' : '';
-  document.getElementById('panelContent').innerHTML =
-    '<div class="feat-card">'+thumbHtml+
-    '<div class="feat-name">'+esc(title)+'</div>'+
-    '<div class="feat-type-badge">🌐 Wikipedia</div>'+
-    '<div class="feat-desc">'+esc(desc.slice(0,250))+'…</div>'+
-    '<div class="feat-stats">'+
-    '<div class="stat-box"><div class="stat-label">Latitude</div><div class="stat-val">'+lat.toFixed(4)+'°</div></div>'+
-    '<div class="stat-box"><div class="stat-label">Longitude</div><div class="stat-val">'+lng.toFixed(4)+'°</div></div>'+
-    '</div>'+
-    '</div>';
+  // Pick a distinct color for this feature
+  var wikiColors = ['#f0c060','#60c0f0','#c060f0','#60f0a0','#f06060','#a0f060'];
+  var usedCount = Object.keys(activeChips).length;
+  var col = wikiColors[usedCount % wikiColors.length];
 
-  // Fly to location
-  autoRotate = false;
-  updateAutoRotateBtn();
-  document.getElementById('toolbar').style.display = 'block';
-  document.getElementById('exportBar').style.display = 'flex';
+  // Store highlight
+  activeHighlights[key] = {color:col, opacity:0.6};
+  activeChips[key] = col;
 
-  // Fly and mark
-  flyTo_(lat, lng, 5.5, function(){
-    drawFeatureHighlight(key, annotColor, 0.7);
-    activeChips[key] = annotColor;
-  });
+  // Re-render the panel to include new feature (appended alongside others)
+  _refreshWikiPanel();
 
-  document.getElementById('wikiInput').value = '';
+  // Fly to location and repaint
+  if(lat !== 0 || lng !== 0){
+    autoRotate = false;
+    updateAutoRotateBtn();
+    document.getElementById('toolbar').style.display = 'block';
+    document.getElementById('exportBar').style.display = 'flex';
+    flyTo_(lat, lng, 5.5, function(){ scheduleRepaint(); });
+  } else {
+    scheduleRepaint();
+  }
 }
+
+// Render all active wiki features in the panel (appended, not replacing)
+function _refreshWikiPanel(){
+  // Find all wiki features in activeHighlights
+  var wikiEntries = Object.keys(activeHighlights).filter(function(k){ return k.indexOf('wiki_')===0; });
+  if(!wikiEntries.length) return;
+
+  // Build a section to append or replace in the panel
+  var panelContent = document.getElementById('panelContent');
+  var existing = panelContent.innerHTML;
+
+  // Remove any existing wiki section
+  var wikiSection = document.getElementById('wikiSection');
+  if(wikiSection) wikiSection.remove();
+
+  // Build new wiki section
+  var html = '<div id="wikiSection" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">';
+  html += '<div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px;">🌐 Wikipedia Features</div>';
+
+  wikiEntries.forEach(function(key){
+    var f = GEO_FEATURES[key];
+    if(!f) return;
+    var hi = activeHighlights[key];
+    var col = hi ? hi.color : '#f0c060';
+    var rop = hi ? Math.round(hi.opacity*100) : 60;
+    var safeKey = key.replace(/'/g,"\'");
+
+    html += '<div class="feat-card" style="margin-bottom:8px;padding:10px;background:var(--surface2);border-radius:var(--r-sm);border-left:3px solid '+col+';">';
+    // Thumbnail
+    if(f._wikiThumb){
+      html += '<img src="'+f._wikiThumb+'" style="width:100%;border-radius:4px;margin-bottom:6px;max-height:90px;object-fit:cover;" />';
+    }
+    html += '<div style="font-size:0.82rem;font-weight:500;color:var(--text);margin-bottom:4px;">'+esc(f.name)+'</div>';
+    html += '<div style="font-size:0.72rem;color:var(--muted);line-height:1.5;margin-bottom:6px;">'+esc(f.desc)+'</div>';
+    // Opacity slider
+    html += '<div class="opacity-row" style="margin:4px 0;">';
+    html += '<span class="opacity-label">Opacity</span>';
+    html += '<input type="range" class="opacity-slider" min="5" max="95" value="'+rop+'" ';
+    html += 'oninput="setHighlightOpacity(this,\''+safeKey+'\',this.value/100)" />';
+    html += '<span class="opacity-val">'+rop+'%</span>';
+    html += '</div>';
+    // Remove button
+    html += '<button onclick="removeWikiFeature(\''+safeKey+'\');" style="font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;margin-top:4px;">✕ Remove</button>';
+    html += '</div>';
+  });
+
+  html += '</div>';
+
+  // Append to existing panel content (preserves search results above)
+  panelContent.insertAdjacentHTML('beforeend', html);
+}
+
+function removeWikiFeature(key){
+  delete activeHighlights[key];
+  delete activeChips[key];
+  delete GEO_FEATURES[key];
+  scheduleRepaint();
+  _refreshWikiPanel();
+}
+
 
 function updateAutoRotateBtn(){
   var btn = document.getElementById('autoRotBtn');
