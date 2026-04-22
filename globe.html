@@ -3673,21 +3673,29 @@ function loadNaturalEarthData(){
   fetchGJ('india-soi.geojson', function(gj){
     if(!gj || !gj.features) return;
     neIndiaSoI = gj;
-    // Index all features in SoI file
+    // Index SoI features by known name fields ONLY
+    // Do NOT index every string property — that causes wrong feature matches
+    var soiNameFields = ['NAME','name','Name','STATE','state','ST_NM',
+                         'DISTRICT','district','REGION','region','GEO_NAME'];
     gj.features.forEach(function(feat){
       var p = feat.properties || {};
       var geom = feat.geometry;
       if(!geom) return;
-      // Index by every string property
-      Object.keys(p).forEach(function(pk){
-        if(typeof p[pk]==='string' && p[pk].length >= 2){
-          var k=normName(p[pk]);
-          if(k && !neIndiaSoIIndex[k]) neIndiaSoIIndex[k]=feat;
+      soiNameFields.forEach(function(fld){
+        if(p[fld] && typeof p[fld]==='string'){
+          var k = normName(p[fld]);
+          if(k && k.length >= 2 && !neIndiaSoIIndex[k]) neIndiaSoIIndex[k]=feat;
         }
       });
-      // The whole-country feature (largest polygon) becomes the India outline
-      if(!neIndiaSoIIndex['india']) neIndiaSoIIndex['india']=feat;
+      // The top-level India polygon — use the feature with largest area or first polygon
+      if(!neIndiaSoIIndex['india'] && geom.type==='MultiPolygon'){
+        neIndiaSoIIndex['india'] = feat;
+      }
     });
+    // If no MultiPolygon found, use first feature as India
+    if(!neIndiaSoIIndex['india'] && gj.features.length){
+      neIndiaSoIIndex['india'] = gj.features[0];
+    }
     console.log('SoI boundary loaded: '+Object.keys(neIndiaSoIIndex).length+' features');
     if(Object.keys(activeHighlights).length) scheduleRepaint();
   });
@@ -4076,11 +4084,14 @@ function drawGeoJSONGeom(ctx, geom, W, H, mode){
 // Paint a land polygon (from any GeoJSON feature) onto offscreen canvas,
 // clip to land mask, composite onto main texture
 function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
-  // Reuse shared offscreen canvas — no allocation per call
+  // Paint GeoJSON geometry — with optional land-mask clipping
+  // Strategy: always draw to a separate offscreen, then clip if mask available,
+  // then composite. If mask not ready, composite unclipped (visible immediately).
   var offC = _getOffscreen();
   var off = offC.getContext('2d');
   off.clearRect(0, 0, W, H);
-  off.fillStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
+  off.globalCompositeOperation = 'source-over'; // reset from any previous use
+  off.fillStyle = 'rgba('+col.r+','+col.g+','+col.b+',1)';
 
   if(isRingArray){
     off.beginPath();
@@ -4088,31 +4099,31 @@ function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
       var p=lngLatToTex(c[0],c[1],W,H);
       i===0?off.moveTo(p[0],p[1]):off.lineTo(p[0],p[1]);
     });
-    off.closePath(); off.fill();
+    off.closePath();
+    off.fill();
   } else {
     drawGeoJSONGeom(off, geomOrRing, W, H, 'fill');
   }
 
-  // Clip to land — always paint something; clipping is enhancement not requirement
-  if(_landMaskCanvas && _landMaskCanvas.width===W && _landMaskCanvas.height===H){
-    // Use pre-built cache (fast path)
-    off.globalCompositeOperation='destination-in';
-    off.drawImage(_landMaskCanvas, 0, 0);
-  } else if(neCoastlines){
-    // Build cache now (first time or size changed), then use it
+  // Apply land mask if available and correct size
+  var maskReady = _landMaskCanvas &&
+                  _landMaskCanvas.width===W &&
+                  _landMaskCanvas.height===H;
+  if(!maskReady && neCoastlines){
     _buildLandMaskCache();
-    if(_landMaskCanvas){
-      off.globalCompositeOperation='destination-in';
-      off.drawImage(_landMaskCanvas, 0, 0);
-    }
-    // else: paint unclipped — visible but may slightly extend to ocean
+    maskReady = !!_landMaskCanvas;
   }
-  // No neCoastlines yet: paint unclipped (highlight visible immediately)
+  if(maskReady){
+    off.globalCompositeOperation = 'destination-in';
+    off.drawImage(_landMaskCanvas, 0, 0);
+  }
+  // If mask not available: paint unclipped — always visible
 
+  // Composite onto main texture
   texCtx.save();
-  texCtx.globalAlpha=opacity*0.42;
-  texCtx.globalCompositeOperation='source-over';
-  texCtx.drawImage(offC,0,0);
+  texCtx.globalAlpha = opacity * 0.42;
+  texCtx.globalCompositeOperation = 'source-over';
+  texCtx.drawImage(offC, 0, 0);
   texCtx.restore();
 }
 
@@ -4121,7 +4132,8 @@ function paintWaterPolygon(geomOrRing, col, opacity, W, H, isRingArray){
   var offC = _getOffscreen();
   var off = offC.getContext('2d');
   off.clearRect(0, 0, W, H);
-  off.fillStyle='rgba('+col.r+','+col.g+','+col.b+',1)';
+  off.globalCompositeOperation = 'source-over';
+  off.fillStyle = 'rgba('+col.r+','+col.g+','+col.b+',1)';
 
   if(isRingArray){
     off.beginPath();
@@ -4129,25 +4141,30 @@ function paintWaterPolygon(geomOrRing, col, opacity, W, H, isRingArray){
       var p=lngLatToTex(c[0],c[1],W,H);
       i===0?off.moveTo(p[0],p[1]):off.lineTo(p[0],p[1]);
     });
-    off.closePath(); off.fill();
+    off.closePath();
+    off.fill();
   } else {
     drawGeoJSONGeom(off, geomOrRing, W, H, 'fill');
   }
 
   // Remove land pixels using cached mask
-  if(_landMaskCanvas && _landMaskCanvas.width===W && _landMaskCanvas.height===H){
-    off.globalCompositeOperation='destination-out';
-    off.drawImage(_landMaskCanvas, 0, 0);
-  } else if(neCoastlines){
-    off.globalCompositeOperation='destination-out';
-    off.fillStyle='rgba(0,0,0,1)';
-    drawNELand(off,W,H);
+  var maskReady = _landMaskCanvas &&
+                  _landMaskCanvas.width===W &&
+                  _landMaskCanvas.height===H;
+  if(!maskReady && neCoastlines){
+    _buildLandMaskCache();
+    maskReady = !!_landMaskCanvas;
   }
+  if(maskReady){
+    off.globalCompositeOperation = 'destination-out';
+    off.drawImage(_landMaskCanvas, 0, 0);
+  }
+  // If mask not available: paint unclipped (still visible)
 
   texCtx.save();
-  texCtx.globalAlpha=opacity*0.42;
-  texCtx.globalCompositeOperation='source-over';
-  texCtx.drawImage(offC,0,0);
+  texCtx.globalAlpha = opacity * 0.42;
+  texCtx.globalCompositeOperation = 'source-over';
+  texCtx.drawImage(offC, 0, 0);
   texCtx.restore();
 }
 
@@ -4266,11 +4283,19 @@ function paintFeatureOnTexture(featureKey, color, opacity){
   }
 
   if(shape.type==='polygon'){
-    if(isWater){
-      paintWaterPolygon(shape.ring, col, opacity, W, H, true);
-    } else {
-      paintLandPolygon(shape.ring, col, opacity, W, H, true);
-    }
+    // Paint directly onto texCtx — bypass all offscreen canvas complexity
+    // This ALWAYS shows the highlight regardless of land mask status
+    texCtx.save();
+    texCtx.globalAlpha = opacity * 0.38;
+    texCtx.fillStyle = 'rgba('+col.r+','+col.g+','+col.b+',1)';
+    texCtx.beginPath();
+    shape.ring.forEach(function(c,i){
+      var p = lngLatToTex(c[0],c[1],W,H);
+      i===0 ? texCtx.moveTo(p[0],p[1]) : texCtx.lineTo(p[0],p[1]);
+    });
+    texCtx.closePath();
+    texCtx.fill();
+    texCtx.restore();
   } else if(shape.type==='polyline'){
     // Fallback river using hand-coded coords
     texCtx.save();
