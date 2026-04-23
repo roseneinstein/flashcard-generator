@@ -223,6 +223,8 @@ input{font-family:inherit;}
 .opacity-slider{flex:1;height:3px;accent-color:var(--accent);cursor:pointer;min-width:40px;}
 .chip-opacity{width:48px;height:3px;accent-color:var(--accent);cursor:pointer;margin-left:5px;flex-shrink:0;vertical-align:middle;}
 
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* ── Mobile ── */
 @media(max-width:700px){
   .panel{width:100%;position:absolute;bottom:0;left:0;right:0;
@@ -4125,6 +4127,8 @@ function paintLandPolygon(geomOrRing, col, opacity, W, H, isRingArray){
   texCtx.globalCompositeOperation = 'source-over';
   texCtx.drawImage(offC, 0, 0);
   texCtx.restore();
+  // Thin black border drawn from original polygon path (not clipped)
+  _strokePolygonBorder(geomOrRing, isRingArray, W, H, opacity);
 }
 
 // Paint a water polygon, clip to ocean (remove land)
@@ -4165,6 +4169,46 @@ function paintWaterPolygon(geomOrRing, col, opacity, W, H, isRingArray){
   texCtx.globalAlpha = opacity * 0.42;
   texCtx.globalCompositeOperation = 'source-over';
   texCtx.drawImage(offC, 0, 0);
+  texCtx.restore();
+  _strokePolygonBorder(geomOrRing, isRingArray, W, H, opacity);
+}
+
+// Draw a thin black border outline for any polygon highlight
+function _strokePolygonBorder(geomOrRing, isRingArray, W, H, opacity){
+  texCtx.save();
+  texCtx.globalAlpha = Math.min(0.72, opacity * 1.1);
+  texCtx.strokeStyle = 'rgba(0,0,0,0.68)';
+  texCtx.lineWidth = Math.max(1.5, W / 2200);
+  texCtx.lineJoin = 'round';
+  texCtx.lineCap = 'round';
+  if(isRingArray){
+    texCtx.beginPath();
+    geomOrRing.forEach(function(c,i){
+      var p=lngLatToTex(c[0],c[1],W,H);
+      i===0?texCtx.moveTo(p[0],p[1]):texCtx.lineTo(p[0],p[1]);
+    });
+    texCtx.closePath();
+    texCtx.stroke();
+  } else {
+    // GeoJSON geometry
+    var geom = geomOrRing;
+    if(!geom) { texCtx.restore(); return; }
+    var polys = geom.type==='Polygon' ? [geom.coordinates]
+              : geom.type==='MultiPolygon' ? geom.coordinates : null;
+    if(polys){
+      polys.forEach(function(poly){
+        poly.forEach(function(ring){
+          texCtx.beginPath();
+          ring.forEach(function(coord,i){
+            var pt=lngLatToTex(coord[0],coord[1],W,H);
+            i===0?texCtx.moveTo(pt[0],pt[1]):texCtx.lineTo(pt[0],pt[1]);
+          });
+          texCtx.closePath();
+          texCtx.stroke();
+        });
+      });
+    }
+  }
   texCtx.restore();
 }
 
@@ -4284,8 +4328,8 @@ function paintFeatureOnTexture(featureKey, color, opacity){
 
   if(shape.type==='polygon'){
     // Paint directly onto texCtx — bypass all offscreen canvas complexity
-    // This ALWAYS shows the highlight regardless of land mask status
     texCtx.save();
+    // Translucent fill
     texCtx.globalAlpha = opacity * 0.38;
     texCtx.fillStyle = 'rgba('+col.r+','+col.g+','+col.b+',1)';
     texCtx.beginPath();
@@ -4295,6 +4339,12 @@ function paintFeatureOnTexture(featureKey, color, opacity){
     });
     texCtx.closePath();
     texCtx.fill();
+    // Thin black border — always visible regardless of fill color
+    texCtx.globalAlpha = Math.min(0.75, opacity * 1.1);
+    texCtx.strokeStyle = 'rgba(0,0,0,0.7)';
+    texCtx.lineWidth = Math.max(1.5, W / 2200);
+    texCtx.lineJoin = 'round';
+    texCtx.stroke();
     texCtx.restore();
   } else if(shape.type==='polyline'){
     // Fallback river using hand-coded coords
@@ -5064,20 +5114,45 @@ function getEmptyState(){
 // Wikipedia results integrate into the panel ALONGSIDE other features
 // ════════════════════════════════════════════════════════════════
 
+// Progress bar element for wiki search
+var _wikiProgressEl = null;
+function _showWikiProgress(msg){
+  if(!_wikiProgressEl){
+    _wikiProgressEl = document.createElement('div');
+    _wikiProgressEl.id = 'wikiProgress';
+    _wikiProgressEl.style.cssText = [
+      'position:fixed','bottom:16px','left:50%','transform:translateX(-50%)',
+      'background:var(--surface)','border:1px solid var(--border)','border-radius:var(--r)',
+      'padding:10px 18px','z-index:999','font-size:0.75rem','color:var(--text)',
+      'display:flex','align-items:center','gap:10px','box-shadow:0 4px 20px rgba(0,0,0,0.4)',
+      'min-width:260px'
+    ].join(';');
+    document.body.appendChild(_wikiProgressEl);
+  }
+  _wikiProgressEl.innerHTML =
+    '<div style="width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></div>' +
+    '<div><div style="font-weight:500;color:var(--accent);">Locating on globe</div>' +
+    '<div style="color:var(--muted);font-size:0.68rem;margin-top:1px;">'+msg+'</div></div>';
+  _wikiProgressEl.style.display = 'flex';
+}
+function _hideWikiProgress(){
+  if(_wikiProgressEl) _wikiProgressEl.style.display = 'none';
+}
+
 function wikiSearch(){
   var inp = document.getElementById('wikiInput');
   if(!inp) return;
   var raw = inp.value.trim();
-  if(!raw){ return; }
+  if(!raw) return;
 
-  // Extract article title from URL or use as search term
+  // Extract article title from URL or plain text
   var titleMatch = raw.match(/wikipedia\.org\/wiki\/([^#?]+)/);
   var title = titleMatch ? decodeURIComponent(titleMatch[1].replace(/_/g,' ')) : raw;
 
   inp.style.opacity = '0.5';
   inp.disabled = true;
+  _showWikiProgress('Fetching from Wikipedia…');
 
-  // Step 1: Wikipedia summary API
   fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g,'_')))
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(data){
@@ -5087,17 +5162,15 @@ function wikiSearch(){
       var pageTitle = data.title || title;
       var thumb = data.thumbnail ? data.thumbnail.source : null;
       var wikidataId = data.wikibase_item || null;
-
-      // Get exactly 5 complete sentences
       var sentences = _extractSentences(desc, 5);
 
-      // Step 2: Try to get a polygon shape via Wikidata → OSM
       if(wikidataId){
+        _showWikiProgress('Looking up boundary via Wikidata…');
         _fetchOsmViaWikidata(wikidataId, function(osmGeom){
           if(osmGeom){
             _addWikiFeature(pageTitle, lat||0, lng||0, sentences, thumb, osmGeom);
           } else if(lat && lng){
-            // Step 3: Try Nominatim
+            _showWikiProgress('Fetching shape from OpenStreetMap…');
             _fetchNominatim(pageTitle, lat, lng, function(nomGeom){
               _addWikiFeature(pageTitle, lat, lng, sentences, thumb, nomGeom);
             });
@@ -5106,6 +5179,7 @@ function wikiSearch(){
           }
         });
       } else if(lat && lng){
+        _showWikiProgress('Fetching shape from OpenStreetMap…');
         _fetchNominatim(pageTitle, lat, lng, function(nomGeom){
           _addWikiFeature(pageTitle, lat, lng, sentences, thumb, nomGeom);
         });
@@ -5114,6 +5188,7 @@ function wikiSearch(){
       }
     })
     .catch(function(){
+      _hideWikiProgress();
       inp.style.opacity='1'; inp.disabled=false;
       inp.style.borderColor='var(--red)';
       setTimeout(function(){ inp.style.borderColor=''; },2000);
@@ -5198,6 +5273,7 @@ function _fetchNominatim(name, lat, lng, cb){
 // Add a Wikipedia-sourced feature to the panel and globe
 // Integrates alongside existing highlights — never wipes them
 function _addWikiFeature(title, lat, lng, sentences, thumb, geom){
+  _hideWikiProgress(); // dismiss progress bar
   var inp = document.getElementById('wikiInput');
   if(inp){ inp.style.opacity='1'; inp.disabled=false; inp.value=''; }
 
@@ -5278,7 +5354,8 @@ function _refreshWikiPanel(){
     html += '<div class="feat-card" style="margin-bottom:8px;padding:10px;background:var(--surface2);border-radius:var(--r-sm);border-left:3px solid '+col+';">';
     // Thumbnail
     if(f._wikiThumb){
-      html += '<img src="'+f._wikiThumb+'" style="width:100%;border-radius:4px;margin-bottom:6px;max-height:90px;object-fit:cover;" />';
+      // Show full image — no cropping, natural aspect ratio
+      html += '<img src="'+f._wikiThumb+'" style="width:100%;border-radius:4px;margin-bottom:6px;height:auto;display:block;" />';
     }
     html += '<div style="font-size:0.82rem;font-weight:500;color:var(--text);margin-bottom:4px;">'+esc(f.name)+'</div>';
     html += '<div style="font-size:0.72rem;color:var(--muted);line-height:1.5;margin-bottom:6px;">'+esc(f.desc)+'</div>';
@@ -5304,8 +5381,19 @@ function removeWikiFeature(key){
   delete activeHighlights[key];
   delete activeChips[key];
   delete GEO_FEATURES[key];
+  // Remove from search index so it can't be found after deletion
+  for(var si=SEARCH_INDEX.length-1; si>=0; si--){
+    if(SEARCH_INDEX[si].key === key) SEARCH_INDEX.splice(si, 1);
+  }
   scheduleRepaint();
-  _refreshWikiPanel();
+  // Rebuild wiki section — if no wiki features left, remove the section entirely
+  var wikiKeys = Object.keys(activeHighlights).filter(function(k){ return k.indexOf('wiki_')===0; });
+  if(wikiKeys.length === 0){
+    var sec = document.getElementById('wikiSection');
+    if(sec) sec.remove();
+  } else {
+    _refreshWikiPanel();
+  }
 }
 
 
