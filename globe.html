@@ -254,7 +254,7 @@ input{font-family:inherit;}
 .loading-content{
   position:relative;z-index:2;
   display:flex;flex-direction:column;align-items:center;
-  gap:20px;
+  gap:clamp(6px,2vw,20px);
   animation:loadFadeUp 0.9s cubic-bezier(0.16,1,0.3,1) both;
 }
 @keyframes loadFadeUp{
@@ -263,34 +263,35 @@ input{font-family:inherit;}
 }
 /* Logo row */
 .loading-logo-row{
-  display:flex;align-items:center;gap:18px;margin-bottom:4px;
+  display:flex;align-items:center;gap:clamp(6px,2vw,18px);margin-bottom:4px;
 }
 .loading-logo-img{
-  width:72px;height:72px;object-fit:contain;
+  width:clamp(28px,7vw,72px);height:clamp(28px,7vw,72px);object-fit:contain;
   filter:drop-shadow(0 2px 8px rgba(0,0,0,0.6));
   opacity:0.95;
 }
 .loading-brand{
   font-family:'Instrument Serif',serif;
-  font-size:3.3rem;
+  font-size:clamp(1.35rem,4.5vw,3.3rem);
   color:#e8d5b0;
   letter-spacing:-0.01em;
+  white-space:nowrap;
   text-shadow:0 2px 16px rgba(0,0,0,0.7);
 }
 /* Atlas title */
 .loading-title{
   font-family:'Geist',system-ui,sans-serif;
-  font-size:1.64rem;
+  font-size:clamp(0.55rem,1.8vw,1.64rem);
   font-weight:400;
-  letter-spacing:0.5em;
+  letter-spacing:clamp(0.1em,0.3vw,0.5em);
   text-transform:uppercase;
   color:rgba(232,213,176,0.75);
   text-shadow:0 2px 12px rgba(0,0,0,0.8);
-  margin-bottom:48px;
+  margin-bottom:clamp(14px,3.5vw,48px);
 }
 /* Progress bar */
 .loading-bar{
-  width:280px;height:2px;
+  width:clamp(120px,55vw,280px);height:2px;
   background:rgba(255,255,255,0.12);
   border-radius:1px;overflow:hidden;
 }
@@ -300,7 +301,7 @@ input{font-family:inherit;}
   box-shadow:0 0 6px rgba(232,213,176,0.5);
 }
 .loading-sub{
-  font-size:1.1rem;letter-spacing:0.18em;text-transform:uppercase;
+  font-size:clamp(0.5rem,1.5vw,1.1rem);letter-spacing:0.12em;text-transform:uppercase;
   color:rgba(255,255,255,0.35);margin-top:8px;
 }
 
@@ -312,14 +313,75 @@ input{font-family:inherit;}
 .chip-opacity{width:48px;height:3px;accent-color:var(--accent);cursor:pointer;margin-left:5px;flex-shrink:0;vertical-align:middle;}
 
 @keyframes spin{to{transform:rotate(360deg)}}
+.mob-handle{display:none;} /* shown only inside mobile @media */
 
 /* ── Mobile ── */
 @media(max-width:700px){
-  .panel{width:100%;position:absolute;bottom:0;left:0;right:0;
-    top:auto;height:48%;border-right:none;border-top:1px solid var(--border);}
-  #globeCanvas{bottom:48%;}
   :root{--panel:100vw;}
   .topbar-title,.topbar-sep{display:none;}
+
+  /* Layout block */
+  .layout{position:fixed;top:52px;bottom:0;left:0;right:0;display:block;}
+
+  /* Globe canvas: top half of the layout area */
+  #globeCanvas{
+    position:absolute;
+    top:0;left:0;right:0;
+    height:50%!important;   /* CSS caps it — Three.js respects !important */
+    width:100%!important;
+  }
+  #annotCanvas{
+    position:absolute;
+    top:0;left:0;right:0;
+    height:50%!important;
+    width:100%!important;
+    pointer-events:none;
+  }
+
+  /* Panel: bottom half */
+  .panel{
+    position:absolute;
+    bottom:0;left:0;right:0;top:50%;
+    width:100%;height:auto;
+    border-right:none;
+    border-top:1px solid var(--border);
+    border-radius:14px 14px 0 0;
+    overflow:hidden;
+    z-index:30;
+    transition:top .28s cubic-bezier(.4,0,.2,1);
+  }
+  /* Collapsed state — panel slides down to just handle */
+  .panel.mob-off{top:calc(100% - 44px);}
+
+  /* Drag handle (shown only on mobile) */
+  .mob-handle{
+    display:flex;align-items:center;justify-content:center;
+    height:44px;flex-shrink:0;cursor:pointer;position:relative;
+    border-bottom:1px solid var(--border);background:var(--surface);
+    -webkit-tap-highlight-color:transparent;user-select:none;
+  }
+  .mob-handle-bar{
+    width:36px;height:4px;border-radius:2px;background:var(--muted2);opacity:.5;
+  }
+  .mob-handle-hint{
+    position:absolute;left:50%;transform:translateX(-50%);
+    font-size:0.58rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;
+    opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap;
+  }
+  .panel.mob-off .mob-handle-bar{opacity:0;}
+  .panel.mob-off .mob-handle-hint{opacity:1;}
+  .mob-handle-btn{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    background:none;border:none;color:var(--muted);font-size:1.1rem;
+    cursor:pointer;padding:6px 8px;line-height:1;
+  }
+
+  /* Zoom buttons just above the panel */
+  .zoom-btns{
+    position:absolute;right:10px;
+    bottom:calc(50% + 8px);
+    transition:bottom .28s cubic-bezier(.4,0,.2,1);
+  }
 }
 </style>
 </head>
@@ -358,7 +420,13 @@ input{font-family:inherit;}
 
 <div class="layout" id="mainLayout" style="visibility:hidden;">
   <!-- Left Panel -->
-  <div class="panel">
+  <div class="panel" id="sidePanel">
+    <!-- Mobile handle (CSS hides on desktop) -->
+    <div class="mob-handle" onclick="mobToggle()">
+      <div class="mob-handle-bar"></div>
+      <span class="mob-handle-hint">Tap to expand</span>
+      <button class="mob-handle-btn" id="mobBtn">⌄</button>
+    </div>
     <!-- Search -->
     <div class="search-wrap" style="position:relative;">
       <div class="search-box">
@@ -3263,11 +3331,18 @@ function updateGlobeTheme(){
 }
 
 function onResize(){
-  var panel = document.querySelector('.panel');
-  var area = document.getElementById('ca') || document.querySelector('.layout');
-  var W = window.innerWidth - panel.offsetWidth;
-  var H = window.innerHeight - 52;
-  camera.aspect = W / H;
+  var mob = window.innerWidth <= 700;
+  var W, H, layoutH = window.innerHeight - 52;
+  if(mob){
+    W = window.innerWidth;
+    H = _mobOff ? layoutH - 44 : Math.round(layoutH * 0.50);
+  } else {
+    var panel = document.querySelector('.panel');
+    W = window.innerWidth - (panel ? panel.offsetWidth : 0);
+    H = layoutH;
+  }
+  W = Math.max(1,W); H = Math.max(1,H);
+  camera.aspect = W/H;
   camera.updateProjectionMatrix();
   renderer.setSize(W, H);
   resizeAnnotCanvas();
@@ -4516,21 +4591,14 @@ function setupAnnotCanvas(){
 }
 function resizeAnnotCanvas(){
   if(!annotC) return;
-  var panel = document.getElementById('sidePanel') || document.querySelector('.panel');
-  var isMob = window.innerWidth <= 700;
-  if(isMob){
-    var layoutH = window.innerHeight - 52;
-    annotC.width = window.innerWidth;
-    if(typeof _mobPanelState !== 'undefined' && _mobPanelState === 'collapsed'){
-      annotC.height = Math.max(1, layoutH - 44);
-    } else if(typeof _mobPanelState !== 'undefined' && _mobPanelState === 'expanded'){
-      annotC.height = Math.max(1, Math.round(layoutH * 0.20));
-    } else {
-      annotC.height = Math.max(1, Math.round(layoutH * 0.50));
-    }
+  var mob=window.innerWidth<=700, layoutH=window.innerHeight-52;
+  var panel=document.querySelector('.panel');
+  if(mob){
+    annotC.width=window.innerWidth;
+    annotC.height=Math.max(1,_mobOff?layoutH-44:Math.round(layoutH*.5));
   } else {
-    annotC.width = Math.max(1, window.innerWidth - (panel ? panel.offsetWidth : 0));
-    annotC.height = Math.max(1, window.innerHeight - 52);
+    annotC.width=Math.max(1,window.innerWidth-(panel?panel.offsetWidth:0));
+    annotC.height=Math.max(1,layoutH);
   }
   redrawAnnotations();
 }
@@ -5543,6 +5611,20 @@ function _dismissLoadingScreen(){
       });
     }, 900); // matches fade duration exactly
   }, 250);
+}
+
+/* ── Mobile panel collapse/expand ── */
+var _mobOff = false;
+function mobToggle(){
+  if(window.innerWidth > 700) return;
+  var panel = document.getElementById('sidePanel');
+  var btn   = document.getElementById('mobBtn');
+  var zb    = document.getElementById('zoomBtns');
+  _mobOff = !_mobOff;
+  if(panel){ panel.classList.toggle('mob-off', _mobOff); }
+  if(btn)  { btn.textContent = _mobOff ? '⌃' : '⌄'; }
+  if(zb)   { zb.style.bottom = _mobOff ? '54px' : 'calc(50% + 8px)'; }
+  setTimeout(onResize, 300);
 }
 
 function updateAutoRotateBtn(){
