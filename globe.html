@@ -45,8 +45,10 @@ input{font-family:inherit;}
   padding:5px 11px;color:var(--muted);font-size:0.7rem;letter-spacing:0.04em;
   text-transform:uppercase;transition:all .18s;display:flex;align-items:center;gap:5px;}
 .topbar-back:hover{border-color:var(--border-h);color:var(--text);}
-.topbar-logo{font-family:'Instrument Serif',serif;font-size:1.15rem;color:var(--accent);
-  letter-spacing:-0.02em;text-decoration:none;}
+.topbar-logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.topbar-logo-img{width:26px;height:26px;object-fit:contain;flex-shrink:0;}
+.topbar-logo-name{font-family:'Instrument Serif',serif;font-size:1.15rem;color:var(--accent);
+  letter-spacing:-0.02em;}
 .topbar-sep{color:var(--muted2);margin:0 6px;font-size:0.75rem;}
 .topbar-title{font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;}
 .topbar-r{display:flex;align-items:center;gap:8px;}
@@ -207,14 +209,83 @@ input{font-family:inherit;}
 
 /* ── Loading screen ── */
 .loading{
-  position:fixed;inset:0;z-index:500;background:var(--bg);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  position:fixed;inset:0;z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  overflow:hidden;
 }
-.loading-globe{font-size:3rem;animation:spin 3s linear infinite;}
-@keyframes spin{from{transform:rotateY(0deg);}to{transform:rotateY(360deg);}}
-.loading-text{font-family:'Instrument Serif',serif;font-size:1.1rem;color:var(--accent);font-style:italic;}
-.loading-bar{width:200px;height:2px;background:var(--surface2);border-radius:1px;overflow:hidden;}
-.loading-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;width:0%;}
+/* Earth photo background */
+.loading-bg{
+  position:absolute;inset:0;
+  background:url('https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg')
+    center/cover no-repeat;
+  filter:brightness(0.45) saturate(1.3);
+  transform:scale(1.04);
+  animation:loadBgPan 8s ease-in-out infinite alternate;
+}
+@keyframes loadBgPan{
+  from{transform:scale(1.04) translate(0,0);}
+  to{transform:scale(1.08) translate(-1%,-0.5%);}
+}
+/* Dark vignette overlay */
+.loading-vignette{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 80% at 50% 50%,
+    transparent 30%, rgba(0,0,0,0.55) 100%);
+  pointer-events:none;
+}
+/* Content */
+.loading-content{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;align-items:center;
+  gap:10px;
+  animation:loadFadeUp 0.9s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes loadFadeUp{
+  from{opacity:0;transform:translateY(22px);}
+  to{opacity:1;transform:translateY(0);}
+}
+/* Logo row */
+.loading-logo-row{
+  display:flex;align-items:center;gap:10px;margin-bottom:4px;
+}
+.loading-logo-img{
+  width:36px;height:36px;object-fit:contain;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,0.6));
+  opacity:0.95;
+}
+.loading-brand{
+  font-family:'Instrument Serif',serif;
+  font-size:1.65rem;
+  color:#e8d5b0;
+  letter-spacing:-0.01em;
+  text-shadow:0 2px 16px rgba(0,0,0,0.7);
+}
+/* Atlas title */
+.loading-title{
+  font-family:'Geist',system-ui,sans-serif;
+  font-size:0.82rem;
+  font-weight:400;
+  letter-spacing:0.42em;
+  text-transform:uppercase;
+  color:rgba(232,213,176,0.75);
+  text-shadow:0 2px 12px rgba(0,0,0,0.8);
+  margin-bottom:32px;
+}
+/* Progress bar */
+.loading-bar{
+  width:180px;height:1.5px;
+  background:rgba(255,255,255,0.12);
+  border-radius:1px;overflow:hidden;
+}
+.loading-fill{
+  height:100%;background:rgba(232,213,176,0.85);
+  border-radius:1px;transition:width .35s ease;width:0%;
+  box-shadow:0 0 6px rgba(232,213,176,0.5);
+}
+.loading-sub{
+  font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;
+  color:rgba(255,255,255,0.35);margin-top:8px;
+}
 
 .opacity-row{display:flex;align-items:center;gap:6px;margin:8px 0 2px;padding:6px 9px;
   background:var(--surface);border-radius:var(--r-sm);border:1px solid var(--border);}
@@ -237,18 +308,29 @@ input{font-family:inherit;}
 </head>
 <body>
 
-<!-- Loading -->
+<!-- Loading screen — cinematic earth splash -->
 <div class="loading" id="loading">
-  <div class="loading-globe">🌍</div>
-  <div class="loading-text">Preparing the Earth…</div>
-  <div class="loading-bar"><div class="loading-fill" id="loadFill"></div></div>
+  <div class="loading-bg"></div>
+  <div class="loading-vignette"></div>
+  <div class="loading-content">
+    <div class="loading-logo-row">
+      <img class="loading-logo-img" id="loadLogoImg" src="/icons/icon-dark-192.png" alt=""/>
+      <span class="loading-brand">CogniSwift</span>
+    </div>
+    <div class="loading-title">3 D &nbsp; E a r t h &nbsp; A t l a s</div>
+    <div class="loading-bar"><div class="loading-fill" id="loadFill"></div></div>
+    <div class="loading-sub">Initialising…</div>
+  </div>
 </div>
 
 <!-- Topbar -->
 <div class="topbar">
   <div class="topbar-left">
     <button class="topbar-back" onclick="goBack()">← Back</button>
-    <a href="/" class="topbar-logo">CogniSwift</a>
+    <a href="/" class="topbar-logo" id="logoLink">
+      <img class="topbar-logo-img" id="logoImg" src="/icons/icon-dark-192.png" alt="CogniSwift"/>
+      <span class="topbar-logo-name">CogniSwift</span>
+    </a>
     <span class="topbar-sep">|</span>
     <span class="topbar-title">3D Earth Atlas</span>
   </div>
@@ -354,6 +436,8 @@ function toggleTheme(){
   isDark = !isDark;
   document.body.classList.toggle('light', !isDark);
   document.getElementById('thmBtn').textContent = isDark ? '☀' : '🌙';
+  var li = document.getElementById('logoImg');
+  if(li) li.src = isDark ? '/icons/icon-dark-192.png' : '/icons/icon-light-192.png';
   updateGlobeTheme();
 }
 function goBack(){
@@ -5419,12 +5503,22 @@ document.addEventListener('click', function(e){
 // INIT
 // ══════════════════════════════════════════════════════════════════════
 window.addEventListener('load', function(){
+  // Set correct initial logos based on current theme
+  var li = document.getElementById('logoImg');
+  if(li) li.src = isDark ? '/icons/icon-dark-192.png' : '/icons/icon-light-192.png';
+  var ll = document.getElementById('loadLogoImg');
+  if(ll) ll.src = isDark ? '/icons/icon-dark-192.png' : '/icons/icon-light-192.png';
   var fill = document.getElementById('loadFill');
+  var sub = document.querySelector('.loading-sub');
   var progress = 0;
+  var steps = ['Initialising renderer…','Loading globe texture…','Preparing atlas…','Building world…'];
+  var stepIdx = 0;
   var loadInterval = setInterval(function(){
     progress = Math.min(90, progress + Math.random() * 15);
     fill.style.width = progress + '%';
-  }, 150);
+    stepIdx = Math.min(steps.length-1, Math.floor(progress/25));
+    if(sub) sub.textContent = steps[stepIdx];
+  }, 180);
 
   // Give Three.js time to set up
   setTimeout(function(){
@@ -5438,8 +5532,10 @@ window.addEventListener('load', function(){
     clearInterval(loadInterval);
     fill.style.width = '100%';
     setTimeout(function(){
-      document.getElementById('loading').style.opacity = '0';
-      document.getElementById('loading').style.transition = 'opacity 0.5s';
+      var ldg = document.getElementById('loading');
+      ldg.style.transition = 'opacity 0.7s ease';
+      ldg.style.opacity = '0';
+      if(sub) sub.textContent = 'Ready.';
       setTimeout(function(){ document.getElementById('loading').style.display = 'none'; }, 500);
     }, 300);
   }, 400);
