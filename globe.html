@@ -2786,12 +2786,12 @@ var customHlCounter = 0;
 
 function initGlobe(){
   var canvas = document.getElementById('globeCanvas');
-  var _panel = document.querySelector('.panel');
-  var _mob = window.innerWidth <= 700;
-  var W = _mob ? window.innerWidth
-               : (canvas.parentElement.offsetWidth - (_panel ? _panel.offsetWidth : 0));
-  var H = _mob ? window.innerHeight - 52 - Math.round(window.innerHeight * 0.52)
-               : canvas.parentElement.offsetHeight;
+  var _initPanel = document.getElementById('sidePanel') || document.querySelector('.panel');
+  var _initMob = window.innerWidth <= 700;
+  var W = _initMob ? window.innerWidth
+                   : (canvas.parentElement.offsetWidth - (_initPanel ? _initPanel.offsetWidth : 0));
+  var H = _initMob ? Math.round((window.innerHeight - 52) * 0.50)
+                   : canvas.parentElement.offsetHeight;
   W = Math.max(1, W); H = Math.max(1, H);
 
   scene = new THREE.Scene();
@@ -4516,16 +4516,21 @@ function setupAnnotCanvas(){
 }
 function resizeAnnotCanvas(){
   if(!annotC) return;
-  var panel = document.querySelector('.panel');
-  var isMobile = window.innerWidth <= 700;
-  if(isMobile){
+  var panel = document.getElementById('sidePanel') || document.querySelector('.panel');
+  var isMob = window.innerWidth <= 700;
+  if(isMob){
+    var layoutH = window.innerHeight - 52;
     annotC.width = window.innerWidth;
-    var panelH = (panel && !panel.classList.contains('collapsed'))
-               ? panel.offsetHeight : 44;
-    annotC.height = Math.max(1, window.innerHeight - 52 - panelH);
+    if(typeof _mobPanelState !== 'undefined' && _mobPanelState === 'collapsed'){
+      annotC.height = Math.max(1, layoutH - 44);
+    } else if(typeof _mobPanelState !== 'undefined' && _mobPanelState === 'expanded'){
+      annotC.height = Math.max(1, Math.round(layoutH * 0.20));
+    } else {
+      annotC.height = Math.max(1, Math.round(layoutH * 0.50));
+    }
   } else {
-    annotC.width = window.innerWidth - (panel ? panel.offsetWidth : 0);
-    annotC.height = window.innerHeight - 52;
+    annotC.width = Math.max(1, window.innerWidth - (panel ? panel.offsetWidth : 0));
+    annotC.height = Math.max(1, window.innerHeight - 52);
   }
   redrawAnnotations();
 }
