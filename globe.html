@@ -254,7 +254,7 @@ input{font-family:inherit;}
 .loading-content{
   position:relative;z-index:2;
   display:flex;flex-direction:column;align-items:center;
-  gap:10px;
+  gap:20px;
   animation:loadFadeUp 0.9s cubic-bezier(0.16,1,0.3,1) both;
 }
 @keyframes loadFadeUp{
@@ -263,16 +263,16 @@ input{font-family:inherit;}
 }
 /* Logo row */
 .loading-logo-row{
-  display:flex;align-items:center;gap:10px;margin-bottom:4px;
+  display:flex;align-items:center;gap:18px;margin-bottom:4px;
 }
 .loading-logo-img{
-  width:36px;height:36px;object-fit:contain;
+  width:72px;height:72px;object-fit:contain;
   filter:drop-shadow(0 2px 8px rgba(0,0,0,0.6));
   opacity:0.95;
 }
 .loading-brand{
   font-family:'Instrument Serif',serif;
-  font-size:1.65rem;
+  font-size:3.3rem;
   color:#e8d5b0;
   letter-spacing:-0.01em;
   text-shadow:0 2px 16px rgba(0,0,0,0.7);
@@ -280,17 +280,17 @@ input{font-family:inherit;}
 /* Atlas title */
 .loading-title{
   font-family:'Geist',system-ui,sans-serif;
-  font-size:0.82rem;
+  font-size:1.64rem;
   font-weight:400;
-  letter-spacing:0.42em;
+  letter-spacing:0.5em;
   text-transform:uppercase;
   color:rgba(232,213,176,0.75);
   text-shadow:0 2px 12px rgba(0,0,0,0.8);
-  margin-bottom:32px;
+  margin-bottom:48px;
 }
 /* Progress bar */
 .loading-bar{
-  width:180px;height:1.5px;
+  width:280px;height:2px;
   background:rgba(255,255,255,0.12);
   border-radius:1px;overflow:hidden;
 }
@@ -300,7 +300,7 @@ input{font-family:inherit;}
   box-shadow:0 0 6px rgba(232,213,176,0.5);
 }
 .loading-sub{
-  font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;
+  font-size:1.1rem;letter-spacing:0.18em;text-transform:uppercase;
   color:rgba(255,255,255,0.35);margin-top:8px;
 }
 
@@ -2757,6 +2757,7 @@ var scene, camera, renderer, globe, clouds, atmosphere;
 var raycaster, mouse;
 // Globe texture globals — repainted when highlights change
 var texCanvas, texCtx, globeTexture, globeMat;
+var _globeReadyFired = false; // ensures dismiss fires exactly once
 var realTexImage = null;        // cached real Earth image for repainting
 var activeHighlights = {};      // featureKey -> {color, opacity}
 var neCoastlines = null;        // NE 50m land polygons for coast-clipping
@@ -2849,6 +2850,8 @@ function initGlobe(){
       globeTexture.needsUpdate = true;
       // Repaint highlights on new base
       if(Object.keys(activeHighlights).length) scheduleRepaint();
+      // Signal that the high-quality globe is ready — dismiss loading screen
+      _dismissLoadingScreen();
       // Dim coast lines since real texture has own detail
       globeGroup.children.forEach(function(c){
         if(c.isLine && c.material && c.material.opacity !== undefined){
@@ -5498,6 +5501,32 @@ function removeWikiFeature(key){
 }
 
 
+// Called when high-quality Earth texture loads (or after 4s fallback)
+function _dismissLoadingScreen(){
+  if(_globeReadyFired) return; // fire exactly once
+  _globeReadyFired = true;
+  var fill = document.getElementById('loadFill');
+  var sub = document.querySelector('.loading-sub');
+  if(fill) fill.style.width = '100%';
+  if(sub) sub.textContent = 'Ready.';
+  // Short pause so user sees 100% bar before fade
+  setTimeout(function(){
+    var ldg = document.getElementById('loading');
+    if(!ldg) return;
+    ldg.style.transition = 'opacity 0.9s ease';
+    ldg.style.opacity = '0';
+    // Reveal globe AFTER the fade completes — never during it
+    setTimeout(function(){
+      ldg.style.display = 'none';
+      var toReveal = ['globeCanvas','annotCanvas','mainLayout','zoomBtns'];
+      toReveal.forEach(function(id){
+        var el = document.getElementById(id);
+        if(el) el.style.visibility = 'visible';
+      });
+    }, 900); // matches fade duration exactly
+  }, 250);
+}
+
 function updateAutoRotateBtn(){
   var btn = document.getElementById('autoRotBtn');
   if(!btn) return;
@@ -5555,31 +5584,16 @@ window.addEventListener('load', function(){
     if(sub) sub.textContent = steps[stepIdx];
   }, 180);
 
-  // Give Three.js time to set up
-  setTimeout(function(){
-    initGlobe();
-    setupAnnotCanvas();
-    setupAnnotInteractions();
-    buildColorPicker();
-    // Load Natural Earth data for precise coast-following highlights
-    loadNaturalEarthData();
+  // Initialise globe immediately — loading screen stays until texture is ready
+  initGlobe();
+  setupAnnotCanvas();
+  setupAnnotInteractions();
+  buildColorPicker();
+  loadNaturalEarthData();
 
-    clearInterval(loadInterval);
-    fill.style.width = '100%';
-    setTimeout(function(){
-      var ldg = document.getElementById('loading');
-      ldg.style.transition = 'opacity 0.8s ease';
-      ldg.style.opacity = '0';
-      if(sub) sub.textContent = 'Ready.';
-      // Reveal the globe and UI — only now, after loading screen is fading
-      var toReveal = ['globeCanvas','annotCanvas','mainLayout','zoomBtns'];
-      toReveal.forEach(function(id){
-        var el = document.getElementById(id);
-        if(el) el.style.visibility = 'visible';
-      });
-      setTimeout(function(){ document.getElementById('loading').style.display = 'none'; }, 800);
-    }, 300);
-  }, 400);
+  // Fallback: if real texture never loads (offline/blocked), dismiss after 4s
+  // using the procedural globe which is still good quality
+  setTimeout(function(){ _dismissLoadingScreen(); }, 4000);
 });
 </script>
 </body>
