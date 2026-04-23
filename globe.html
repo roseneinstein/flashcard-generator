@@ -63,7 +63,7 @@ input{font-family:inherit;}
 
 /* ── Layout ── */
 .layout{position:fixed;top:52px;bottom:0;left:0;right:0;display:flex;}
-#globeCanvas{position:absolute;top:0;right:0;display:block;cursor:grab;image-rendering:crisp-edges;}
+#globeCanvas{position:absolute;top:0;right:0;display:block;cursor:grab;image-rendering:crisp-edges;visibility:hidden;}
 #globeCanvas.dragging{cursor:grabbing;}
 
 /* ── Left Panel ── */
@@ -185,7 +185,7 @@ input{font-family:inherit;}
 .hint-example:hover{border-color:var(--border-h);color:var(--text);}
 
 /* ── Annotation canvas overlay ── */
-#annotCanvas{position:absolute;top:0;right:0;pointer-events:none;z-index:5;}
+#annotCanvas{position:absolute;top:0;right:0;pointer-events:none;z-index:5;visibility:hidden;}
 #annotCanvas.drawing{pointer-events:all;cursor:crosshair;}
 
 /* ── Tooltip on globe ── */
@@ -210,6 +210,7 @@ input{font-family:inherit;}
 /* ── Loading screen ── */
 .loading{
   position:fixed;inset:0;z-index:500;
+  background:#000;  /* solid black — nothing bleeds through before photo loads */
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   overflow:hidden;
 }
@@ -339,7 +340,7 @@ input{font-family:inherit;}
   </div>
 </div>
 
-<div class="layout">
+<div class="layout" id="mainLayout" style="visibility:hidden;">
   <!-- Left Panel -->
   <div class="panel">
     <!-- Search -->
@@ -405,7 +406,7 @@ input{font-family:inherit;}
   <canvas id="annotCanvas"></canvas>
 
   <!-- Zoom controls -->
-  <div class="zoom-btns">
+  <div class="zoom-btns" id="zoomBtns" style="visibility:hidden;">
     <button class="zoom-btn" onclick="zoomGlobe(0.82)" title="Zoom in">+</button>
     <button class="zoom-btn" onclick="zoomGlobe(1.22)" title="Zoom out">−</button>
     <button class="zoom-btn" style="font-size:0.6rem" onclick="resetView()" title="Reset view">⊙</button>
@@ -5533,10 +5534,16 @@ window.addEventListener('load', function(){
     fill.style.width = '100%';
     setTimeout(function(){
       var ldg = document.getElementById('loading');
-      ldg.style.transition = 'opacity 0.7s ease';
+      ldg.style.transition = 'opacity 0.8s ease';
       ldg.style.opacity = '0';
       if(sub) sub.textContent = 'Ready.';
-      setTimeout(function(){ document.getElementById('loading').style.display = 'none'; }, 500);
+      // Reveal the globe and UI — only now, after loading screen is fading
+      var toReveal = ['globeCanvas','annotCanvas','mainLayout','zoomBtns'];
+      toReveal.forEach(function(id){
+        var el = document.getElementById(id);
+        if(el) el.style.visibility = 'visible';
+      });
+      setTimeout(function(){ document.getElementById('loading').style.display = 'none'; }, 800);
     }, 300);
   }, 400);
 });
