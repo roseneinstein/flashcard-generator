@@ -4607,7 +4607,23 @@ function redrawAnnotations(){
   if(!annotCtx) return;
   annotCtx.clearRect(0,0,annotC.width,annotC.height);
   annotations.forEach(function(a){
-    if(a.type === 'label') drawAnnotLabel(a);
+    if(a.type === 'line' || a.type === 'dashline'){
+      var sc1 = worldToScreen(a.fromLat, a.fromLng);
+      var sc2 = worldToScreen(a.toLat, a.toLng);
+      if(!sc1 || !sc2) return;
+      annotCtx.save();
+      annotCtx.strokeStyle = a.color || '#fff';
+      annotCtx.lineWidth = 2.5; annotCtx.lineCap = 'round'; annotCtx.globalAlpha = 0.92;
+      if(a.type==='dashline') annotCtx.setLineDash([8,6]);
+      annotCtx.beginPath();
+      annotCtx.moveTo(sc1.x, sc1.y); annotCtx.lineTo(sc2.x, sc2.y);
+      annotCtx.stroke(); annotCtx.setLineDash([]);
+      [sc1,sc2].forEach(function(sc){
+        annotCtx.fillStyle=a.color||'#fff';
+        annotCtx.beginPath(); annotCtx.arc(sc.x,sc.y,3.5,0,Math.PI*2); annotCtx.fill();
+      });
+      annotCtx.restore();
+    } else if(a.type === 'label') drawAnnotLabel(a);
     else if(a.type === 'arrow') drawAnnotArrow(a);
   });
 }
@@ -4832,6 +4848,9 @@ function updatePaintPreview(){
     annotCtx.fill();
     annotCtx.restore();
   });
+  var cntEl=document.getElementById('paintPtCount');
+  if(cntEl) cntEl.textContent=pts.length+' pts';
+  _syncPaintCloseBtn();
 }
 
 function paintCustomPolygon(ring, color, opacity){
@@ -5611,6 +5630,21 @@ function _dismissLoadingScreen(){
       });
     }, 900); // matches fade duration exactly
   }, 250);
+}
+
+// Show/hide "Close Polygon" button
+function _syncPaintCloseBtn(){
+  var existing = document.getElementById('paintCloseBtn');
+  if(currentTool==='paint' && paintPoints.length>=3){
+    if(!existing){
+      var btn=document.createElement('button');
+      btn.id='paintCloseBtn';
+      btn.textContent='✓ Close polygon';
+      btn.style.cssText='position:fixed;bottom:calc(50% + 54px);right:14px;z-index:200;background:var(--accent);color:#000;border:none;border-radius:var(--r);padding:8px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.4);';
+      btn.onclick=closePaintPolygon;
+      document.body.appendChild(btn);
+    }
+  } else if(existing){ existing.remove(); }
 }
 
 /* ── Mobile panel collapse/expand ── */
