@@ -432,7 +432,9 @@ input{font-family:inherit;}
       <div class="search-box">
         <span class="search-icon">🔍</span>
         <input class="search-input" id="searchInput" placeholder="Search any place, river, mountain, country…"
-          autocomplete="off" oninput="onSearch(this.value)" onkeydown="onSearchKey(event)"/>
+          autocomplete="off" inputmode="search" enterkeyhint="search"
+          oninput="onSearch(this.value)" onkeydown="onSearchKey(event)"
+          onchange="var v=this.value.trim();if(v){document.getElementById('suggestions').style.display='none';doSearch(v);}"/>
         <button class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none">✕</button>
       </div>
       <div style="display:flex;gap:5px;margin-top:6px;align-items:center;">
@@ -468,14 +470,13 @@ input{font-family:inherit;}
       <div class="tool-row">
         <button class="tool-btn" id="toolLabel" onclick="setTool('label')" title="Add text label">🏷 Label</button>
         <button class="tool-btn" id="toolArrow" onclick="setTool('arrow')" title="Draw arrow">↗ Arrow</button>
-        <button class="tool-btn" id="toolPaint" onclick="setTool('paint')" title="Draw custom highlight region (click points, double-click to close)">🎨 Highlight</button>
-        <button class="tool-btn" id="toolErase" onclick="setTool('erase')" title="Erase annotation or custom highlight">✕ Erase</button>
+        <button class="tool-btn" id="toolLine"  onclick="setTool('line')"  title="Draw solid line">― Line</button>
+        <button class="tool-btn" id="toolDash"  onclick="setTool('dash')"  title="Draw dashed line">╌ Dash</button>
+        <button class="tool-btn" id="toolPaint" onclick="setTool('paint')" title="Tap points · tap ✓ or double-tap to close">🎨 Highlight</button>
+        <button class="tool-btn" id="toolErase" onclick="setTool('erase')" title="Erase annotation">✕ Erase</button>
       </div>
       <div class="color-row-t" id="annotColors"></div>
-      <!-- Paint tool hint — shows only when paint tool is active -->
-      <div id="paintHint" style="display:none;font-size:0.65rem;color:var(--muted);margin-top:5px;line-height:1.5;">
-        Click to add points · Double-click to close · <span id="paintPtCount">0 pts</span>
-      </div>
+      <div id="toolHint" style="display:none;font-size:0.65rem;color:var(--muted);margin-top:5px;line-height:1.6;"></div>
     </div>
 
     <!-- Export bar -->
@@ -2846,6 +2847,7 @@ var activeChips = {};   // featureKey -> color
 var annotColor = '#e8d5b0';
 var currentTool = null;
 var arrowStart = null;
+var lineStart = null;
 var currentFeature = null;
 // Custom highlight polygon tool state
 var paintPoints = [];         // lat/lng points clicked so far
@@ -4703,23 +4705,38 @@ function clearAnnotations(){
 
 // ── Annotation tool interactions ──────────────────────────────────────
 function setTool(tool){
-  // Toggle off if same tool clicked again
-  if(currentTool === tool){
-    // If cancelling paint mid-draw, discard points
-    if(tool === 'paint'){ paintPoints = []; updatePaintPreview(); }
-    currentTool = null;
+  if(currentTool===tool){
+    if(currentTool==='paint'){paintPoints=[];updatePaintPreview();}
+    lineStart=null; currentTool=null;
   } else {
-    if(currentTool === 'paint'){ paintPoints = []; updatePaintPreview(); }
-    currentTool = tool;
+    if(currentTool==='paint'){paintPoints=[];updatePaintPreview();}
+    lineStart=null; currentTool=tool;
   }
-  ['label','arrow','paint','erase'].forEach(function(t){
-    var btn = document.getElementById('tool'+t.charAt(0).toUpperCase()+t.slice(1));
-    if(btn) btn.classList.toggle('active', currentTool===t);
+  ['label','arrow','line','dash','paint','erase'].forEach(function(t){
+    var b=document.getElementById('tool'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(b) b.classList.toggle('active',currentTool===t);
   });
-  var hint = document.getElementById('paintHint');
-  if(hint) hint.style.display = currentTool==='paint' ? 'block' : 'none';
-  if(annotC) annotC.classList.toggle('drawing', !!currentTool);
-  arrowStart = null;
+  var hintMap={
+    label:'Tap globe to place a label',
+    arrow:'Tap start · then end point of arrow',
+    line:'Tap two points to draw a solid line',
+    dash:'Tap two points to draw a dashed line',
+    paint:'Tap points on globe · <span id="paintPtCount">0 pts</span> · double-tap or tap ✓ to finish',
+    erase:'Tap a label, arrow or line to erase'
+  };
+  var hintEl=document.getElementById('toolHint');
+  if(hintEl){
+    if(currentTool&&hintMap[currentTool]){hintEl.innerHTML=hintMap[currentTool];hintEl.style.display='block';}
+    else{hintEl.style.display='none';}
+  }
+  var gc=document.getElementById('globeCanvas');
+  if(gc) gc.style.pointerEvents=currentTool?'none':'auto';
+  if(annotC){
+    annotC.classList.toggle('drawing',!!currentTool);
+    annotC.style.pointerEvents=currentTool?'auto':'none';
+  }
+  arrowStart=null; lineStart=null;
+  if(currentTool&&autoRotate){autoRotate=false;updateAutoRotateBtn();}
 }
 
 // ── Screen→globe lat/lng ──────────────────────────────────────────────
@@ -4745,75 +4762,79 @@ function screenToLatLng(px, py){
 
 // Set up annotation canvas click handlers
 function setupAnnotInteractions(){
-  annotC.addEventListener('click', function(e){
+  function handleTap(px,py){
     if(!currentTool) return;
-    var rect = annotC.getBoundingClientRect();
-    var px = e.clientX - rect.left, py = e.clientY - rect.top;
-    var ll = screenToLatLng(px, py);
-    if(!ll) return;
-
-    if(currentTool === 'label'){
-      var text = prompt('Enter label text:');
-      if(!text) return;
-      annotations.push({type:'label', lat:ll.lat, lng:ll.lng, text:text, color:annotColor});
-    } else if(currentTool === 'arrow'){
+    var ll=screenToLatLng(px,py); if(!ll) return;
+    if(currentTool==='label'){
+      var t=prompt('Label text:'); if(!t) return;
+      annotations.push({type:'label',lat:ll.lat,lng:ll.lng,text:t,color:annotColor});
+      redrawAnnotations();
+    } else if(currentTool==='arrow'){
       if(!arrowStart){
-        arrowStart = ll;
-        document.getElementById('globeTip').textContent = 'Now click the end point of the arrow';
-        document.getElementById('globeTip').style.display = 'block';
-        document.getElementById('globeTip').style.left = (px+10)+'px';
-        document.getElementById('globeTip').style.top = (py+10)+'px';
+        arrowStart=ll;
+        var tip=document.getElementById('globeTip');
+        tip.textContent='Tap end point'; tip.style.display='block';
+        tip.style.left=(px+10)+'px'; tip.style.top=(py+10)+'px';
       } else {
-        var label = prompt('Arrow label (optional):') || '';
-        annotations.push({type:'arrow', fromLat:arrowStart.lat, fromLng:arrowStart.lng,
-          toLat:ll.lat, toLng:ll.lng, label:label, color:annotColor});
-        arrowStart = null;
-        document.getElementById('globeTip').style.display = 'none';
+        var lbl=prompt('Arrow label (optional):')||'';
+        annotations.push({type:'arrow',fromLat:arrowStart.lat,fromLng:arrowStart.lng,
+          toLat:ll.lat,toLng:ll.lng,label:lbl,color:annotColor});
+        arrowStart=null; document.getElementById('globeTip').style.display='none';
+        redrawAnnotations();
       }
-    } else if(currentTool === 'paint'){
-      paintPoints.push(ll);
-      var cntEl = document.getElementById('paintPtCount');
-      if(cntEl) cntEl.textContent = paintPoints.length + ' pts';
-      updatePaintPreview();
-    } else if(currentTool === 'erase'){
-      // Remove nearest annotation
-      var sc, minD = 25, minI = -1;
-      annotations.forEach(function(a, i){
-        sc = worldToScreen(a.lat, a.lng);
-        var d = Math.hypot(sc.x-px, sc.y-py);
+    } else if(currentTool==='line'||currentTool==='dash'){
+      if(!lineStart){
+        lineStart=ll;
+        var sc=worldToScreen(ll.lat,ll.lng);
+        annotCtx.save(); annotCtx.fillStyle=annotColor; annotCtx.globalAlpha=0.9;
+        annotCtx.beginPath(); annotCtx.arc(sc.x,sc.y,5,0,Math.PI*2); annotCtx.fill();
+        annotCtx.restore();
+      } else {
+        annotations.push({type:currentTool==='dash'?'dashline':'line',
+          fromLat:lineStart.lat,fromLng:lineStart.lng,toLat:ll.lat,toLng:ll.lng,color:annotColor});
+        lineStart=null; redrawAnnotations(); setTool(currentTool);
+      }
+    } else if(currentTool==='paint'){
+      paintPoints.push(ll); updatePaintPreview();
+    } else if(currentTool==='erase'){
+      var minD=30,minI=-1;
+      annotations.forEach(function(a,i){
+        var ref=(a.type==='arrow'||a.type==='line'||a.type==='dashline')
+          ?worldToScreen((a.fromLat+a.toLat)/2,(a.fromLng+a.toLng)/2)
+          :worldToScreen(a.lat,a.lng);
+        var d=Math.hypot(ref.x-px,ref.y-py);
         if(d<minD){minD=d;minI=i;}
       });
-      if(minI>=0){ annotations.splice(minI,1); return; }
-      // Also try removing nearest custom highlight
-      removeNearestCustomHighlight(px, py);
+      if(minI>=0){annotations.splice(minI,1);redrawAnnotations();return;}
+      removeNearestCustomHighlight(px,py);
     }
+  }
+  annotC.addEventListener('click',function(e){
+    var r=annotC.getBoundingClientRect();
+    handleTap(e.clientX-r.left,e.clientY-r.top);
   });
-
-  // Double-click: close polygon and commit custom highlight
-  annotC.addEventListener('dblclick', function(e){
-    if(currentTool !== 'paint') return;
-    e.preventDefault();
-    if(paintPoints.length < 3){
-      paintPoints = [];
-      updatePaintPreview();
-      var cntEl = document.getElementById('paintPtCount');
-      if(cntEl) cntEl.textContent = '0 pts';
-      return;
+  var _tx,_ty,_tm;
+  annotC.addEventListener('touchstart',function(e){
+    if(e.touches.length===1){_tx=e.touches[0].clientX;_ty=e.touches[0].clientY;_tm=false;}
+  },{passive:true});
+  annotC.addEventListener('touchmove',function(e){
+    if(e.touches.length===1&&Math.hypot(e.touches[0].clientX-_tx,e.touches[0].clientY-_ty)>8)_tm=true;
+  },{passive:true});
+  annotC.addEventListener('touchend',function(e){
+    if(!_tm&&e.changedTouches.length===1&&currentTool){
+      var r=annotC.getBoundingClientRect();
+      handleTap(_tx-r.left,_ty-r.top); e.preventDefault();
     }
-    // Commit: store as custom highlight
-    var id = 'custom_'+(++customHlCounter);
-    var ring = paintPoints.map(function(p){ return [p.lng, p.lat]; });
-    customHighlights.push({id:id, ring:ring, color:annotColor, opacity:0.45});
-    // Paint onto texture
-    paintCustomPolygon(ring, annotColor, 0.45);
-    // Reset
-    paintPoints = [];
-    updatePaintPreview();
-    var cntEl = document.getElementById('paintPtCount');
-    if(cntEl) cntEl.textContent = '0 pts';
-    // Deactivate paint tool
-    setTool('paint'); // toggles off
+  },{passive:false});
+  annotC.addEventListener('dblclick',function(e){
+    if(currentTool==='paint'){e.preventDefault();closePaintPolygon();}
   });
+  var _lt=0;
+  annotC.addEventListener('touchend',function(e){
+    var now=Date.now();
+    if(now-_lt<300&&currentTool==='paint'){e.preventDefault();closePaintPolygon();}
+    _lt=now;
+  },{passive:false});
 }
 
 // Draw preview dots + connecting lines for paint-in-progress
@@ -5633,6 +5654,17 @@ function _dismissLoadingScreen(){
 }
 
 // Show/hide "Close Polygon" button
+function closePaintPolygon(){
+  if(!paintPoints||paintPoints.length<3){paintPoints=[];updatePaintPreview();return;}
+  var id='custom_'+(++customHlCounter);
+  var ring=paintPoints.map(function(p){return[p.lng,p.lat];});
+  customHighlights.push({id:id,ring:ring,color:annotColor,opacity:0.45});
+  paintCustomPolygon(ring,annotColor,0.45);
+  paintPoints=[];updatePaintPreview();
+  var cb=document.getElementById('paintCloseBtn');if(cb)cb.remove();
+  setTool('paint');
+}
+
 function _syncPaintCloseBtn(){
   var existing = document.getElementById('paintCloseBtn');
   if(currentTool==='paint' && paintPoints.length>=3){
