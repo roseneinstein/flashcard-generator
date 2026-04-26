@@ -4732,9 +4732,23 @@ function clearAnnotations(){
 }
 
 // ── Annotation tool interactions ──────────────────────────────────────
-function setTool(tool){
-  if(currentTool===tool){
-    if(currentTool==='paint'){paintPoints=[];updatePaintPreview();}
+function setTool(t){
+  currentTool = t;
+
+  var ac = document.getElementById('annotCanvas');
+
+  if(t){
+    ac.classList.add('drawing');
+    ac.style.pointerEvents = 'auto';
+    ac.style.touchAction = 'none';
+  } else {
+    ac.classList.remove('drawing');
+    ac.style.pointerEvents = 'none';
+    ac.style.touchAction = 'auto';
+  }
+
+  updateToolUI();
+}
     lineStart=null; currentTool=null;
   } else {
     if(currentTool==='paint'){paintPoints=[];updatePaintPreview();}
@@ -5007,16 +5021,26 @@ var searchCards = [];
 var CARD_COLORS = ['#e8d5b0','#4ade80','#60a5fa','#f87171','#c084fc','#fb923c','#34d399','#f472b6','#a78bfa','#facc15'];
 var cardColorIdx = 0;
 
-function doSearch(name){
-  document.getElementById('suggestions').style.display = 'none';
-  document.getElementById('searchInput').value = name;
-  document.getElementById('searchClear').style.display = 'block';
+function doSearch(q){
+  var key = q.toLowerCase().trim();
+  var f = GEO_FEATURES[key];
 
-  // Find in database
-  var key = name.toLowerCase().trim();
-  var feature = GEO_FEATURES[key];
-  if(!feature){
-    var best = SEARCH_INDEX.find(function(r){ return r.name.toLowerCase() === key; }) ||
+  if(!f){
+    for(var k in GEO_FEATURES){
+      if(k.includes(key)){
+        f = GEO_FEATURES[k];
+        break;
+      }
+    }
+  }
+
+  if(!f) return;
+
+  showFeature(f);
+
+  document.getElementById('suggestions').style.display='none';
+  document.getElementById('searchClear').style.display='block';
+}) ||
                SEARCH_INDEX.find(function(r){ return r.searchStr.indexOf(key) >= 0; });
     if(best){ feature = GEO_FEATURES[best.key]; key = best.key; }
   }
