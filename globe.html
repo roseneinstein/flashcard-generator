@@ -185,7 +185,7 @@ input{font-family:inherit;}
 .hint-example:hover{border-color:var(--border-h);color:var(--text);}
 
 /* ── Annotation canvas overlay ── */
-#annotCanvas{position:absolute;top:0;right:0;pointer-events:none;z-index:5;visibility:hidden;}
+#annotCanvas{position:absolute;top:0;right:0;pointer-events:none;z-index:10;visibility:hidden;}
 #annotCanvas.drawing{pointer-events:all;cursor:crosshair;}
 
 /* ── Tooltip on globe ── */
@@ -230,13 +230,14 @@ input{font-family:inherit;}
 .loading-bg::before{
   content:'';
   position:absolute;inset:0;
+  /* Use circle gradients so they look correct on both portrait and landscape */
   background:
-    radial-gradient(ellipse 60% 55% at 38% 42%, rgba(14,80,140,0.95) 0%, transparent 65%),
-    radial-gradient(ellipse 40% 45% at 72% 35%, rgba(20,110,60,0.8) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 40% at 55% 65%, rgba(10,60,110,0.9) 0%, transparent 65%),
-    radial-gradient(ellipse 30% 25% at 25% 68%, rgba(180,140,90,0.6) 0%, transparent 55%),
-    radial-gradient(ellipse 20% 20% at 80% 70%, rgba(180,150,100,0.5) 0%, transparent 50%),
-    radial-gradient(ellipse 100% 100% at 50% 50%, rgba(4,18,40,1) 0%, rgba(2,10,25,1) 100%);
+    radial-gradient(circle at 38% 42%, rgba(14,80,140,0.9) 0%, transparent 50%),
+    radial-gradient(circle at 72% 35%, rgba(20,110,60,0.75) 0%, transparent 45%),
+    radial-gradient(circle at 55% 65%, rgba(10,60,110,0.85) 0%, transparent 50%),
+    radial-gradient(circle at 25% 68%, rgba(180,140,90,0.55) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(180,150,100,0.45) 0%, transparent 38%),
+    rgba(4,18,40,1);
   z-index:-1;
 }
 @keyframes loadBgPan{
@@ -246,8 +247,9 @@ input{font-family:inherit;}
 /* Dark vignette overlay */
 .loading-vignette{
   position:absolute;inset:0;
-  background:radial-gradient(ellipse 80% 80% at 50% 50%,
-    transparent 30%, rgba(0,0,0,0.55) 100%);
+  /* Circular vignette — no ellipse distortion on portrait mobile */
+  background:radial-gradient(circle at 50% 50%,
+    transparent 35%, rgba(0,0,0,0.65) 100%);
   pointer-events:none;
 }
 /* Content */
@@ -335,7 +337,8 @@ input{font-family:inherit;}
     top:0;left:0;right:0;
     height:50%!important;
     width:100%!important;
-    pointer-events:none;
+    pointer-events:none; /* setTool() overrides via inline style */
+    z-index:10; /* above globeCanvas so touch events reach it */
   }
 
   /* Panel: bottom half */
@@ -505,6 +508,10 @@ input{font-family:inherit;}
 
 <!-- Three.js r128 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</script>
 <!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -3337,7 +3344,13 @@ function onResize(){
   var W, H, layoutH = window.innerHeight - 52;
   if(mob){
     W = window.innerWidth;
-    H = _mobOff ? layoutH - 44 : Math.round(layoutH * 0.50);
+    // Use actual canvas clientHeight if available (set by mobToggle CSS)
+    var gc = document.getElementById('globeCanvas');
+    if(gc && gc.clientHeight > 10){
+      H = gc.clientHeight;
+    } else {
+      H = _mobOff ? layoutH - 44 : Math.round(layoutH * 0.50);
+    }
   } else {
     var panel = document.querySelector('.panel');
     W = window.innerWidth - (panel ? panel.offsetWidth : 0);
@@ -4045,11 +4058,15 @@ function lookupNE(searchKey, ftype){
   // Checked before ALL other sources for any Indian feature
   var INDIA_QUERIES = ['india','indian subcontinent','bharat'];
   var isIndiaQuery = INDIA_QUERIES.indexOf(q)>=0 || INDIA_QUERIES.indexOf(q2)>=0;
-  if(neIndiaSoI && (isIndiaQuery || GOI_OVERRIDE[q] || GOI_OVERRIDE[q2])){
-    // Use the SoI full boundary for India
-    var soiF = neIndiaSoIIndex[q] || neIndiaSoIIndex[q2] || neIndiaSoIIndex[q3]
-             || neIndiaSoIIndex['india'];
-    if(soiF && soiF.geometry) return {geom:soiF.geometry, src:'country'};
+  if(isIndiaQuery || GOI_OVERRIDE[q] || GOI_OVERRIDE[q2]){
+    // SoI file (official GOI boundary) — highest priority
+    if(neIndiaSoI){
+      var soiF = neIndiaSoIIndex[q] || neIndiaSoIIndex[q2] || neIndiaSoIIndex[q3]
+               || neIndiaSoIIndex['india'];
+      if(soiF && soiF.geometry) return {geom:soiF.geometry, src:'country'};
+    }
+    // SoI not loaded yet — fall through to NE country data (still shows India correctly)
+    // Do NOT return null here — that causes only a point marker
   }
   // For any state/region WITHIN India, SoI takes priority over NE
   if(neIndiaSoI){
@@ -5686,11 +5703,23 @@ function mobToggle(){
   var panel = document.getElementById('sidePanel');
   var btn   = document.getElementById('mobBtn');
   var zb    = document.getElementById('zoomBtns');
+  var gc    = document.getElementById('globeCanvas');
+  var ac    = document.getElementById('annotCanvas');
   _mobOff = !_mobOff;
   if(panel){ panel.classList.toggle('mob-off', _mobOff); }
   if(btn)  { btn.textContent = _mobOff ? '⌃' : '⌄'; }
   if(zb)   { zb.style.bottom = _mobOff ? '54px' : 'calc(50% + 8px)'; }
-  setTimeout(onResize, 300);
+  // Sync canvas CSS height with panel state so globe stays spherical
+  var layoutH = window.innerHeight - 52;
+  var globeH  = _mobOff ? (layoutH - 44) : Math.round(layoutH * 0.50);
+  var pct     = (globeH / layoutH * 100).toFixed(1) + '%';
+  if(gc){ gc.style.height  = pct; gc.style.bottom = _mobOff ? '44px' : '50%'; }
+  if(ac){ ac.style.height  = pct; ac.style.bottom = _mobOff ? '44px' : '50%'; }
+  if(panel){ panel.style.top = _mobOff ? 'calc(100% - 44px)' : '50%'; }
+  // After CSS transition, resize Three.js to match
+  setTimeout(function(){
+    onResize();
+  }, 310);
 }
 
 function updateAutoRotateBtn(){
