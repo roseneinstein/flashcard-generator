@@ -904,7 +904,18 @@ var GEO_FEATURES = {
     stats:{Area:'3.29 million km²', Population:'1.44 billion (2024)', States:'28 states + 8 UTs', Capital:'New Delhi'},
     related:['himalayas','gangetic plains','deccan plateau','western ghats','bay of bengal','arabian sea'],
     highlights:['ganga river','brahmaputra river','indus river','godavari river'],
-    shape:{type:'point'}
+    shape:{type:'polygon',ring:[
+      [68.2,23.7],[70.2,22.5],[72.0,20.5],[73.2,18.0],[73.5,15.5],
+      [74.5,13.5],[76.5,8.5],[77.5,8.0],[78.5,8.5],[80.0,9.5],
+      [80.5,12.5],[79.5,14.0],[80.5,16.5],[80.5,17.5],[82.0,18.5],
+      [84.0,19.5],[85.5,20.0],[86.5,21.5],[88.5,22.5],[89.5,22.5],
+      [91.5,22.0],[92.0,22.5],[93.5,24.0],[94.5,25.5],[96.0,27.0],
+      [97.0,28.5],[96.5,28.5],[94.0,28.0],[92.0,27.5],[90.0,27.5],
+      [88.5,27.5],[87.0,28.0],[85.5,28.5],[83.5,29.0],[82.0,30.5],
+      [80.0,31.5],[78.5,32.5],[77.0,33.5],[76.0,34.0],[75.5,35.0],
+      [78.0,35.5],[80.0,35.0],[79.0,35.0],[77.5,35.5],[76.0,35.5],
+      [73.5,36.5],[72.0,36.0],[71.0,35.5],[70.0,37.0],[70.5,35.5],
+      [71.0,34.5],[70.5,32.5],[69.5,29.5],[68.5,27.0],[68.2,23.7]]}
   },
   'brazil': {
     name:'Brazil', type:'country', region:'South America',
@@ -4759,9 +4770,10 @@ function setTool(tool){
 // ── Screen→globe lat/lng ──────────────────────────────────────────────
 function screenToLatLng(px, py){
   // Raycast against globe sphere
-  var panel = document.querySelector('.panel');
-  var W = window.innerWidth - panel.offsetWidth;
-  var H = window.innerHeight - 52;
+  // Use renderer's actual pixel dimensions (correct on all screen sizes)
+  var W = renderer.domElement.width  / (renderer.getPixelRatio ? renderer.getPixelRatio() : window.devicePixelRatio);
+  var H = renderer.domElement.height / (renderer.getPixelRatio ? renderer.getPixelRatio() : window.devicePixelRatio);
+  if(!W || !H) return null;
   var ndcX = (px / W) * 2 - 1;
   var ndcY = -(py / H) * 2 + 1;
   raycaster.setFromCamera({x:ndcX, y:ndcY}, camera);
