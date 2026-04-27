@@ -511,7 +511,6 @@ input{font-family:inherit;}
 <!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-</script>
 <!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -4780,10 +4779,22 @@ function setTool(tool){
 
 // ── Screen→globe lat/lng ──────────────────────────────────────────────
 function screenToLatLng(px, py){
-  // Raycast against globe sphere
-  // Use renderer's actual pixel dimensions (correct on all screen sizes)
-  var W = renderer.domElement.width  / (renderer.getPixelRatio ? renderer.getPixelRatio() : window.devicePixelRatio);
-  var H = renderer.domElement.height / (renderer.getPixelRatio ? renderer.getPixelRatio() : window.devicePixelRatio);
+  // Raycast against globe sphere.
+  // px,py are in annotCanvas CSS pixel coords (from getBoundingClientRect).
+  // We need NDC in [-1,1] range matching the renderer viewport.
+  // Use annotCanvas actual rendered size — guaranteed same coord space as handleTap.
+  var W, H;
+  if(annotC){
+    var r = annotC.getBoundingClientRect();
+    W = r.width;
+    H = r.height;
+  }
+  if(!W || !H){
+    // Fallback to renderer dimensions
+    var pr = window.devicePixelRatio || 1;
+    W = renderer.domElement.width  / pr;
+    H = renderer.domElement.height / pr;
+  }
   if(!W || !H) return null;
   var ndcX = (px / W) * 2 - 1;
   var ndcY = -(py / H) * 2 + 1;
@@ -5043,10 +5054,12 @@ function doSearch(name){
     return;
   }
 
-  // If feature already in stack — just fly to it
+  // If feature already in stack — fly and re-highlight (don't skip highlight)
   var existing = searchCards.find(function(c){ return c.key === key; });
   if(existing){
-    flyTo_(feature.lat, feature.lng, feature.zoom || 3.5);
+    flyTo_(feature.lat, feature.lng, feature.zoom || 3.5, function(){
+      drawFeatureHighlight(key, existing.color, 0.55);
+    });
     return;
   }
 
