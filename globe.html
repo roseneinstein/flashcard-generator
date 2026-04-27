@@ -4506,7 +4506,17 @@ function paintFeatureOnTexture(featureKey, color, opacity){
   // ── TRY GEOJSON LOOKUP FIRST ───────────────────────────────────────
   var found = lookupNE(f.name, ftype) || lookupNE(featureKey, ftype);
 
-  if(found && found.geom){
+  // Validate geometry before using it
+  function geomHasCoords(geom){
+    if(!geom) return false;
+    if(geom.type==='Polygon') return geom.coordinates && geom.coordinates.length > 0;
+    if(geom.type==='MultiPolygon') return geom.coordinates && geom.coordinates.length > 0;
+    if(geom.type==='LineString') return geom.coordinates && geom.coordinates.length > 1;
+    if(geom.type==='MultiLineString') return geom.coordinates && geom.coordinates.length > 0;
+    return false;
+  }
+
+  if(found && found.geom && geomHasCoords(found.geom)){
     if(isRiver || found.src==='river'){
       paintRiverLine(found.geom, col, W, H);
       return;
@@ -4518,6 +4528,7 @@ function paintFeatureOnTexture(featureKey, color, opacity){
       return;
     }
   }
+  // found was null or had invalid geometry — use hand-coded fallback below
 
   // ── FALLBACK: use hand-coded shape data ────────────────────────────
   if(!f.shape){
@@ -4662,16 +4673,16 @@ function worldToScreen(lat, lng){
   // Project lat/lng through Three.js camera
   var v = latLngToVec3(lat, lng, GLOBE_R * 1.003);
   var vCopy = v.clone();
-  // Apply globeGroup rotation
   vCopy.applyEuler(globeGroup.rotation);
   vCopy.project(camera);
-  var panel = document.querySelector('.panel');
-  var W = window.innerWidth - panel.offsetWidth;
-  var H = window.innerHeight - 52;
+  // Use renderer's actual pixel dimensions — correct on mobile and desktop
+  var pr = window.devicePixelRatio || 1;
+  var W = renderer.domElement.width  / pr;
+  var H = renderer.domElement.height / pr;
   return {
     x: (vCopy.x + 1) / 2 * W,
     y: -(vCopy.y - 1) / 2 * H,
-    visible: vCopy.z < 1 // behind globe check
+    visible: vCopy.z < 1
   };
 }
 
