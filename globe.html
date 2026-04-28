@@ -317,6 +317,80 @@ input{font-family:inherit;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .mob-handle{display:none;} /* shown only inside mobile @media */
 
+/* ── Export PDF Modal ── */
+.exp-modal-overlay{
+  position:fixed;inset:0;z-index:600;
+  background:rgba(0,0,0,0.62);
+  backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;
+}
+.exp-modal{
+  background:var(--surface);border:1px solid var(--border-h);
+  border-radius:var(--r);padding:24px;width:100%;max-width:420px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.55);
+  animation:expModalIn .22s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes expModalIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.exp-modal-title{
+  font-family:'Instrument Serif',serif;font-size:1.1rem;font-style:italic;
+  color:var(--accent);margin-bottom:4px;letter-spacing:-0.01em;
+}
+.exp-modal-sub{font-size:0.72rem;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.exp-modal-section{margin-bottom:16px;}
+.exp-modal-label{
+  font-size:0.62rem;text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--muted);margin-bottom:8px;font-weight:500;
+}
+.exp-opt-row{display:flex;flex-direction:column;gap:6px;}
+.exp-opt{
+  display:flex;align-items:flex-start;gap:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.exp-opt:hover{border-color:var(--border-h);}
+.exp-opt.selected{
+  border-color:rgba(var(--accent-rgb),0.45);
+  background:rgba(var(--accent-rgb),0.08);
+}
+.exp-opt input[type=radio]{
+  margin-top:2px;accent-color:var(--accent);flex-shrink:0;cursor:pointer;
+}
+.exp-opt-text{}
+.exp-opt-name{font-size:0.8rem;color:var(--text);font-weight:400;line-height:1.3;}
+.exp-opt-desc{font-size:0.68rem;color:var(--muted);margin-top:2px;line-height:1.4;}
+.exp-theme-row{display:flex;gap:8px;}
+.exp-theme-btn{
+  flex:1;padding:9px 10px;border:1px solid var(--border);
+  border-radius:var(--r-sm);background:var(--surface2);
+  font-size:0.75rem;color:var(--muted);cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.exp-theme-btn:hover{border-color:var(--border-h);color:var(--text);}
+.exp-theme-btn.selected{
+  border-color:rgba(var(--accent-rgb),0.45);
+  background:rgba(var(--accent-rgb),0.08);
+  color:var(--accent);
+}
+.exp-modal-footer{display:flex;gap:8px;margin-top:20px;}
+.exp-modal-cancel{
+  flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--r-sm);
+  background:none;color:var(--muted);font-size:0.78rem;cursor:pointer;
+  font-family:inherit;transition:all .15s;letter-spacing:0.03em;
+}
+.exp-modal-cancel:hover{border-color:var(--border-h);color:var(--text);}
+.exp-modal-go{
+  flex:2;padding:9px;border:none;border-radius:var(--r-sm);
+  background:var(--accent);color:var(--bg);font-size:0.78rem;cursor:pointer;
+  font-family:inherit;font-weight:500;letter-spacing:0.04em;
+  transition:opacity .15s;
+}
+.exp-modal-go:hover{opacity:0.85;}
+.exp-modal-go:disabled{opacity:0.45;cursor:not-allowed;}
+.exp-modal-go-inner{display:flex;align-items:center;justify-content:center;gap:7px;}
+.exp-spinner{width:13px;height:13px;border:2px solid var(--bg);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+
 /* ── Mobile ── */
 @media(max-width:700px){
   :root{--panel:100vw;}
@@ -485,7 +559,7 @@ input{font-family:inherit;}
 
     <!-- Export bar -->
     <div class="export-bar" id="exportBar" style="display:none">
-      <button class="exp-btn sec" onclick="exportPDF()">⬇ Export PDF</button>
+      <button class="exp-btn sec" onclick="openExportModal()">⬇ Export PDF</button>
     </div>
   </div>
 
@@ -5311,38 +5385,355 @@ function toggleRelated(elOrKey, rk){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// EXPORT PDF
+// EXPORT PDF  — modal + options
 // ══════════════════════════════════════════════════════════════════════
-function exportPDF(){
-  // 1. Render current Three.js frame to offscreen at 2x
-  renderer.render(scene, camera);
-  var globeDataUrl = renderer.domElement.toDataURL('image/png');
 
-  // 2. Compose with annotation canvas
+// State for the export modal
+var _expChoice  = 'globe';      // 'globe' | 'globe+info'
+var _expTheme   = 'dark';       // 'dark'  | 'light'
+var _expModalEl = null;
+
+function openExportModal(){
+  if(_expModalEl){ _expModalEl.remove(); _expModalEl = null; }
+
+  // Default theme to current site theme
+  _expTheme = document.body.classList.contains('light') ? 'light' : 'dark';
+
+  var overlay = document.createElement('div');
+  overlay.className = 'exp-modal-overlay';
+  overlay.id = 'expModalOverlay';
+  // Click outside to close
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) closeExportModal(); });
+
+  var hasInfo = !!currentFeature;
+
+  overlay.innerHTML =
+    '<div class="exp-modal" id="expModalBox">' +
+      '<div class="exp-modal-title">Export PDF</div>' +
+      '<div class="exp-modal-sub">Choose what to include and your preferred theme.</div>' +
+
+      '<!-- Content options -->' +
+      '<div class="exp-modal-section">' +
+        '<div class="exp-modal-label">Content</div>' +
+        '<div class="exp-opt-row">' +
+          '<label class="exp-opt selected" id="expOptGlobe">' +
+            '<input type="radio" name="expContent" value="globe" checked/>' +
+            '<div class="exp-opt-text">' +
+              '<div class="exp-opt-name">🌍 Globe only</div>' +
+              '<div class="exp-opt-desc">Current camera view with all markings — one page.</div>' +
+            '</div>' +
+          '</label>' +
+          '<label class="exp-opt" id="expOptInfo" style="'+(hasInfo?'':'opacity:0.42;pointer-events:none;')+'">' +
+            '<input type="radio" name="expContent" value="globe+info" '+(hasInfo?'':'disabled')+'/>' +
+            '<div class="exp-opt-text">' +
+              '<div class="exp-opt-name">📋 Globe + Info box</div>' +
+              '<div class="exp-opt-desc">'+(hasInfo
+                ? 'Globe on page 1, then all info box details in a two-column layout on subsequent pages.'
+                : 'Search for a feature first to enable this option.')+
+              '</div>' +
+            '</div>' +
+          '</label>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Theme options -->' +
+      '<div class="exp-modal-section">' +
+        '<div class="exp-modal-label">Theme</div>' +
+        '<div class="exp-theme-row">' +
+          '<button class="exp-theme-btn '+((_expTheme==='dark')?'selected':'')+'" id="expThemeDark" onclick="_pickTheme(\'dark\')" type="button">🌑 Dark</button>' +
+          '<button class="exp-theme-btn '+((_expTheme==='light')?'selected':'')+'" id="expThemeLight" onclick="_pickTheme(\'light\')" type="button">☀ Light</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="exp-modal-footer">' +
+        '<button class="exp-modal-cancel" onclick="closeExportModal()" type="button">Cancel</button>' +
+        '<button class="exp-modal-go" id="expGoBtn" onclick="_runExport()" type="button">' +
+          '<span class="exp-modal-go-inner" id="expGoBtnInner">⬇ Generate PDF</span>' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+  _expModalEl = overlay;
+
+  // Wire radio buttons for highlight
+  var radios = overlay.querySelectorAll('input[name=expContent]');
+  radios.forEach(function(r){
+    r.addEventListener('change', function(){
+      _expChoice = this.value;
+      overlay.querySelectorAll('.exp-opt').forEach(function(el){ el.classList.remove('selected'); });
+      var lbl = this.closest('.exp-opt');
+      if(lbl) lbl.classList.add('selected');
+    });
+  });
+}
+
+function _pickTheme(t){
+  _expTheme = t;
+  var dark  = document.getElementById('expThemeDark');
+  var light = document.getElementById('expThemeLight');
+  if(dark)  dark.classList.toggle('selected',  t==='dark');
+  if(light) light.classList.toggle('selected', t==='light');
+}
+
+function closeExportModal(){
+  if(_expModalEl){ _expModalEl.remove(); _expModalEl = null; }
+}
+
+function _runExport(){
+  var btn = document.getElementById('expGoBtn');
+  var inner = document.getElementById('expGoBtnInner');
+  if(btn){ btn.disabled = true; }
+  if(inner){ inner.innerHTML = '<div class="exp-spinner"></div> Generating…'; }
+
+  // Small timeout so the UI updates before heavy PDF work
+  setTimeout(function(){
+    try{
+      _doExportPDF(_expChoice, _expTheme);
+    } catch(e){
+      console.error('PDF export error:', e);
+    }
+    closeExportModal();
+  }, 80);
+}
+
+function _doExportPDF(choice, theme){
+  // ── 1. Render globe composite ──────────────────────────────────────
+  renderer.render(scene, camera);
   var W = renderer.domElement.width, H = renderer.domElement.height;
   var comp = document.createElement('canvas');
   comp.width = W; comp.height = H;
   var ctx = comp.getContext('2d');
+
+  // Theme-aware background for the globe page
+  var isDarkTheme = (theme === 'dark');
+  var pageBg  = isDarkTheme ? '#0d0c1a' : '#e8e4db';   // --bg
+  var textCol = isDarkTheme ? [236,237,242] : [30,27,20];    // --text
+  var mutedCol= isDarkTheme ? [138,138,172] : [122,112,96];  // --muted
+  var accentCol= isDarkTheme? [232,213,176] : [154,124,63];  // --accent
+  var surfaceCol= isDarkTheme? [22,20,42]   : [245,242,234]; // --surface
+  var surfaceCol2= isDarkTheme? [30,28,50]  : [237,233,224]; // --surface2
+  var borderCol= isDarkTheme ? [50,48,80]   : [200,195,185]; // border approx
+
+  // Fill background
+  ctx.fillStyle = pageBg;
+  ctx.fillRect(0, 0, W, H);
   ctx.drawImage(renderer.domElement, 0, 0);
   if(annotC) ctx.drawImage(annotC, 0, 0, W, H);
+  var globeImgUrl = comp.toDataURL('image/png');
 
-  var imgUrl = comp.toDataURL('image/png');
-
+  // ── 2. Create PDF ──────────────────────────────────────────────────
   var pdf = new jspdf.jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
-  pdf.addImage(imgUrl, 'PNG', 0, 0, 297, 210);
+  var PW = 297, PH = 210; // A4 landscape mm
 
-  // Info text
-  if(currentFeature){
-    pdf.setFontSize(16);
-    pdf.setTextColor(232,213,176);
-    pdf.text(currentFeature.data.name, 10, 195);
+  var FOOTER_H = 10; // mm reserved at bottom for branding
+  var MARGIN   = 0;
+
+  // ── PAGE 1: Globe ──────────────────────────────────────────────────
+  // Fill page background
+  pdf.setFillColor(pageBg);
+  pdf.rect(0, 0, PW, PH, 'F');
+
+  // Fit globe image to fill page (leave footer strip)
+  var globeAreaH = PH - FOOTER_H;
+  // Scale to fill width maintaining aspect ratio, then crop vertically
+  var imgAspect = W / H;
+  var drawW = PW, drawH = PW / imgAspect;
+  var drawX = 0, drawY = 0;
+  if(drawH < globeAreaH){ drawH = globeAreaH; drawW = globeAreaH * imgAspect; drawX = (PW - drawW)/2; }
+  pdf.addImage(globeImgUrl, 'PNG', drawX, drawY, drawW, drawH);
+
+  // Branding footer — page 1
+  _addPdfFooter(pdf, PW, PH, isDarkTheme, pageBg, mutedCol);
+
+  // ── PAGE 2+: Info box content ──────────────────────────────────────
+  if(choice === 'globe+info' && currentFeature){
+    pdf.addPage('a4', 'landscape');
+
+    // Full page background
+    pdf.setFillColor.apply(pdf, _hexToRgb(pageBg));
+    pdf.rect(0, 0, PW, PH, 'F');
+
+    var f   = currentFeature.data;
+    var key = currentFeature.key;
+
+    // ── Layout constants ────────────────────────────────
+    var TOP_MARGIN  = 14;
+    var SIDE_MARGIN = 14;
+    var COL_GAP     = 8;
+    var colW = (PW - SIDE_MARGIN*2 - COL_GAP) / 2;
+    var maxY = PH - FOOTER_H - 6;  // don't go into footer
+
+    // Cursor per column
+    var col = 0; // 0 = left, 1 = right
+    var yL = TOP_MARGIN, yR = TOP_MARGIN;
+    function curY(){ return col===0 ? yL : yR; }
+    function setY(v){ if(col===0) yL=v; else yR=v; }
+    function xOf(c){ return SIDE_MARGIN + c*(colW + COL_GAP); }
+    function advY(delta){ if(col===0) yL+=delta; else yR+=delta; }
+
+    // Helper: check if we need a new page
+    function ensureSpace(needed){
+      if(col===0 && yL + needed > maxY){ col=1; return; }
+      if(col===1 && yR + needed > maxY){
+        // New page
+        pdf.addPage('a4','landscape');
+        pdf.setFillColor.apply(pdf, _hexToRgb(pageBg));
+        pdf.rect(0,0,PW,PH,'F');
+        _addPdfFooter(pdf, PW, PH, isDarkTheme, pageBg, mutedCol);
+        yL = TOP_MARGIN; yR = TOP_MARGIN; col = 0;
+      }
+    }
+
+    // ── Feature name (full width, top of page) ──
+    pdf.setFont('helvetica','italic');
+    pdf.setFontSize(20);
+    pdf.setTextColor.apply(pdf, accentCol);
+    pdf.text(f.name, SIDE_MARGIN, TOP_MARGIN);
+    var nameH = 8;
+
+    // Type badge
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor.apply(pdf, mutedCol);
+    pdf.text((typeIcon(f.type)||'') + ' ' + (f.type||'').toUpperCase(), SIDE_MARGIN, TOP_MARGIN + nameH);
+
+    var headerBottom = TOP_MARGIN + nameH + 5;
+
+    // Thin divider line
+    pdf.setDrawColor.apply(pdf, borderCol);
+    pdf.setLineWidth(0.25);
+    pdf.line(SIDE_MARGIN, headerBottom + 1, PW - SIDE_MARGIN, headerBottom + 1);
+
+    yL = headerBottom + 6;
+    yR = headerBottom + 6;
+
+    // ── Description ──
+    var descText = f.desc || '';
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor.apply(pdf, textCol);
+    var descLines = pdf.splitTextToSize(descText, colW);
+    var descH = descLines.length * 4.2;
+    ensureSpace(descH + 4);
+    pdf.text(descLines, xOf(col), curY());
+    advY(descH + 5);
+
+    // ── Stats ──
+    if(f.stats && Object.keys(f.stats).length){
+      var statKeys = Object.keys(f.stats);
+      // Section header
+      ensureSpace(7);
+      pdf.setFont('helvetica','normal');
+      pdf.setFontSize(6.5);
+      pdf.setTextColor.apply(pdf, mutedCol);
+      pdf.text('KEY STATISTICS', xOf(col), curY());
+      advY(5);
+
+      statKeys.forEach(function(sk){
+        ensureSpace(12);
+        var bx = xOf(col), by = curY();
+        // stat box background
+        pdf.setFillColor.apply(pdf, _hexToRgb(isDarkTheme ? '#1e1c32' : '#ede9e0'));
+        pdf.roundedRect(bx, by, colW, 10, 1.5, 1.5, 'F');
+        // label
+        pdf.setFont('helvetica','normal');
+        pdf.setFontSize(6);
+        pdf.setTextColor.apply(pdf, mutedCol);
+        pdf.text(String(sk).toUpperCase(), bx+3.5, by+3.8);
+        // value
+        pdf.setFont('helvetica','normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor.apply(pdf, textCol);
+        var valStr = String(f.stats[sk]);
+        var valLines = pdf.splitTextToSize(valStr, colW - 7);
+        pdf.text(valLines[0], bx+3.5, by+7.8);
+        advY(12);
+      });
+      advY(3);
+    }
+
+    // ── Related features ──
+    if(f.related && f.related.length){
+      ensureSpace(10);
+      pdf.setFont('helvetica','normal');
+      pdf.setFontSize(6.5);
+      pdf.setTextColor.apply(pdf, mutedCol);
+      pdf.text('RELATED FEATURES', xOf(col), curY());
+      advY(5);
+
+      // Chips in a wrapping row
+      var chipX = xOf(col);
+      var chipY = curY();
+      var chipH = 5.5, chipPad = 3, chipGap = 3;
+      var rowX  = chipX;
+
+      f.related.forEach(function(rk){
+        var rf = GEO_FEATURES[rk];
+        var rname = rf ? rf.name : rk.split(' ').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join(' ');
+        pdf.setFontSize(7);
+        var tw = pdf.getTextWidth(rname);
+        var cw = tw + chipPad*2;
+        if(rowX + cw > xOf(col) + colW && rowX > chipX){
+          rowX = chipX; chipY += chipH + 2;
+          ensureSpace(chipH + 4);
+          if(col===0) yL = chipY + chipH + 2; else yR = chipY + chipH + 2;
+        }
+        // chip bg
+        pdf.setFillColor.apply(pdf, _hexToRgb(isDarkTheme ? '#26243e' : '#e4e0d6'));
+        pdf.roundedRect(rowX, chipY, cw, chipH, chipH/2, chipH/2, 'F');
+        // chip text
+        pdf.setFont('helvetica','normal');
+        pdf.setFontSize(7);
+        pdf.setTextColor.apply(pdf, mutedCol);
+        pdf.text(rname, rowX + chipPad, chipY + 3.8);
+        rowX += cw + chipGap;
+      });
+      var afterChips = chipY + chipH + 5;
+      if(col===0) yL = afterChips; else yR = afterChips;
+    }
+
+    _addPdfFooter(pdf, PW, PH, isDarkTheme, pageBg, mutedCol);
   }
-  pdf.setFontSize(7);
-  pdf.setTextColor(120,120,140);
-  pdf.text('CogniSwift 3D Earth Atlas — cogniswift.in  |  Educational use only', 297-10, 207, {align:'right'});
 
-  pdf.save('cogniswift-earth-' + (currentFeature ? currentFeature.key.replace(/\s+/g,'-') : 'globe') + '.pdf');
+  // ── Save ──────────────────────────────────────────────────────────
+  var slug = currentFeature ? currentFeature.key.replace(/\s+/g,'-') : 'globe';
+  pdf.save('cogniswift-earth-' + slug + '.pdf');
 }
+
+// Helper: hex colour string → [r,g,b] array
+function _hexToRgb(hex){
+  var c = hex.replace('#','');
+  if(c.length===3) c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  var n=parseInt(c,16);
+  return [(n>>16)&255,(n>>8)&255,n&255];
+}
+
+// Helper: add branding footer to current PDF page
+function _addPdfFooter(pdf, PW, PH, isDark, pageBg, mutedCol){
+  var footY = PH - 4.5;
+
+  // Footer background strip
+  pdf.setFillColor.apply(pdf, _hexToRgb(isDark ? '#0a0918' : '#dddad1'));
+  pdf.rect(0, PH - 8, PW, 8, 'F');
+
+  // Separator line
+  pdf.setDrawColor.apply(pdf, mutedCol);
+  pdf.setLineWidth(0.18);
+  pdf.line(10, PH - 8.1, PW - 10, PH - 8.1);
+
+  pdf.setFont('helvetica','normal');
+  pdf.setFontSize(6.2);
+  pdf.setTextColor.apply(pdf, mutedCol);
+
+  // Left: main site
+  pdf.text('cogniswift.in — Explore smarter. Think deeper.', 10, footY);
+  // Right: globe URL
+  pdf.text('3D Earth Atlas → cogniswift.in/globe.html?theme=dark', PW - 10, footY, {align:'right'});
+}
+
+// Legacy alias — keeps any lingering direct calls working
+function exportPDF(){ openExportModal(); }
 
 // ══════════════════════════════════════════════════════════════════════
 // ANNOTATION COLOR PICKER
