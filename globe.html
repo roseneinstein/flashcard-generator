@@ -477,6 +477,7 @@ input{font-family:inherit;}
         <button class="tool-btn" id="toolDash"  onclick="setTool('dash')"  title="Draw dashed line">╌ Dash</button>
         <button class="tool-btn" id="toolPaint" onclick="setTool('paint')" title="Tap points · tap ✓ or double-tap to close">🎨 Highlight</button>
         <button class="tool-btn" id="toolErase" onclick="setTool('erase')" title="Erase annotation">✕ Erase</button>
+        <button class="tool-btn" id="toolUndo" onclick="undoAnnotation()" title="Undo last mark (Ctrl+Z)">↩ Undo</button>
       </div>
       <div class="color-row-t" id="annotColors"></div>
       <div id="toolHint" style="display:none;font-size:0.65rem;color:var(--muted);margin-top:5px;line-height:1.6;"></div>
@@ -2889,6 +2890,7 @@ function initGlobe(){
 
   renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  _rendererW = W; _rendererH = H;
   renderer.setSize(W, H);
 
   globeGroup = new THREE.Group();
@@ -3367,6 +3369,7 @@ function onResize(){
     H = layoutH;
   }
   W = Math.max(1,W); H = Math.max(1,H);
+  _rendererW = W; _rendererH = H; // save for screenToLatLng
   camera.aspect = W/H;
   camera.updateProjectionMatrix();
   renderer.setSize(W, H);
@@ -3660,6 +3663,7 @@ var neIndiaSoIIndex = {};   // Indexed by state/feature name
 var _landMaskCanvas = null; // cached land mask for coast-clipping (computed once)
 var _offscreenCanvas= null; // reusable offscreen canvas (not recreated per paint)
 var _repaintPending = false;// debounce flag
+var _rendererW = 0, _rendererH = 0; // CSS pixel dims of last renderer.setSize call
 var neLake10Index   = {};   // 10m lakes (more precise)
 var neRegion10Index = {};   // 10m physical regions
 
@@ -4674,10 +4678,9 @@ function worldToScreen(lat, lng){
   var vCopy = v.clone();
   vCopy.applyEuler(globeGroup.rotation);
   vCopy.project(camera);
-  // Use renderer's actual pixel dimensions — correct on mobile and desktop
-  var pr = window.devicePixelRatio || 1;
-  var W = renderer.domElement.width  / pr;
-  var H = renderer.domElement.height / pr;
+  // Same dims as screenToLatLng — must be consistent
+  var W = _rendererW || 1;
+  var H = _rendererH || 1;
   return {
     x: (vCopy.x + 1) / 2 * W,
     y: -(vCopy.y - 1) / 2 * H,
@@ -4779,23 +4782,10 @@ function setTool(tool){
 
 // ── Screen→globe lat/lng ──────────────────────────────────────────────
 function screenToLatLng(px, py){
-  // Raycast against globe sphere.
-  // px,py are in annotCanvas CSS pixel coords (from getBoundingClientRect).
-  // We need NDC in [-1,1] range matching the renderer viewport.
-  // Use annotCanvas actual rendered size — guaranteed same coord space as handleTap.
-  var W, H;
-  if(annotC){
-    var r = annotC.getBoundingClientRect();
-    W = r.width;
-    H = r.height;
-  }
-  if(!W || !H){
-    // Fallback to renderer dimensions
-    var pr = window.devicePixelRatio || 1;
-    W = renderer.domElement.width  / pr;
-    H = renderer.domElement.height / pr;
-  }
-  if(!W || !H) return null;
+  // Use the EXACT W,H that were passed to renderer.setSize() and camera.aspect.
+  // This guarantees NDC coords match the camera projection — no rounding mismatch.
+  var W = _rendererW || 1;
+  var H = _rendererH || 1;
   var ndcX = (px / W) * 2 - 1;
   var ndcY = -(py / H) * 2 + 1;
   raycaster.setFromCamera({x:ndcX, y:ndcY}, camera);
@@ -5757,6 +5747,30 @@ function mobToggle(){
     onResize();
   }, 310);
 }
+
+// ── Undo last annotation or custom highlight ─────────────────────
+function undoAnnotation(){
+  // Try custom highlights first (most recent action)
+  if(customHighlights && customHighlights.length > 0){
+    customHighlights.pop();
+    // Repaint all remaining custom highlights
+    scheduleRepaint();
+    return;
+  }
+  // Then regular annotations (labels, arrows, lines)
+  if(annotations && annotations.length > 0){
+    annotations.pop();
+    redrawAnnotations();
+  }
+}
+
+// Keyboard shortcut: Ctrl+Z / Cmd+Z
+document.addEventListener('keydown', function(e){
+  if((e.ctrlKey || e.metaKey) && e.key === 'z'){
+    e.preventDefault();
+    undoAnnotation();
+  }
+});
 
 function updateAutoRotateBtn(){
   var btn = document.getElementById('autoRotBtn');
