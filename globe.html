@@ -5358,43 +5358,36 @@ function toggleRelated(elOrKey, rk){
 // ══════════════════════════════════════════════════════════════════════
 var _eChoice='globe', _eTheme='dark', _eModal=null;
 
-/* ── Modal open/close ─────────────────────────────────────────────── */
+/* ── Modal ─────────────────────────────────────────────────────────── */
 function openExportModal(){
   if(_eModal){_eModal.remove();_eModal=null;}
-  _eTheme = document.body.classList.contains('light')?'light':'dark';
-  _eChoice= 'globe';
-
-  var hasCards = (typeof searchCards!=='undefined' && searchCards.length>0) ||
+  _eTheme=document.body.classList.contains('light')?'light':'dark';
+  _eChoice='globe';
+  var hasCards=(typeof searchCards!=='undefined'&&searchCards.length>0)||
     Object.keys(activeHighlights).some(function(k){return k.indexOf('wiki_')===0;});
-
   var ov=document.createElement('div');
   ov.className='exp-ov';
   ov.addEventListener('click',function(e){if(e.target===ov)closeExportModal();});
-
   ov.innerHTML=
     '<div class="exp-box">'+
       '<div class="exp-title">Export PDF</div>'+
       '<div class="exp-sub">Choose content and background theme for your PDF.</div>'+
-      '<div class="exp-sec">'+
-        '<div class="exp-lbl">Content</div>'+
-        '<div class="exp-opts">'+
-          '<label class="exp-opt on" id="_eoG">'+
-            '<input type="radio" name="ec" value="globe" checked/>'+
-            '<div><div class="exp-oname">🌍&nbsp; Globe only</div>'+
-            '<div class="exp-odesc">Current camera view with all markings — one page.</div></div>'+
-          '</label>'+
-          '<label class="exp-opt'+(hasCards?'':' off')+'" id="_eoI">'+
-            '<input type="radio" name="ec" value="globe+info"'+(hasCards?'':' disabled')+'/>'+
-            '<div><div class="exp-oname">📋&nbsp; Globe + Info box</div>'+
-            '<div class="exp-odesc">'+(hasCards
-              ?'Globe on page 1, then every info-box card with polygon map thumbnails in an elegant two-column layout.'
-              :'Search for a feature first to enable this option.')+
-            '</div></div>'+
-          '</label>'+
-        '</div>'+
-      '</div>'+
-      '<div class="exp-sec">'+
-        '<div class="exp-lbl">Background Theme</div>'+
+      '<div class="exp-sec"><div class="exp-lbl">Content</div><div class="exp-opts">'+
+        '<label class="exp-opt on" id="_eoG">'+
+          '<input type="radio" name="ec" value="globe" checked/>'+
+          '<div><div class="exp-oname">🌍&nbsp; Globe only</div>'+
+          '<div class="exp-odesc">Current camera view with all markings — one page.</div></div>'+
+        '</label>'+
+        '<label class="exp-opt'+(hasCards?'':' off')+'" id="_eoI">'+
+          '<input type="radio" name="ec" value="globe+info"'+(hasCards?'':' disabled')+'/>'+
+          '<div><div class="exp-oname">📋&nbsp; Globe + Info box</div>'+
+          '<div class="exp-odesc">'+(hasCards
+            ?'Globe on page 1, then every info-box card with polygon map thumbnails in an elegant two-column layout.'
+            :'Search for a feature first to enable this option.')+
+          '</div></div>'+
+        '</label>'+
+      '</div></div>'+
+      '<div class="exp-sec"><div class="exp-lbl">Background Theme</div>'+
         '<div class="exp-themes">'+
           '<button class="exp-tbtn'+(_eTheme==='dark'?' on':'')+'" id="_etD" onclick="_ePkTh(\'dark\')"  type="button">🌑&nbsp; Dark</button>'+
           '<button class="exp-tbtn'+(_eTheme==='light'?' on':'')+'" id="_etL" onclick="_ePkTh(\'light\')" type="button">☀&nbsp; Light</button>'+
@@ -5407,15 +5400,13 @@ function openExportModal(){
         '</button>'+
       '</div>'+
     '</div>';
-
   document.body.appendChild(ov);
   _eModal=ov;
-
   ov.querySelectorAll('input[name=ec]').forEach(function(r){
     r.addEventListener('change',function(){
       _eChoice=this.value;
       ov.querySelectorAll('.exp-opt').forEach(function(el){el.classList.remove('on');});
-      var lb=this.closest('.exp-opt'); if(lb)lb.classList.add('on');
+      var lb=this.closest('.exp-opt');if(lb)lb.classList.add('on');
     });
   });
 }
@@ -5436,382 +5427,440 @@ function _eRun(){
   },80);
 }
 
-/* ══ Helpers ════════════════════════════════════════════════════════ */
+/* ── Colour helpers ─────────────────────────────────────────────────── */
 function _eHex(hex){
   var c=(hex||'#888').replace('#','');
   if(c.length===3)c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
   var n=parseInt(c,16)||0;
   return [(n>>16)&255,(n>>8)&255,n&255];
 }
-function _eLighter(rgb,amt){
-  return [Math.min(255,rgb[0]+amt),Math.min(255,rgb[1]+amt),Math.min(255,rgb[2]+amt)];
+
+/* ── Type label — plain ASCII only (jsPDF can't render emoji) ─────── */
+function _eTypeLbl(type){
+  var MAP={mountain:'Mountain',volcano:'Volcano',river:'River',plain:'Plain',
+    desert:'Desert',forest:'Forest',country:'Country',plateau:'Plateau',
+    sea:'Sea',lake:'Lake',trench:'Trench',region:'Region',
+    'mountain range':'Mountain Range','salt marsh':'Salt Marsh',
+    'lagoon/waterway':'Lagoon / Waterway','union territory':'Union Territory',
+    'mangrove delta':'Mangrove Delta','ocean trench':'Ocean Trench',
+    'rift valley':'Rift Valley'};
+  return (MAP[(type||'').toLowerCase()]||(type||'Unknown')).toUpperCase();
 }
 
-/* ── Determine if a feature produces a shaded polygon ── */
+/* ── Detect polygon features ────────────────────────────────────────── */
 function _eHasPoly(key,f){
-  if(!f) return false;
+  if(!f)return false;
   var ft=(f.type||'').toLowerCase();
   var NO=['mountain','volcano','river','ocean trench','trench','rift valley','lagoon/waterway'];
-  if(NO.indexOf(ft)>=0) return false;
+  if(NO.indexOf(ft)>=0)return false;
   if(f.shape){
-    if(f.shape.type==='point'||f.shape.type==='polyline'||f.shape.type==='dashed') return false;
+    if(f.shape.type==='point'||f.shape.type==='polyline'||f.shape.type==='dashed')return false;
     if(f.shape.type==='geojson'&&f.shape.geom){
       var gt=f.shape.geom.type||'';
-      if(gt==='LineString'||gt==='MultiLineString') return false;
+      if(gt==='LineString'||gt==='MultiLineString')return false;
       return true;
     }
   }
-  return true; // NE-lookup based (country, region, plain, sea, lake, etc.)
+  return true;
 }
 
-/* ── Get the geometry for a feature (same logic as paintFeatureOnTexture) ── */
+/* ── Get GeoJSON polygon geometry for a feature ─────────────────────── */
 function _eGetGeom(key,f){
-  if(!f) return null;
+  if(!f)return null;
   var ft=(f.type||'').toLowerCase();
-  // Try NE lookup first
   var found=lookupNE(f.name,ft)||lookupNE(key,ft);
   if(found&&found.geom){
-    var gt=(found.geom.type||'');
-    if(gt==='Polygon'||gt==='MultiPolygon') return found.geom;
+    var gt=found.geom.type||'';
+    if(gt==='Polygon'||gt==='MultiPolygon')return found.geom;
   }
-  // Fallback to hand-coded shape
   if(f.shape){
     if(f.shape.type==='geojson'&&f.shape.geom){
       var g=f.shape.geom,gt2=g.type||'';
-      if(gt2==='Polygon'||gt2==='MultiPolygon') return g;
+      if(gt2==='Polygon'||gt2==='MultiPolygon')return g;
     }
     if(f.shape.type==='polygon'&&f.shape.ring){
-      // Convert ring to GeoJSON Polygon
-      return {type:'Polygon',coordinates:[f.shape.ring.map(function(c){return [c[0],c[1]];}) ]};
+      return {type:'Polygon',coordinates:[f.shape.ring.map(function(c){return [c[0],c[1]];})]};
     }
   }
   return null;
 }
 
-/* ── Compute bounding box of a GeoJSON geometry ── */
+/* ── Bounding box of geometry ───────────────────────────────────────── */
 function _eGeomBbox(geom){
   var minX=180,maxX=-180,minY=90,maxY=-90;
-  function pt(c){
-    if(c[0]<minX)minX=c[0]; if(c[0]>maxX)maxX=c[0];
-    if(c[1]<minY)minY=c[1]; if(c[1]>maxY)maxY=c[1];
-  }
+  function pt(c){if(c[0]<minX)minX=c[0];if(c[0]>maxX)maxX=c[0];if(c[1]<minY)minY=c[1];if(c[1]>maxY)maxY=c[1];}
   function ring(r){r.forEach(pt);}
-  function poly(p){p.forEach(ring);}
-  if(geom.type==='Polygon')           geom.coordinates.forEach(ring);
-  else if(geom.type==='MultiPolygon') geom.coordinates.forEach(poly);
-  return {minX:minX,maxX:maxX,minY:minY,maxY:maxY};
+  if(geom.type==='Polygon')geom.coordinates.forEach(ring);
+  else if(geom.type==='MultiPolygon')geom.coordinates.forEach(function(p){p.forEach(ring);});
+  return{minX:minX,maxX:maxX,minY:minY,maxY:maxY};
 }
 
-/* ── Render isolated polygon thumbnail as square data URL ── */
+/* ── Area estimate (degrees²) for scale comparison ──────────────────── */
+function _eGeomArea(bb){return(bb.maxX-bb.minX)*(bb.maxY-bb.minY);}
+
+/*
+ * _ePolyThumb — renders a polygon isolated on a canvas, returning a data URL.
+ *
+ * KEY DESIGN:
+ * - Canvas is RECTANGULAR matching the geographic lng×lat aspect of the bbox.
+ *   This ensures Russia looks wide and tall features look tall — no forced squaring.
+ * - MIN_DEG = 8°: features smaller than 8° in both axes get their viewport expanded
+ *   to 8°×8° so tiny islands/states are never microscopic. This is the "benchmark
+ *   minimum thumbnail size".
+ * - MAX canvas pixel width = 600px, height = 360px. Scale to fit within that,
+ *   maintaining the geographic aspect ratio.
+ * - In jsPDF we render the image at the canvas's natural pixel aspect ratio —
+ *   computed width from THUMBH and the canvas aspect — so there is zero stretch.
+ * - The returned object contains {url, canvasW, canvasH} so jsPDF can size correctly.
+ */
 function _ePolyThumb(geom,color,isDark){
-  var SZ=300; // output square px
-  var c=document.createElement('canvas'); c.width=SZ; c.height=SZ;
-  var ctx=c.getContext('2d');
-
-  var bg=isDark?'#0d0c1a':'#e8e4db';
-  var borderCol=isDark?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.15)';
-
-  // Background
-  ctx.fillStyle=bg;
-  ctx.fillRect(0,0,SZ,SZ);
-
-  // Compute bbox with padding
   var bb=_eGeomBbox(geom);
-  var pad=Math.max((bb.maxX-bb.minX),(bb.maxY-bb.minY))*0.18+2;
+
+  // Padding: 15% of the larger span, minimum 1.5°
+  var spanLng=bb.maxX-bb.minX, spanLat=bb.maxY-bb.minY;
+  var pad=Math.max(Math.max(spanLng,spanLat)*0.15,1.5);
+
   var lngMin=bb.minX-pad, lngMax=bb.maxX+pad;
   var latMin=bb.minY-pad, latMax=bb.maxY+pad;
-  // Keep aspect: fit into square
+
+  // MIN_DEG benchmark: ensure at least 8° viewport in each dimension
+  var MIN_DEG=8;
+  if((lngMax-lngMin)<MIN_DEG){var dl=(MIN_DEG-(lngMax-lngMin))/2;lngMin-=dl;lngMax+=dl;}
+  if((latMax-latMin)<MIN_DEG){var dl=(MIN_DEG-(latMax-latMin))/2;latMin-=dl;latMax+=dl;}
+
   var lngSpan=lngMax-lngMin, latSpan=latMax-latMin;
-  if(lngSpan<latSpan){ var d=(latSpan-lngSpan)/2; lngMin-=d; lngMax+=d; }
-  else               { var d=(lngSpan-latSpan)/2; latMin-=d; latMax+=d; }
-  lngSpan=lngMax-lngMin; latSpan=latMax-latMin;
 
-  function project(lng,lat){
-    var x=((lng-lngMin)/lngSpan)*SZ;
-    var y=((latMax-lat)/latSpan)*SZ;
-    return [x,y];
+  // Geographic aspect: lng per lat (cos-corrected for Mercator-like accuracy)
+  var midLat=(latMin+latMax)/2;
+  var cosLat=Math.cos(midLat*Math.PI/180)||0.01;
+  // In equirectangular, 1° lng = cosLat × 1° lat in real distance
+  // So visual aspect = lngSpan × cosLat / latSpan
+  var geoAspect=(lngSpan*cosLat)/latSpan;
+  // Clamp aspect so we don't get absurdly wide (Russia) or tall canvases
+  geoAspect=Math.max(0.4,Math.min(3.0,geoAspect));
+
+  // Canvas dimensions: fit inside 600×360 keeping aspect
+  var MAX_W=600,MAX_H=360;
+  var cW,cH;
+  if(geoAspect>=1){
+    cW=MAX_W; cH=Math.round(MAX_W/geoAspect);
+    if(cH>MAX_H){cH=MAX_H;cW=Math.round(MAX_H*geoAspect);}
+  } else {
+    cH=MAX_H; cW=Math.round(MAX_H*geoAspect);
+    if(cW>MAX_W){cW=MAX_W;cH=Math.round(MAX_W/geoAspect);}
+  }
+  cW=Math.max(60,cW); cH=Math.max(60,cH);
+
+  var canvas=document.createElement('canvas');
+  canvas.width=cW; canvas.height=cH;
+  var ctx=canvas.getContext('2d');
+
+  var bg=isDark?'#0e0c1c':'#e8e4db';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,cW,cH);
+
+  // Project lng/lat → canvas pixel
+  function proj(lng,lat){
+    var x=((lng-lngMin)/lngSpan)*cW;
+    var y=((latMax-lat)/latSpan)*cH;
+    return[x,y];
   }
 
-  // Draw a subtle grid / graticule
-  ctx.strokeStyle=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)';
-  ctx.lineWidth=0.8;
-  for(var glng=-180;glng<=180;glng+=30){
-    var gx=((glng-lngMin)/lngSpan)*SZ;
-    if(gx>=0&&gx<=SZ){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,SZ);ctx.stroke();}
+  // Subtle graticule — adaptive interval
+  var gratStep=lngSpan>120?30:lngSpan>60?15:lngSpan>20?10:lngSpan>8?5:2;
+  ctx.strokeStyle=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.07)';
+  ctx.lineWidth=0.7;
+  for(var gl=-180;gl<=180;gl+=gratStep){
+    var gx=((gl-lngMin)/lngSpan)*cW;
+    if(gx>=0&&gx<=cW){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,cH);ctx.stroke();}
   }
-  for(var glat=-90;glat<=90;glat+=30){
-    var gy=((latMax-glat)/latSpan)*SZ;
-    if(gy>=0&&gy<=SZ){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(SZ,gy);ctx.stroke();}
+  for(var gl=-90;gl<=90;gl+=gratStep){
+    var gy=((latMax-gl)/latSpan)*cH;
+    if(gy>=0&&gy<=cH){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(cW,gy);ctx.stroke();}
   }
 
-  // Parse colour
+  // Draw polygon
   var rgb=_eHex(color);
-  var fillA=isDark?0.42:0.38;
-  ctx.fillStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+fillA+')';
-  ctx.strokeStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',0.92)';
-  ctx.lineWidth=1.6;
+  ctx.fillStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+(isDark?0.38:0.34)+')';
+  ctx.strokeStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',0.95)';
+  ctx.lineWidth=Math.max(1.2,cW/200);
   ctx.lineJoin='round';
 
-  function drawGeom(geom){
+  function drawGeom(g){
     function ring(coords){
-      if(!coords||!coords.length) return;
-      var p0=project(coords[0][0],coords[0][1]);
+      if(!coords||!coords.length)return;
+      var p0=proj(coords[0][0],coords[0][1]);
       ctx.moveTo(p0[0],p0[1]);
-      for(var i=1;i<coords.length;i++){
-        var p=project(coords[i][0],coords[i][1]);
-        ctx.lineTo(p[0],p[1]);
-      }
+      for(var i=1;i<coords.length;i++){var p=proj(coords[i][0],coords[i][1]);ctx.lineTo(p[0],p[1]);}
       ctx.closePath();
     }
-    if(geom.type==='Polygon'){
-      ctx.beginPath(); geom.coordinates.forEach(ring);
-      ctx.fill(); ctx.stroke();
-    } else if(geom.type==='MultiPolygon'){
-      geom.coordinates.forEach(function(poly){
-        ctx.beginPath(); poly.forEach(ring);
-        ctx.fill(); ctx.stroke();
-      });
+    if(g.type==='Polygon'){ctx.beginPath();g.coordinates.forEach(ring);ctx.fill();ctx.stroke();}
+    else if(g.type==='MultiPolygon'){
+      g.coordinates.forEach(function(poly){ctx.beginPath();poly.forEach(ring);ctx.fill();ctx.stroke();});
     }
   }
   drawGeom(geom);
 
-  // Subtle vignette
-  var vg=ctx.createRadialGradient(SZ/2,SZ/2,SZ*0.3,SZ/2,SZ/2,SZ*0.72);
-  vg.addColorStop(0,'rgba(0,0,0,0)');
-  vg.addColorStop(1,isDark?'rgba(0,0,0,0.28)':'rgba(0,0,0,0.12)');
-  ctx.fillStyle=vg; ctx.fillRect(0,0,SZ,SZ);
+  // Coordinate label inside map
+  var midLng=((bb.minX+bb.maxX)/2).toFixed(1)+'°E';
+  var midLatLbl=((bb.minY+bb.maxY)/2).toFixed(1)+'°N';
+  ctx.font='bold '+(Math.max(9,cH*0.055))+'px sans-serif';
+  ctx.fillStyle=isDark?'rgba(255,255,255,0.22)':'rgba(0,0,0,0.18)';
+  ctx.textAlign='center';
+  ctx.fillText(midLng+'  '+midLatLbl,cW/2,cH-6);
 
-  return c.toDataURL('image/png');
+  // Vignette
+  var vg=ctx.createRadialGradient(cW/2,cH/2,Math.min(cW,cH)*0.28,cW/2,cH/2,Math.min(cW,cH)*0.72);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,isDark?'rgba(0,0,0,0.30)':'rgba(0,0,0,0.10)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,cW,cH);
+
+  return{url:canvas.toDataURL('image/png'),cW:cW,cH:cH};
 }
 
-/* ══ Main PDF builder ═══════════════════════════════════════════════ */
+/* ══ Main PDF builder ═══════════════════════════════════════════════════ */
 function _eBuildPDF(choice,theme){
   var isDark=(theme==='dark');
+  // Colour palette
   var BG    =isDark?'#0d0c1a':'#e8e4db';
-  var SURF2 =isDark?'#1a1830':'#ece8df';
-  var SURF3 =isDark?'#201e38':'#e4e0d6';
-  var TEXT  =isDark?[236,237,242]:[30,27,20];
-  var MUTED =isDark?[138,138,172]:[122,112,96];
-  var BORDER=isDark?[48,46,76]:[196,191,181];
-  var ACCENT=isDark?[232,213,176]:[154,124,63];
-  var PW=297,PH=210,FOOT=10,SM=11;
+  var SURF2 =isDark?'#17152c':'#edeade';
+  var SURF3 =isDark?'#201e38':'#e4e0d4';
+  var TEXT  =isDark?[230,232,242]:[28,25,18];
+  var MUTED =isDark?[140,136,174]:[118,108,92];
+  var BORDER=isDark?[46,44,74]:[194,189,178];
+  var ACCENT=isDark?[232,213,176]:[152,122,60];
 
-  /* ── Globe composite ─────────────────────────────────────────── */
+  var PW=297,PH=210,FOOT=11,SM=10;
+  var bgR=_eHex(BG),s2R=_eHex(SURF2),s3R=_eHex(SURF3);
+
+  /* ── Globe composite ─────────────────────────────────────────────── */
   renderer.render(scene,camera);
-  var GW=renderer.domElement.width, GH=renderer.domElement.height;
+  var GW=renderer.domElement.width,GH=renderer.domElement.height;
   var comp=document.createElement('canvas');
-  comp.width=GW; comp.height=GH;
+  comp.width=GW;comp.height=GH;
   var ctx=comp.getContext('2d');
-  ctx.fillStyle=BG; ctx.fillRect(0,0,GW,GH);
+  ctx.fillStyle=BG;ctx.fillRect(0,0,GW,GH);
   ctx.drawImage(renderer.domElement,0,0,GW,GH);
-  if(annotC&&annotC.width>0&&annotC.height>0) ctx.drawImage(annotC,0,0,GW,GH);
+  if(annotC&&annotC.width>0&&annotC.height>0)ctx.drawImage(annotC,0,0,GW,GH);
   var globeImg=comp.toDataURL('image/png');
 
-  /* ── jsPDF setup ─────────────────────────────────────────────── */
+  /* ── PDF init ────────────────────────────────────────────────────── */
   var pdf=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  var bgR=_eHex(BG), s2R=_eHex(SURF2), s3R=_eHex(SURF3);
 
-  function fill(col){pdf.setFillColor(col[0],col[1],col[2]);}
-  function txt(col) {pdf.setTextColor(col[0],col[1],col[2]);}
-  function drw(col) {pdf.setDrawColor(col[0],col[1],col[2]);}
+  function fill(c){pdf.setFillColor(c[0],c[1],c[2]);}
+  function txt(c) {pdf.setTextColor(c[0],c[1],c[2]);}
+  function drw(c) {pdf.setDrawColor(c[0],c[1],c[2]);}
 
-  /* ── Branding footer (two separate lines, both clickable) ────── */
+  /* ── Footer: two centred clickable lines ─────────────────────────── */
   function addFooter(){
-    var stripRgb=isDark?[6,5,14]:[205,201,191];
-    pdf.setFillColor(stripRgb[0],stripRgb[1],stripRgb[2]);
+    var sRgb=isDark?[6,5,14]:[202,198,188];
+    pdf.setFillColor(sRgb[0],sRgb[1],sRgb[2]);
     pdf.rect(0,PH-FOOT,PW,FOOT,'F');
-    drw(BORDER); pdf.setLineWidth(0.18);
-    pdf.line(SM,PH-FOOT+0.4,PW-SM,PH-FOOT+0.4);
-
+    drw(BORDER);pdf.setLineWidth(0.18);
+    pdf.line(SM,PH-FOOT+0.5,PW-SM,PH-FOOT+0.5);
     pdf.setFont('helvetica','normal');
-    // Line 1: main site
-    pdf.setFontSize(6.0); txt(MUTED);
+    pdf.setFontSize(6.0);txt(MUTED);
     pdf.textWithLink(
       'cogniswift.in  —  From Notes To Memory · World\'s most advanced AI Revision Engine for exams',
-      PW/2, PH-6.4, {align:'center', url:'https://www.cogniswift.in'}
-    );
-    // Line 2: globe URL
-    pdf.setFontSize(5.8);
+      PW/2,PH-6.5,{align:'center',url:'https://www.cogniswift.in'});
+    pdf.setFontSize(5.6);
     pdf.textWithLink(
       'CogniSwift 3D EARTH ATLAS  ·  cogniswift.in/globe.html?theme=dark',
-      PW/2, PH-2.8, {align:'center', url:'https://www.cogniswift.in/globe.html?theme=dark'}
-    );
+      PW/2,PH-2.6,{align:'center',url:'https://www.cogniswift.in/globe.html?theme=dark'});
   }
 
-  /* ══ PAGE 1 — Globe ═════════════════════════════════════════════ */
-  fill(bgR); pdf.rect(0,0,PW,PH,'F');
-  var gArea=PH-FOOT;
+  /* ══ PAGE 1 — Globe ═════════════════════════════════════════════════ */
+  fill(bgR);pdf.rect(0,0,PW,PH,'F');
+  var gAreaH=PH-FOOT;
   var aspect=GW/GH;
-  var dW=PW, dH=PW/aspect, dX=0, dY=(gArea-dH)/2;
-  if(dH<gArea){dH=gArea; dW=gArea*aspect; dX=(PW-dW)/2; dY=0;}
+  var dW=PW,dH=PW/aspect,dX=0,dY=(gAreaH-dH)/2;
+  if(dH<gAreaH){dH=gAreaH;dW=gAreaH*aspect;dX=(PW-dW)/2;dY=0;}
   pdf.addImage(globeImg,'PNG',dX,dY,dW,dH);
   addFooter();
 
-  /* ══ PAGES 2+ — Info cards ══════════════════════════════════════ */
-  if(choice!=='globe+info') return pdf.save(_eFilename());
+  if(choice!=='globe+info')return pdf.save(_eFilename());
 
-  // Collect all cards: direct searches + wiki features in panel order
+  /* ── Collect all cards ───────────────────────────────────────────── */
   var cards=[];
-  if(typeof searchCards!=='undefined') searchCards.forEach(function(sc){
-    cards.push({key:sc.key,data:sc.data,color:sc.color,isWiki:false});
+  if(typeof searchCards!=='undefined')searchCards.forEach(function(sc){
+    cards.push({key:sc.key,data:sc.data,color:sc.color});
   });
   Object.keys(activeHighlights).forEach(function(k){
-    if(k.indexOf('wiki_')!==0) return;
-    var f=GEO_FEATURES[k]; if(!f) return;
+    if(k.indexOf('wiki_')!==0)return;
+    var f=GEO_FEATURES[k];if(!f)return;
     var hi=activeHighlights[k];
-    cards.push({key:k,data:f,color:(hi?hi.color:'#f0c060'),isWiki:true});
+    cards.push({key:k,data:f,color:(hi?hi.color:'#f0c060')});
   });
-  if(!cards.length) return pdf.save(_eFilename());
+  if(!cards.length)return pdf.save(_eFilename());
 
-  /* ── Pre-render all polygon thumbnails synchronously ── */
+  /* ── Pre-render thumbnails ───────────────────────────────────────── */
   cards.forEach(function(card){
     card.hasPoly=_eHasPoly(card.key,card.data);
+    card.thumb=null;
     if(card.hasPoly){
       var geom=_eGetGeom(card.key,card.data);
-      card.thumbUrl = geom ? _ePolyThumb(geom,card.color,isDark) : null;
-    } else {
-      card.thumbUrl=null;
+      card.thumb=geom?_ePolyThumb(geom,card.color,isDark):null;
     }
   });
 
-  /* ── Layout: 2 columns ── */
-  var TOP=13, COLW=(PW-SM*2-7)/2, GAP=7, MAXCY=PH-FOOT-5;
-  var THUMBH=34; // mm — square thumbnail height in the card
-
-  var yL=TOP,yR=TOP,col=0;
+  /* ══ PAGES 2+ — One card per column slot, full page height ══════════
+   *
+   * Layout:
+   *   Each page has 2 columns (left / right).
+   *   Each card occupies the FULL column height (from TOP to MAXCY).
+   *   Content scrolls downward; overflow goes to a new card block on
+   *   the next available column or page.
+   *   This gives maximum readability with large text and breathing room.
+   */
+  var TOP=12;
+  var MAXCY=PH-FOOT-5;          // usable bottom
+  var CARD_H=MAXCY-TOP;         // full column usable height
+  var GAP=8;
+  var COLW=(PW-SM*2-GAP)/2;
   var onPage=false;
+  var col=0;                    // 0=left, 1=right
 
   function xOf(c){return SM+c*(COLW+GAP);}
-  function getCY(){return col===0?yL:yR;}
-  function advCY(d){if(col===0)yL+=d;else yR+=d;}
 
-  function startInfoPage(){
+  function startPage(){
     pdf.addPage('a4','landscape');
-    fill(bgR); pdf.rect(0,0,PW,PH,'F');
-    // Subtle column divider
-    drw(BORDER); pdf.setLineWidth(0.15);
-    pdf.line(PW/2,TOP+4,PW/2,PH-FOOT-6);
+    fill(bgR);pdf.rect(0,0,PW,PH,'F');
+    // Subtle centre divider
+    drw(BORDER);pdf.setLineWidth(0.14);
+    pdf.line(PW/2,TOP+3,PW/2,PH-FOOT-4);
     addFooter();
-    yL=TOP; yR=TOP; col=0; onPage=true;
+    col=0;onPage=true;
   }
 
-  function ensureSpace(need){
-    if(!onPage){startInfoPage();return;}
-    if(col===0&&yL+need>MAXCY){col=1;return;}
-    if(col===1&&yR+need>MAXCY){startInfoPage();}
+  function nextSlot(){
+    if(!onPage){startPage();return;}
+    if(col===0){col=1;return;}
+    startPage();
   }
 
-  startInfoPage();
+  startPage();
 
-  cards.forEach(function(card,ci){
-    var f=card.data, cRgb=_eHex(card.color);
-    var hasPoly=card.hasPoly, thumbUrl=card.thumbUrl;
+  cards.forEach(function(card){
+    nextSlot(); // each card gets its own column slot
+    var f=card.data;
+    var cRgb=_eHex(card.color);
+    var thumb=card.thumb;
+    var cx=xOf(col);
+    var cy=TOP;
 
-    // ── Estimate card height ──
-    pdf.setFontSize(7.8);
-    var descLines=pdf.splitTextToSize(f.desc||'',COLW-8);
-    var descH=descLines.length*3.8;
-    var statsKeys=f.stats?Object.keys(f.stats):[];
-    var relArr=f.related||[];
-    var relTxt=relArr.length?(relArr.map(function(rk){
-      var rf=GEO_FEATURES[rk]; return rf?rf.name:rk.replace(/_/g,' ');
-    }).join('  ·  ')):'';
-    var relLines=relTxt?pdf.splitTextToSize('Related: '+relTxt,COLW-8):[];
+    /* ── Glowing card background ── */
+    // Main card fill
+    fill(s2R);
+    pdf.roundedRect(cx,cy,COLW,CARD_H,3,3,'F');
 
-    var cardH=5 +                              // top padding
-      (thumbUrl?THUMBH+3:0) +                  // thumbnail
-      6 +                                       // name
-      4 +                                       // type
-      descH + 3 +                              // description
-      (statsKeys.length?(statsKeys.length*10+5):0) + // stats
-      (relLines.length?(relLines.length*3.6+4):0) +  // related
-      5;                                        // bottom padding
-
-    ensureSpace(cardH+4);
-
-    var cx=xOf(col), cy=getCY();
-
-    /* ── Card background with gradient-like layering ── */
-    // Outer card
-    fill(s2R); pdf.roundedRect(cx,cy,COLW,cardH,2.2,2.2,'F');
-
-    // Top accent band (colour-tinted, 30% opacity)
-    var accentBandH=hasPoly&&thumbUrl ? THUMBH+5 : 9;
-    // Simulate tinted band via a thin overlay
-    var aR=_eLighter(cRgb,isDark?-30:30);
+    // Glow: coloured left curved border band
+    // Simulate with a filled rounded rect clipped to left 5mm
     pdf.setFillColor(cRgb[0],cRgb[1],cRgb[2]);
-    // Left border stripe (3px)
-    pdf.rect(cx,cy,2.2,cardH,'F');
+    pdf.roundedRect(cx,cy,5,CARD_H,3,3,'F');      // left rounded band
+    fill(s2R);
+    pdf.rect(cx+3,cy,3,CARD_H,'F');               // flatten right half of band → straight join to body
 
-    // Thin top border in accent colour
+    // Top glow line
     pdf.setDrawColor(cRgb[0],cRgb[1],cRgb[2]);
-    pdf.setLineWidth(0.6);
-    pdf.line(cx+2.2,cy+0.3,cx+COLW,cy+0.3);
-    pdf.setLineWidth(0.15);
+    pdf.setLineWidth(0.7);
+    pdf.line(cx+5,cy+0.35,cx+COLW-3,cy+0.35);
 
-    var iy=cy+4;
+    // Bottom glow line (dim)
+    pdf.setLineWidth(0.3);
+    pdf.setDrawColor(cRgb[0],cRgb[1],cRgb[2]);
+    pdf.line(cx+5,cy+CARD_H-0.35,cx+COLW-3,cy+CARD_H-0.35);
+    pdf.setLineWidth(0.14);
 
-    /* ── Polygon thumbnail ── */
-    if(thumbUrl){
-      // Rounded clip simulation: just draw image directly — jsPDF doesn't clip
-      pdf.addImage(thumbUrl,'PNG',cx+3,iy,COLW-6,THUMBH);
-      // Caption bar at bottom of thumb
-      fill(s3R); pdf.rect(cx+3,iy+THUMBH-5,COLW-6,5,'F');
-      pdf.setFont('helvetica','normal'); pdf.setFontSize(5.5); txt(MUTED);
-      pdf.text('Highlighted region',cx+5,iy+THUMBH-1.8);
-      iy+=THUMBH+4;
+    // Outer card border
+    drw(BORDER);pdf.setLineWidth(0.18);
+    pdf.roundedRect(cx,cy,COLW,CARD_H,3,3,'S');
+    pdf.setLineWidth(0.14);
+
+    var iy=cy+7; // content starts with left margin inside card
+    var IX=cx+8; // content x
+    var IW=COLW-13; // content width
+
+    /* ── Thumbnail ── */
+    if(thumb&&thumb.url){
+      // Compute rendered mm dimensions preserving canvas aspect ratio
+      // We give the thumbnail a fixed HEIGHT in mm; width is derived from canvas ratio
+      var thumbH_mm=42; // mm
+      var thumbW_mm=thumbH_mm*(thumb.cW/thumb.cH);
+      // Clamp width to card content width
+      if(thumbW_mm>IW){thumbW_mm=IW;thumbH_mm=thumbW_mm*(thumb.cH/thumb.cW);}
+      // Centre within card
+      var thumbX=IX+(IW-thumbW_mm)/2;
+      pdf.addImage(thumb.url,'PNG',thumbX,iy,thumbW_mm,thumbH_mm);
+      // Caption
+      fill(s3R);pdf.rect(thumbX,iy+thumbH_mm-5.5,thumbW_mm,5.5,'F');
+      pdf.setFont('helvetica','normal');pdf.setFontSize(6.5);txt(MUTED);
+      pdf.text('Region map',thumbX+2,iy+thumbH_mm-1.8);
+      iy+=thumbH_mm+4;
     }
 
     /* ── Feature name ── */
-    pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(13);
     pdf.setTextColor(cRgb[0],cRgb[1],cRgb[2]);
-    // Truncate long names
-    var displayName=f.name||'';
-    while(pdf.getTextWidth(displayName)>COLW-7&&displayName.length>8)
-      displayName=displayName.slice(0,-1);
-    if(displayName!==f.name) displayName+='…';
-    pdf.text(displayName,cx+4,iy+4.5);
-    iy+=6.5;
+    var dname=f.name||'';
+    // Truncate if too wide
+    while(pdf.getTextWidth(dname)>IW+2&&dname.length>6)dname=dname.slice(0,-1);
+    if(dname!==f.name)dname+='…';
+    pdf.text(dname,IX,iy+5);iy+=8;
 
-    /* ── Type pill ── */
-    var typeTxt=(typeIcon(f.type)||'📌')+' '+(f.type||'').toUpperCase();
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(6); txt(MUTED);
-    pdf.text(typeTxt,cx+4,iy); iy+=5;
+    /* ── Type label (plain ASCII) ── */
+    pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);txt(MUTED);
+    pdf.text(_eTypeLbl(f.type),IX,iy);iy+=6;
 
-    /* ── Thin divider ── */
-    drw(BORDER); pdf.setLineWidth(0.15);
-    pdf.line(cx+4,iy,cx+COLW-4,iy); iy+=3;
+    /* ── Divider ── */
+    drw(BORDER);pdf.setLineWidth(0.18);
+    pdf.line(IX,iy,cx+COLW-5,iy);iy+=4;
 
     /* ── Description ── */
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(7.8); txt(TEXT);
-    pdf.text(descLines,cx+4,iy); iy+=descH+3;
+    pdf.setFont('helvetica','normal');pdf.setFontSize(9);txt(TEXT);
+    var descLines=pdf.splitTextToSize(f.desc||'',IW);
+    // Limit lines to fit remaining space
+    var remainY=cy+CARD_H-5;
+    var statsKeys=f.stats?Object.keys(f.stats):[];
+    var relArr=(f.related||[]).filter(function(rk){return !!GEO_FEATURES[rk];});
+    // Reserve space for stats + related
+    var reservedH=statsKeys.length*(11+2)+( relArr.length?20:0)+6;
+    var maxDescH=remainY-iy-reservedH;
+    var lineH=4.6;
+    var maxLines=Math.max(2,Math.floor(maxDescH/lineH));
+    var showLines=descLines.slice(0,maxLines);
+    if(showLines.length<descLines.length){
+      // Truncate last line with ellipsis
+      var last=showLines[showLines.length-1];
+      while(pdf.getTextWidth(last+'…')>IW&&last.length>3)last=last.slice(0,-1);
+      showLines[showLines.length-1]=last+'…';
+    }
+    pdf.text(showLines,IX,iy);iy+=showLines.length*lineH+4;
 
     /* ── Stats ── */
-    if(statsKeys.length){
-      pdf.setFont('helvetica','normal'); pdf.setFontSize(5.8); txt(MUTED);
-      pdf.text('KEY STATISTICS',cx+4,iy); iy+=4;
+    if(statsKeys.length&&iy<remainY-statsKeys.length*13){
+      pdf.setFont('helvetica','normal');pdf.setFontSize(7);txt(MUTED);
+      pdf.text('KEY STATISTICS',IX,iy);iy+=4.5;
       statsKeys.forEach(function(sk){
-        fill(s3R); pdf.roundedRect(cx+3,iy,COLW-6,8.5,1,1,'F');
-        pdf.setFont('helvetica','normal'); pdf.setFontSize(5.5); txt(MUTED);
-        pdf.text(String(sk).toUpperCase(),cx+5,iy+2.8);
-        pdf.setFontSize(7.2); txt(TEXT);
-        var vl=pdf.splitTextToSize(String(f.stats[sk]),COLW-10);
-        pdf.text(vl[0],cx+5,iy+6.8);
-        iy+=10;
+        if(iy>remainY-12)return;
+        fill(s3R);pdf.roundedRect(IX,iy,IW,9.5,1.2,1.2,'F');
+        pdf.setFont('helvetica','normal');pdf.setFontSize(6.2);txt(MUTED);
+        pdf.text(String(sk).toUpperCase(),IX+2.5,iy+3.2);
+        pdf.setFontSize(8);txt(TEXT);
+        var vl=pdf.splitTextToSize(String(f.stats[sk]),IW-5);
+        pdf.text(vl[0],IX+2.5,iy+7.5);
+        iy+=11;
       });
       iy+=2;
     }
 
     /* ── Related ── */
-    if(relLines.length){
-      drw(BORDER); pdf.setLineWidth(0.12);
-      pdf.line(cx+4,iy,cx+COLW-4,iy); iy+=3;
-      pdf.setFont('helvetica','italic'); pdf.setFontSize(6.5);
-      txt(MUTED); pdf.text(relLines,cx+4,iy);
-      iy+=relLines.length*3.6+2;
+    if(relArr.length&&iy<remainY-12){
+      drw(BORDER);pdf.setLineWidth(0.15);
+      pdf.line(IX,iy,cx+COLW-5,iy);iy+=3.5;
+      pdf.setFont('helvetica','italic');pdf.setFontSize(7.5);txt(MUTED);
+      var relNames=relArr.map(function(rk){return GEO_FEATURES[rk].name;}).join('  ·  ');
+      var relLines=pdf.splitTextToSize('See also: '+relNames,IW);
+      pdf.text(relLines.slice(0,2),IX,iy);
     }
-
-    advCY(cardH+4);
   });
 
   pdf.save(_eFilename());
@@ -5827,6 +5876,7 @@ function _eFilename(){
 
 // Legacy alias
 function exportPDF(){openExportModal();}
+
 
 // ══════════════════════════════════════════════════════════════════════
 // ANNOTATION COLOR PICKER
