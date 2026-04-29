@@ -317,77 +317,48 @@ input{font-family:inherit;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .mob-handle{display:none;} /* shown only inside mobile @media */
 
-/* ══ Export PDF Modal ══════════════════════════════════════════════ */
-.exp-modal-overlay{
-  position:fixed;inset:0;z-index:600;
-  background:rgba(0,0,0,0.65);
-  backdrop-filter:blur(6px);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;
-}
-.exp-modal{
-  background:var(--surface);border:1px solid var(--border-h);
-  border-radius:var(--r);padding:24px 22px;width:100%;max-width:420px;
-  box-shadow:0 16px 48px rgba(0,0,0,0.6);
-  animation:expIn .2s cubic-bezier(.16,1,.3,1) both;
-}
-@keyframes expIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-.exp-modal-title{
-  font-family:'Instrument Serif',serif;font-size:1.1rem;font-style:italic;
-  color:var(--accent);margin-bottom:3px;letter-spacing:-0.01em;
-}
-.exp-modal-sub{font-size:0.7rem;color:var(--muted);margin-bottom:18px;line-height:1.5;}
-.exp-modal-section{margin-bottom:15px;}
-.exp-modal-label{
-  font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;
-  color:var(--muted);margin-bottom:7px;font-weight:500;
-}
-.exp-opt-row{display:flex;flex-direction:column;gap:6px;}
-.exp-opt{
-  display:flex;align-items:flex-start;gap:10px;
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;
-  transition:border-color .15s,background .15s;user-select:none;
-}
+/* ══ Export PDF Modal ══════════════════════════════════════════════════ */
+.exp-ov{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.68);
+  backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:16px;}
+.exp-box{background:var(--surface);border:1px solid var(--border-h);border-radius:var(--r);
+  padding:24px 22px;width:100%;max-width:430px;
+  box-shadow:0 20px 60px rgba(0,0,0,.65);animation:expIn .22s cubic-bezier(.16,1,.3,1) both;}
+@keyframes expIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.exp-title{font-family:'Instrument Serif',serif;font-size:1.1rem;font-style:italic;
+  color:var(--accent);margin-bottom:3px;letter-spacing:-.01em;}
+.exp-sub{font-size:.7rem;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.exp-sec{margin-bottom:14px;}
+.exp-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);margin-bottom:7px;font-weight:500;}
+.exp-opts{display:flex;flex-direction:column;gap:6px;}
+.exp-opt{display:flex;align-items:flex-start;gap:10px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;
+  cursor:pointer;transition:border-color .15s,background .15s;user-select:none;}
 .exp-opt:hover{border-color:var(--border-h);}
-.exp-opt.exp-sel{
-  border-color:rgba(var(--accent-rgb),0.45);
-  background:rgba(var(--accent-rgb),0.07);
-}
-.exp-opt.exp-disabled{opacity:0.4;pointer-events:none;}
+.exp-opt.on{border-color:rgba(var(--accent-rgb),.45);background:rgba(var(--accent-rgb),.07);}
+.exp-opt.off{opacity:.4;pointer-events:none;}
 .exp-opt input[type=radio]{margin-top:2px;accent-color:var(--accent);flex-shrink:0;cursor:pointer;}
-.exp-opt-name{font-size:0.8rem;color:var(--text);line-height:1.35;}
-.exp-opt-desc{font-size:0.68rem;color:var(--muted);margin-top:2px;line-height:1.4;}
-.exp-theme-row{display:flex;gap:8px;}
-.exp-theme-btn{
-  flex:1;padding:9px 10px;border:1px solid var(--border);
-  border-radius:var(--r-sm);background:var(--surface2);
-  font-size:0.76rem;color:var(--muted);cursor:pointer;font-family:inherit;
-  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;
-}
-.exp-theme-btn:hover{border-color:var(--border-h);color:var(--text);}
-.exp-theme-btn.exp-sel{
-  border-color:rgba(var(--accent-rgb),0.45);
-  background:rgba(var(--accent-rgb),0.07);
-  color:var(--accent);
-}
-.exp-modal-footer{display:flex;gap:8px;margin-top:20px;}
-.exp-cancel{
-  flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--r-sm);
-  background:none;color:var(--muted);font-size:0.76rem;cursor:pointer;
-  font-family:inherit;transition:all .15s;letter-spacing:0.03em;
-}
+.exp-oname{font-size:.8rem;color:var(--text);line-height:1.35;}
+.exp-odesc{font-size:.67rem;color:var(--muted);margin-top:2px;line-height:1.4;}
+.exp-themes{display:flex;gap:8px;}
+.exp-tbtn{flex:1;padding:9px 10px;border:1px solid var(--border);border-radius:var(--r-sm);
+  background:var(--surface2);font-size:.76rem;color:var(--muted);cursor:pointer;
+  font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.exp-tbtn:hover{border-color:var(--border-h);color:var(--text);}
+.exp-tbtn.on{border-color:rgba(var(--accent-rgb),.45);background:rgba(var(--accent-rgb),.07);color:var(--accent);}
+.exp-foot{display:flex;gap:8px;margin-top:20px;}
+.exp-cancel{flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--r-sm);
+  background:none;color:var(--muted);font-size:.76rem;cursor:pointer;
+  font-family:inherit;transition:all .15s;letter-spacing:.03em;}
 .exp-cancel:hover{border-color:var(--border-h);color:var(--text);}
-.exp-go{
-  flex:2;padding:9px;border:none;border-radius:var(--r-sm);
-  background:var(--accent);color:var(--bg);font-size:0.76rem;cursor:pointer;
-  font-family:inherit;font-weight:500;letter-spacing:0.04em;transition:opacity .15s;
-}
-.exp-go:hover{opacity:0.85;}
-.exp-go:disabled{opacity:0.42;cursor:not-allowed;}
-.exp-go-inner{display:flex;align-items:center;justify-content:center;gap:7px;}
-.exp-spin{width:12px;height:12px;border:2px solid var(--bg);
-  border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+.exp-go{flex:2;padding:9px;border:none;border-radius:var(--r-sm);background:var(--accent);
+  color:var(--bg);font-size:.76rem;cursor:pointer;font-family:inherit;font-weight:500;
+  letter-spacing:.04em;transition:opacity .15s;}
+.exp-go:hover{opacity:.85;}
+.exp-go:disabled{opacity:.4;cursor:not-allowed;}
+.exp-gorow{display:flex;align-items:center;justify-content:center;gap:7px;}
+.exp-spin{width:12px;height:12px;border:2px solid var(--bg);border-top-color:transparent;
+  border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
 
 /* ── Mobile ── */
 @media(max-width:700px){
@@ -5383,477 +5354,479 @@ function toggleRelated(elOrKey, rk){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// EXPORT PDF  —  modal + multi-card + shaded-region thumbnails
+// EXPORT PDF  ── modal + per-feature polygon thumbnails + elegant layout
 // ══════════════════════════════════════════════════════════════════════
+var _eChoice='globe', _eTheme='dark', _eModal=null;
 
-var _expChoice = 'globe';   // 'globe' | 'globe+info'
-var _expTheme  = 'dark';    // 'dark'  | 'light'
-var _expModalEl = null;
-
-/* ── Open modal ─────────────────────────────────────────── */
+/* ── Modal open/close ─────────────────────────────────────────────── */
 function openExportModal(){
-  if(_expModalEl){ _expModalEl.remove(); _expModalEl=null; }
-  _expTheme = document.body.classList.contains('light') ? 'light' : 'dark';
-  _expChoice = 'globe';
+  if(_eModal){_eModal.remove();_eModal=null;}
+  _eTheme = document.body.classList.contains('light')?'light':'dark';
+  _eChoice= 'globe';
 
-  // Gather all cards visible in the panel
-  var hasCards = (searchCards.length > 0) ||
-                 Object.keys(activeHighlights).some(function(k){ return k.indexOf('wiki_')===0; });
+  var hasCards = (typeof searchCards!=='undefined' && searchCards.length>0) ||
+    Object.keys(activeHighlights).some(function(k){return k.indexOf('wiki_')===0;});
 
-  var overlay = document.createElement('div');
-  overlay.className = 'exp-modal-overlay';
-  overlay.addEventListener('click', function(e){ if(e.target===overlay) closeExportModal(); });
+  var ov=document.createElement('div');
+  ov.className='exp-ov';
+  ov.addEventListener('click',function(e){if(e.target===ov)closeExportModal();});
 
-  overlay.innerHTML =
-    '<div class="exp-modal">' +
-      '<div class="exp-modal-title">Export PDF</div>' +
-      '<div class="exp-modal-sub">Choose what to include and your preferred background theme.</div>' +
-
-      '<div class="exp-modal-section">' +
-        '<div class="exp-modal-label">Content</div>' +
-        '<div class="exp-opt-row">' +
-
-          '<label class="exp-opt exp-sel" id="_eo_globe">' +
-            '<input type="radio" name="expContent" value="globe" checked/>' +
-            '<div>' +
-              '<div class="exp-opt-name">🌍&nbsp; Globe only</div>' +
-              '<div class="exp-opt-desc">Current camera angle with all markings — one page.</div>' +
-            '</div>' +
-          '</label>' +
-
-          '<label class="exp-opt'+(hasCards?'':' exp-disabled')+'" id="_eo_info">' +
-            '<input type="radio" name="expContent" value="globe+info"'+(hasCards?'':' disabled')+'/>' +
-            '<div>' +
-              '<div class="exp-opt-name">📋&nbsp; Globe + Info box</div>' +
-              '<div class="exp-opt-desc">'+(hasCards
-                ? 'Globe on page 1, then every info-box card in a two-column layout — including shaded-region previews for applicable features.'
-                : 'Search for at least one feature to enable this option.')+
-              '</div>' +
-            '</div>' +
-          '</label>' +
-
-        '</div>' +
-      '</div>' +
-
-      '<div class="exp-modal-section">' +
-        '<div class="exp-modal-label">Background Theme</div>' +
-        '<div class="exp-theme-row">' +
-          '<button class="exp-theme-btn'+(_expTheme==='dark'?' exp-sel':'')+'" id="_et_dark"  onclick="_expPickTheme(\'dark\')"  type="button">🌑&nbsp; Dark</button>' +
-          '<button class="exp-theme-btn'+(_expTheme==='light'?' exp-sel':'')+'" id="_et_light" onclick="_expPickTheme(\'light\')" type="button">☀&nbsp; Light</button>' +
-        '</div>' +
-      '</div>' +
-
-      '<div class="exp-modal-footer">' +
-        '<button class="exp-cancel" onclick="closeExportModal()" type="button">Cancel</button>' +
-        '<button class="exp-go" id="_expGoBtn" onclick="_expRun()" type="button">' +
-          '<span class="exp-go-inner" id="_expGoInner">⬇&nbsp; Generate PDF</span>' +
-        '</button>' +
-      '</div>' +
+  ov.innerHTML=
+    '<div class="exp-box">'+
+      '<div class="exp-title">Export PDF</div>'+
+      '<div class="exp-sub">Choose content and background theme for your PDF.</div>'+
+      '<div class="exp-sec">'+
+        '<div class="exp-lbl">Content</div>'+
+        '<div class="exp-opts">'+
+          '<label class="exp-opt on" id="_eoG">'+
+            '<input type="radio" name="ec" value="globe" checked/>'+
+            '<div><div class="exp-oname">🌍&nbsp; Globe only</div>'+
+            '<div class="exp-odesc">Current camera view with all markings — one page.</div></div>'+
+          '</label>'+
+          '<label class="exp-opt'+(hasCards?'':' off')+'" id="_eoI">'+
+            '<input type="radio" name="ec" value="globe+info"'+(hasCards?'':' disabled')+'/>'+
+            '<div><div class="exp-oname">📋&nbsp; Globe + Info box</div>'+
+            '<div class="exp-odesc">'+(hasCards
+              ?'Globe on page 1, then every info-box card with polygon map thumbnails in an elegant two-column layout.'
+              :'Search for a feature first to enable this option.')+
+            '</div></div>'+
+          '</label>'+
+        '</div>'+
+      '</div>'+
+      '<div class="exp-sec">'+
+        '<div class="exp-lbl">Background Theme</div>'+
+        '<div class="exp-themes">'+
+          '<button class="exp-tbtn'+(_eTheme==='dark'?' on':'')+'" id="_etD" onclick="_ePkTh(\'dark\')"  type="button">🌑&nbsp; Dark</button>'+
+          '<button class="exp-tbtn'+(_eTheme==='light'?' on':'')+'" id="_etL" onclick="_ePkTh(\'light\')" type="button">☀&nbsp; Light</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="exp-foot">'+
+        '<button class="exp-cancel" onclick="closeExportModal()" type="button">Cancel</button>'+
+        '<button class="exp-go" id="_eGoBtn" onclick="_eRun()" type="button">'+
+          '<span class="exp-gorow" id="_eGoTxt">⬇&nbsp; Generate PDF</span>'+
+        '</button>'+
+      '</div>'+
     '</div>';
 
-  document.body.appendChild(overlay);
-  _expModalEl = overlay;
+  document.body.appendChild(ov);
+  _eModal=ov;
 
-  // Wire radio buttons
-  overlay.querySelectorAll('input[name=expContent]').forEach(function(r){
-    r.addEventListener('change', function(){
-      _expChoice = this.value;
-      overlay.querySelectorAll('.exp-opt').forEach(function(el){ el.classList.remove('exp-sel'); });
-      var lbl = this.closest('.exp-opt');
-      if(lbl) lbl.classList.add('exp-sel');
+  ov.querySelectorAll('input[name=ec]').forEach(function(r){
+    r.addEventListener('change',function(){
+      _eChoice=this.value;
+      ov.querySelectorAll('.exp-opt').forEach(function(el){el.classList.remove('on');});
+      var lb=this.closest('.exp-opt'); if(lb)lb.classList.add('on');
     });
   });
 }
-
-function _expPickTheme(t){
-  _expTheme = t;
-  var d = document.getElementById('_et_dark'), l = document.getElementById('_et_light');
-  if(d){ d.classList.toggle('exp-sel', t==='dark');  }
-  if(l){ l.classList.toggle('exp-sel', t==='light'); }
+function _ePkTh(t){
+  _eTheme=t;
+  var d=document.getElementById('_etD'),l=document.getElementById('_etL');
+  if(d)d.classList.toggle('on',t==='dark');
+  if(l)l.classList.toggle('on',t==='light');
 }
-
-function closeExportModal(){
-  if(_expModalEl){ _expModalEl.remove(); _expModalEl=null; }
-}
-
-function _expRun(){
-  var btn = document.getElementById('_expGoBtn');
-  var inn = document.getElementById('_expGoInner');
-  if(btn) btn.disabled = true;
-  if(inn) inn.innerHTML = '<div class="exp-spin"></div>&nbsp;Generating…';
+function closeExportModal(){if(_eModal){_eModal.remove();_eModal=null;}}
+function _eRun(){
+  var btn=document.getElementById('_eGoBtn'),tx=document.getElementById('_eGoTxt');
+  if(btn)btn.disabled=true;
+  if(tx)tx.innerHTML='<div class="exp-spin"></div>&nbsp;Generating…';
   setTimeout(function(){
-    try{ _expDoPDF(_expChoice, _expTheme); } catch(e){ console.error(e); }
+    try{_eBuildPDF(_eChoice,_eTheme);}catch(e){console.error('PDF error:',e);}
     closeExportModal();
-  }, 80);
+  },80);
 }
 
-/* ══ Core PDF builder ═══════════════════════════════════════════════ */
-function _expDoPDF(choice, theme){
-  var isDark  = (theme === 'dark');
-  // Colour palette matching CSS vars
-  var BG      = isDark ? '#0d0c1a' : '#e8e4db';
-  var SURFACE = isDark ? '#16142a' : '#f5f2ea';
-  var SURF2   = isDark ? '#1e1c32' : '#ede9e0';
-  var BORDER  = isDark ? [50,48,80]    : [200,195,185];
-  var TEXT    = isDark ? [236,237,242] : [30,27,20];
-  var MUTED   = isDark ? [138,138,172] : [122,112,96];
-  var ACCENT  = isDark ? [232,213,176] : [154,124,63];
-
-  /* ── 1. Composite globe canvas (Three.js + annotation overlay) ── */
-  // Force a fresh render at the current camera angle
-  renderer.render(scene, camera);
-  var GW = renderer.domElement.width;
-  var GH = renderer.domElement.height;
-
-  // On mobile the renderer is sized exactly to the visible globe area
-  // (top 50% of layout below topbar). annotC is sized the same way.
-  // We draw both at their natural pixel size — no stretching — so nothing
-  // is cropped and the export matches exactly what the user sees.
-  var comp = document.createElement('canvas');
-  comp.width  = GW;
-  comp.height = GH;
-  var ctx = comp.getContext('2d');
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, GW, GH);
-  ctx.drawImage(renderer.domElement, 0, 0, GW, GH);
-  if(annotC && annotC.width > 0 && annotC.height > 0){
-    // annotC may have slightly different pixel dims on mobile if devicePixelRatio
-    // scaling differs — always draw it scaled to match GW×GH so overlays align.
-    ctx.drawImage(annotC, 0, 0, GW, GH);
-  }
-  var globeImg = comp.toDataURL('image/png');
-
-  /* ── 2. Setup PDF ── */
-  var PW = 297, PH = 210;  // A4 landscape mm
-  var FOOT = 9;            // footer height mm
-  var SM   = 12;           // side margin mm
-
-  var pdf = new jspdf.jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
-
-  /* ── helper: hex → [r,g,b] ── */
-  function rgb(hex){
-    var c = hex.replace('#','');
-    if(c.length===3) c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
-    var n=parseInt(c,16);
-    return [(n>>16)&255,(n>>8)&255,n&255];
-  }
-  function setFill(col){ pdf.setFillColor(col[0],col[1],col[2]); }
-  function setTxt(col) { pdf.setTextColor(col[0],col[1],col[2]); }
-  function setDraw(col){ pdf.setDrawColor(col[0],col[1],col[2]); }
-
-  /* ── helper: add clickable branding footer ── */
-  function addFooter(){
-    var bgRgb = rgb(BG);
-    var stripY = PH - FOOT;
-    // Slightly darker strip
-    var stripRgb = isDark ? [8,7,18] : [210,206,196];
-    pdf.setFillColor(stripRgb[0],stripRgb[1],stripRgb[2]);
-    pdf.rect(0, stripY, PW, FOOT, 'F');
-    // Separator line
-    setDraw(BORDER);
-    pdf.setLineWidth(0.2);
-    pdf.line(SM, stripY+0.3, PW-SM, stripY+0.3);
-
-    pdf.setFont('helvetica','normal');
-    pdf.setFontSize(6.2);
-    setTxt(MUTED);
-
-    var y = PH - 2.8;
-    // Left: main site
-    var leftTxt = 'cogniswift.in  —  From Notes To Memory · World\'s most advanced AI Revision Engine for exams';
-    pdf.textWithLink(leftTxt, SM, y, {url:'https://www.cogniswift.in'});
-    // Right: globe URL
-    var rightTxt = 'CogniSwift 3D EARTH ATLAS  →  cogniswift.in/globe.html?theme=dark';
-    pdf.textWithLink(rightTxt, PW-SM, y, {align:'right', url:'https://www.cogniswift.in/globe.html?theme=dark'});
-  }
-
-  /* ══ PAGE 1: Globe ══════════════════════════════════════════════ */
-  var bgRgb = rgb(BG);
-  pdf.setFillColor(bgRgb[0],bgRgb[1],bgRgb[2]);
-  pdf.rect(0,0,PW,PH,'F');
-
-  // Fit globe image — fill width, maintain aspect, vertically centred in globe area
-  var globeAreaH = PH - FOOT;
-  var imgAspect  = GW / GH;
-  var dW = PW, dH = PW / imgAspect;
-  var dX = 0, dY = (globeAreaH - dH) / 2;
-  if(dH < globeAreaH){ dH = globeAreaH; dW = globeAreaH * imgAspect; dX = (PW-dW)/2; dY = 0; }
-  pdf.addImage(globeImg, 'PNG', dX, dY, dW, dH);
-
-  addFooter();
-
-  /* ══ PAGES 2+: Info box cards ═══════════════════════════════════ */
-  if(choice === 'globe+info'){
-
-    // ── Collect ALL cards in panel order ──────────────────────────
-    // 1. searchCards (direct searches) — in order they were added
-    // 2. wiki features — in order they appear in activeHighlights
-    var allCards = [];
-
-    searchCards.forEach(function(sc){
-      allCards.push({ key: sc.key, data: sc.data, color: sc.color, isWiki: false });
-    });
-
-    Object.keys(activeHighlights).forEach(function(k){
-      if(k.indexOf('wiki_') === 0){
-        var f = GEO_FEATURES[k];
-        if(!f) return;
-        var hi = activeHighlights[k];
-        allCards.push({ key: k, data: f, color: hi ? hi.color : '#f0c060', isWiki: true });
-      }
-    });
-
-    if(allCards.length === 0) return pdf.save(_expFilename());
-
-    // ── Determine which keys have a SHADED POLYGON highlight ──────
-    // Shaded = painted as polygon/area on the globe texture.
-    // NOT shaded = mountain, volcano, river, trench, lagoon, polyline, point
-    function hasPolygonHighlight(key, f){
-      if(!f) return false;
-      var ftype = (f.type||'').toLowerCase();
-      // Exclude non-area types
-      var noShade = ['mountain','volcano','river','ocean trench','trench',
-                     'rift valley','lagoon/waterway'];
-      if(noShade.indexOf(ftype) >= 0) return false;
-      // If shape is explicitly a point or polyline → no shading
-      if(f.shape){
-        if(f.shape.type === 'point') return false;
-        if(f.shape.type === 'polyline') return false;
-        if(f.shape.type === 'dashed') return false;
-        // geojson — check geometry type
-        if(f.shape.type === 'geojson' && f.shape.geom){
-          var gt = f.shape.geom.type || '';
-          if(gt === 'LineString' || gt === 'MultiLineString') return false;
-          return true; // Polygon or MultiPolygon
-        }
-      }
-      // NE lookup-based features (countries, plains, plateaus, seas, etc.)
-      // They don't have f.shape or have shape:{type:'polygon'} — treat as shaded
-      return true;
-    }
-
-    // ── Render a small globe snapshot for a feature's shaded area ─
-    // We render a fresh snapshot of the current texCanvas (which already has
-    // all highlights painted) and just reuse the existing renderer frame.
-    // For the thumbnail we capture the same globe view — the highlight is
-    // already painted on the texture. We just take a cropped square from the
-    // centre of the renderer output as the thumbnail.
-    function getFeatureThumbnail(key, f, col, cb){
-      // Use html2canvas-style approach: re-render the globe from a flyTo position
-      // Instead: snapshot texCanvas directly as a flat equirectangular strip,
-      // then draw it on a small canvas. Much lighter than re-rendering 3D.
-      // We use the CURRENT renderer frame (already painted with all highlights).
-      try{
-        var thumb = document.createElement('canvas');
-        var TS = 200;
-        thumb.width = TS; thumb.height = TS;
-        var tc = thumb.getContext('2d');
-        tc.fillStyle = BG;
-        tc.fillRect(0,0,TS,TS);
-        // Draw centre-crop of the renderer output
-        var src = renderer.domElement;
-        var srcSize = Math.min(src.width, src.height);
-        var sx = (src.width  - srcSize)/2;
-        var sy = (src.height - srcSize)/2;
-        tc.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, TS, TS);
-        if(annotC) tc.drawImage(annotC, sx, sy, srcSize, srcSize, 0, 0, TS, TS);
-        cb(thumb.toDataURL('image/png'));
-      } catch(e){ cb(null); }
-    }
-
-    // ── Layout constants ──────────────────────────────────────────
-    var TOP   = 13;
-    var SIDE  = SM;
-    var GAP   = 7;
-    var COLW  = (PW - SIDE*2 - GAP) / 2;
-    var MAXCY = PH - FOOT - 4;
-    var THUMBH= 28; // mm height of thumbnail strip
-
-    // Column cursors
-    var yL = TOP, yR = TOP, col = 0; // col 0=left, 1=right
-
-    function xOf(c){ return SIDE + c*(COLW+GAP); }
-    function getCY(){ return col===0 ? yL : yR; }
-    function advCY(d){ if(col===0) yL+=d; else yR+=d; }
-
-    function ensureSpace(need){
-      if(col===0 && yL+need > MAXCY){ col=1; return; }
-      if(col===1 && yR+need > MAXCY){
-        // New page
-        pdf.addPage('a4','landscape');
-        bgRgb = rgb(BG);
-        pdf.setFillColor(bgRgb[0],bgRgb[1],bgRgb[2]);
-        pdf.rect(0,0,PW,PH,'F');
-        addFooter();
-        yL=TOP; yR=TOP; col=0;
-      }
-    }
-
-    function newInfoPage(){
-      pdf.addPage('a4','landscape');
-      var bgr = rgb(BG);
-      pdf.setFillColor(bgr[0],bgr[1],bgr[2]);
-      pdf.rect(0,0,PW,PH,'F');
-      addFooter();
-      yL=TOP; yR=TOP; col=0;
-    }
-
-    newInfoPage();
-
-    // Render each card synchronously (thumbnails are canvas-based, no async)
-    allCards.forEach(function(card){
-      var f   = card.data;
-      var key = card.key;
-      var cardColor = card.color;
-      var cardRgb = _expHexToRgb(cardColor);
-
-      // Estimate height of this card
-      var descLines = pdf.setFontSize(8)||pdf.splitTextToSize(f.desc||'', COLW-5);
-      pdf.setFontSize(8);
-      descLines = pdf.splitTextToSize(f.desc||'', COLW-5);
-      var descH = descLines.length * 4.0;
-      var statsCount = f.stats ? Object.keys(f.stats).length : 0;
-      var relCount   = f.related ? f.related.length : 0;
-      var hasPoly    = hasPolygonHighlight(key, f);
-      var wikiThumb  = f._wikiThumb || null;
-      var thumbH     = (hasPoly || wikiThumb) ? THUMBH + 3 : 0;
-
-      var cardH = 6 + thumbH + 5 + descH + 4 +
-                  (statsCount > 0 ? statsCount*11+5 : 0) +
-                  (relCount   > 0 ? 12 : 0) + 4;
-
-      ensureSpace(cardH + 5);
-
-      var cx = xOf(col);
-      var cy = getCY();
-
-      // ── Card background ──
-      var s2 = rgb(SURF2);
-      pdf.setFillColor(s2[0],s2[1],s2[2]);
-      pdf.roundedRect(cx, cy, COLW, cardH, 2, 2, 'F');
-      // Left accent bar
-      pdf.setFillColor(cardRgb[0],cardRgb[1],cardRgb[2]);
-      pdf.rect(cx, cy, 2, cardH, 'F');
-
-      var iy = cy + 4;
-
-      // ── Thumbnail: polygon highlight or wiki image ──
-      if(hasPoly && !wikiThumb){
-        // Draw globe thumbnail (centre-crop of current render)
-        try{
-          var thumbCanvas = document.createElement('canvas');
-          var TS = 300;
-          thumbCanvas.width = TS; thumbCanvas.height = TS;
-          var ttc = thumbCanvas.getContext('2d');
-          ttc.fillStyle = BG;
-          ttc.fillRect(0,0,TS,TS);
-          var src = renderer.domElement;
-          var srcSz = Math.min(src.width,src.height);
-          var sxx = (src.width-srcSz)/2, syy = (src.height-srcSz)/2;
-          ttc.drawImage(src, sxx, syy, srcSz, srcSz, 0, 0, TS, TS);
-          if(annotC) ttc.drawImage(annotC, sxx, syy, srcSz, srcSz, 0, 0, TS, TS);
-          var tDataUrl = thumbCanvas.toDataURL('image/png');
-          pdf.addImage(tDataUrl,'PNG', cx+3, iy, COLW-6, THUMBH);
-        } catch(e){}
-        // Colour label overlay at bottom of thumb
-        pdf.setFillColor(cardRgb[0],cardRgb[1],cardRgb[2]);
-        pdf.setGState && pdf.setGState(pdf.GState({opacity:0.18}));
-        try{ pdf.rect(cx+3, iy+THUMBH-4.5, COLW-6, 4.5, 'F'); } catch(e){}
-        try{ if(pdf.setGState) pdf.setGState(pdf.GState({opacity:1})); } catch(e){}
-        pdf.setFont('helvetica','normal'); pdf.setFontSize(5.5); setTxt(MUTED);
-        pdf.text('Globe view — shaded region highlighted', cx+5, iy+THUMBH-1.2);
-        iy += THUMBH + 2;
-      } else if(wikiThumb){
-        // Wiki image
-        try{
-          var wimg = new Image();
-          wimg.crossOrigin='anonymous';
-          // Use synchronous canvas approach — can't do async in sync PDF build
-          // Fall back: just label
-          pdf.setFont('helvetica','italic'); pdf.setFontSize(5.8); setTxt(MUTED);
-          pdf.text('Wikipedia source image available online', cx+5, iy+4);
-          iy += 7;
-        } catch(e){ iy += 2; }
-      }
-
-      // ── Feature name ──
-      pdf.setFont('helvetica','normal');
-      pdf.setFontSize(9);
-      setTxt(cardRgb);
-      pdf.text(String(f.name||''), cx+4, iy+4.5);
-      iy += 6.5;
-
-      // ── Type badge ──
-      pdf.setFontSize(6.2);
-      setTxt(MUTED);
-      pdf.text((typeIcon(f.type)||'📌')+' '+(f.type||'').toUpperCase(), cx+4, iy);
-      iy += 5;
-
-      // ── Description ──
-      pdf.setFont('helvetica','normal');
-      pdf.setFontSize(8);
-      setTxt(TEXT);
-      var dlines = pdf.splitTextToSize(f.desc||'', COLW-6);
-      pdf.text(dlines, cx+4, iy);
-      iy += dlines.length*4.0 + 3;
-
-      // ── Stats ──
-      if(statsCount > 0){
-        pdf.setFontSize(6);
-        setTxt(MUTED);
-        pdf.text('KEY STATISTICS', cx+4, iy);
-        iy += 4;
-        Object.keys(f.stats).forEach(function(sk){
-          var s1rgb = rgb(isDark ? '#1e1c32' : '#e4e0d6');
-          pdf.setFillColor(s1rgb[0],s1rgb[1],s1rgb[2]);
-          pdf.roundedRect(cx+3, iy, COLW-6, 9, 1.2, 1.2, 'F');
-          pdf.setFontSize(5.8); setTxt(MUTED);
-          pdf.text(String(sk).toUpperCase(), cx+5, iy+3.2);
-          pdf.setFontSize(7.5); setTxt(TEXT);
-          var vlines = pdf.splitTextToSize(String(f.stats[sk]), COLW-10);
-          pdf.text(vlines[0], cx+5, iy+7.2);
-          iy += 11;
-        });
-        iy += 1;
-      }
-
-      // ── Related features ──
-      if(relCount > 0){
-        pdf.setFont('helvetica','normal');
-        pdf.setFontSize(6.2);
-        setTxt(MUTED);
-        pdf.text('RELATED: '+ f.related.map(function(rk){
-          var rf=GEO_FEATURES[rk];
-          return rf ? rf.name : rk.replace(/_/g,' ');
-        }).join(' · '), cx+4, iy, {maxWidth: COLW-6});
-        iy += 7;
-      }
-
-      advCY(cardH + 5);
-    });
-  }
-
-  pdf.save(_expFilename());
-}
-
-function _expFilename(){
-  var parts = searchCards.map(function(c){ return c.key.replace(/\s+/g,'-'); });
-  var wKeys = Object.keys(activeHighlights).filter(function(k){ return k.indexOf('wiki_')===0; });
-  wKeys.forEach(function(k){ parts.push(k.slice(5,20)); });
-  var slug = parts.slice(0,3).join('_') || 'globe';
-  return 'cogniswift-earth-' + slug + '.pdf';
-}
-
-function _expHexToRgb(hex){
-  if(!hex||hex.length<4) return [180,160,120];
-  var c=hex.replace('#','');
-  if(c.length===3) c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+/* ══ Helpers ════════════════════════════════════════════════════════ */
+function _eHex(hex){
+  var c=(hex||'#888').replace('#','');
+  if(c.length===3)c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
   var n=parseInt(c,16)||0;
   return [(n>>16)&255,(n>>8)&255,n&255];
 }
+function _eLighter(rgb,amt){
+  return [Math.min(255,rgb[0]+amt),Math.min(255,rgb[1]+amt),Math.min(255,rgb[2]+amt)];
+}
+
+/* ── Determine if a feature produces a shaded polygon ── */
+function _eHasPoly(key,f){
+  if(!f) return false;
+  var ft=(f.type||'').toLowerCase();
+  var NO=['mountain','volcano','river','ocean trench','trench','rift valley','lagoon/waterway'];
+  if(NO.indexOf(ft)>=0) return false;
+  if(f.shape){
+    if(f.shape.type==='point'||f.shape.type==='polyline'||f.shape.type==='dashed') return false;
+    if(f.shape.type==='geojson'&&f.shape.geom){
+      var gt=f.shape.geom.type||'';
+      if(gt==='LineString'||gt==='MultiLineString') return false;
+      return true;
+    }
+  }
+  return true; // NE-lookup based (country, region, plain, sea, lake, etc.)
+}
+
+/* ── Get the geometry for a feature (same logic as paintFeatureOnTexture) ── */
+function _eGetGeom(key,f){
+  if(!f) return null;
+  var ft=(f.type||'').toLowerCase();
+  // Try NE lookup first
+  var found=lookupNE(f.name,ft)||lookupNE(key,ft);
+  if(found&&found.geom){
+    var gt=(found.geom.type||'');
+    if(gt==='Polygon'||gt==='MultiPolygon') return found.geom;
+  }
+  // Fallback to hand-coded shape
+  if(f.shape){
+    if(f.shape.type==='geojson'&&f.shape.geom){
+      var g=f.shape.geom,gt2=g.type||'';
+      if(gt2==='Polygon'||gt2==='MultiPolygon') return g;
+    }
+    if(f.shape.type==='polygon'&&f.shape.ring){
+      // Convert ring to GeoJSON Polygon
+      return {type:'Polygon',coordinates:[f.shape.ring.map(function(c){return [c[0],c[1]];}) ]};
+    }
+  }
+  return null;
+}
+
+/* ── Compute bounding box of a GeoJSON geometry ── */
+function _eGeomBbox(geom){
+  var minX=180,maxX=-180,minY=90,maxY=-90;
+  function pt(c){
+    if(c[0]<minX)minX=c[0]; if(c[0]>maxX)maxX=c[0];
+    if(c[1]<minY)minY=c[1]; if(c[1]>maxY)maxY=c[1];
+  }
+  function ring(r){r.forEach(pt);}
+  function poly(p){p.forEach(ring);}
+  if(geom.type==='Polygon')           geom.coordinates.forEach(ring);
+  else if(geom.type==='MultiPolygon') geom.coordinates.forEach(poly);
+  return {minX:minX,maxX:maxX,minY:minY,maxY:maxY};
+}
+
+/* ── Render isolated polygon thumbnail as square data URL ── */
+function _ePolyThumb(geom,color,isDark){
+  var SZ=300; // output square px
+  var c=document.createElement('canvas'); c.width=SZ; c.height=SZ;
+  var ctx=c.getContext('2d');
+
+  var bg=isDark?'#0d0c1a':'#e8e4db';
+  var borderCol=isDark?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.15)';
+
+  // Background
+  ctx.fillStyle=bg;
+  ctx.fillRect(0,0,SZ,SZ);
+
+  // Compute bbox with padding
+  var bb=_eGeomBbox(geom);
+  var pad=Math.max((bb.maxX-bb.minX),(bb.maxY-bb.minY))*0.18+2;
+  var lngMin=bb.minX-pad, lngMax=bb.maxX+pad;
+  var latMin=bb.minY-pad, latMax=bb.maxY+pad;
+  // Keep aspect: fit into square
+  var lngSpan=lngMax-lngMin, latSpan=latMax-latMin;
+  if(lngSpan<latSpan){ var d=(latSpan-lngSpan)/2; lngMin-=d; lngMax+=d; }
+  else               { var d=(lngSpan-latSpan)/2; latMin-=d; latMax+=d; }
+  lngSpan=lngMax-lngMin; latSpan=latMax-latMin;
+
+  function project(lng,lat){
+    var x=((lng-lngMin)/lngSpan)*SZ;
+    var y=((latMax-lat)/latSpan)*SZ;
+    return [x,y];
+  }
+
+  // Draw a subtle grid / graticule
+  ctx.strokeStyle=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)';
+  ctx.lineWidth=0.8;
+  for(var glng=-180;glng<=180;glng+=30){
+    var gx=((glng-lngMin)/lngSpan)*SZ;
+    if(gx>=0&&gx<=SZ){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,SZ);ctx.stroke();}
+  }
+  for(var glat=-90;glat<=90;glat+=30){
+    var gy=((latMax-glat)/latSpan)*SZ;
+    if(gy>=0&&gy<=SZ){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(SZ,gy);ctx.stroke();}
+  }
+
+  // Parse colour
+  var rgb=_eHex(color);
+  var fillA=isDark?0.42:0.38;
+  ctx.fillStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+fillA+')';
+  ctx.strokeStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',0.92)';
+  ctx.lineWidth=1.6;
+  ctx.lineJoin='round';
+
+  function drawGeom(geom){
+    function ring(coords){
+      if(!coords||!coords.length) return;
+      var p0=project(coords[0][0],coords[0][1]);
+      ctx.moveTo(p0[0],p0[1]);
+      for(var i=1;i<coords.length;i++){
+        var p=project(coords[i][0],coords[i][1]);
+        ctx.lineTo(p[0],p[1]);
+      }
+      ctx.closePath();
+    }
+    if(geom.type==='Polygon'){
+      ctx.beginPath(); geom.coordinates.forEach(ring);
+      ctx.fill(); ctx.stroke();
+    } else if(geom.type==='MultiPolygon'){
+      geom.coordinates.forEach(function(poly){
+        ctx.beginPath(); poly.forEach(ring);
+        ctx.fill(); ctx.stroke();
+      });
+    }
+  }
+  drawGeom(geom);
+
+  // Subtle vignette
+  var vg=ctx.createRadialGradient(SZ/2,SZ/2,SZ*0.3,SZ/2,SZ/2,SZ*0.72);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,isDark?'rgba(0,0,0,0.28)':'rgba(0,0,0,0.12)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,SZ,SZ);
+
+  return c.toDataURL('image/png');
+}
+
+/* ══ Main PDF builder ═══════════════════════════════════════════════ */
+function _eBuildPDF(choice,theme){
+  var isDark=(theme==='dark');
+  var BG    =isDark?'#0d0c1a':'#e8e4db';
+  var SURF2 =isDark?'#1a1830':'#ece8df';
+  var SURF3 =isDark?'#201e38':'#e4e0d6';
+  var TEXT  =isDark?[236,237,242]:[30,27,20];
+  var MUTED =isDark?[138,138,172]:[122,112,96];
+  var BORDER=isDark?[48,46,76]:[196,191,181];
+  var ACCENT=isDark?[232,213,176]:[154,124,63];
+  var PW=297,PH=210,FOOT=10,SM=11;
+
+  /* ── Globe composite ─────────────────────────────────────────── */
+  renderer.render(scene,camera);
+  var GW=renderer.domElement.width, GH=renderer.domElement.height;
+  var comp=document.createElement('canvas');
+  comp.width=GW; comp.height=GH;
+  var ctx=comp.getContext('2d');
+  ctx.fillStyle=BG; ctx.fillRect(0,0,GW,GH);
+  ctx.drawImage(renderer.domElement,0,0,GW,GH);
+  if(annotC&&annotC.width>0&&annotC.height>0) ctx.drawImage(annotC,0,0,GW,GH);
+  var globeImg=comp.toDataURL('image/png');
+
+  /* ── jsPDF setup ─────────────────────────────────────────────── */
+  var pdf=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  var bgR=_eHex(BG), s2R=_eHex(SURF2), s3R=_eHex(SURF3);
+
+  function fill(col){pdf.setFillColor(col[0],col[1],col[2]);}
+  function txt(col) {pdf.setTextColor(col[0],col[1],col[2]);}
+  function drw(col) {pdf.setDrawColor(col[0],col[1],col[2]);}
+
+  /* ── Branding footer (two separate lines, both clickable) ────── */
+  function addFooter(){
+    var stripRgb=isDark?[6,5,14]:[205,201,191];
+    pdf.setFillColor(stripRgb[0],stripRgb[1],stripRgb[2]);
+    pdf.rect(0,PH-FOOT,PW,FOOT,'F');
+    drw(BORDER); pdf.setLineWidth(0.18);
+    pdf.line(SM,PH-FOOT+0.4,PW-SM,PH-FOOT+0.4);
+
+    pdf.setFont('helvetica','normal');
+    // Line 1: main site
+    pdf.setFontSize(6.0); txt(MUTED);
+    pdf.textWithLink(
+      'cogniswift.in  —  From Notes To Memory · World\'s most advanced AI Revision Engine for exams',
+      PW/2, PH-6.4, {align:'center', url:'https://www.cogniswift.in'}
+    );
+    // Line 2: globe URL
+    pdf.setFontSize(5.8);
+    pdf.textWithLink(
+      'CogniSwift 3D EARTH ATLAS  ·  cogniswift.in/globe.html?theme=dark',
+      PW/2, PH-2.8, {align:'center', url:'https://www.cogniswift.in/globe.html?theme=dark'}
+    );
+  }
+
+  /* ══ PAGE 1 — Globe ═════════════════════════════════════════════ */
+  fill(bgR); pdf.rect(0,0,PW,PH,'F');
+  var gArea=PH-FOOT;
+  var aspect=GW/GH;
+  var dW=PW, dH=PW/aspect, dX=0, dY=(gArea-dH)/2;
+  if(dH<gArea){dH=gArea; dW=gArea*aspect; dX=(PW-dW)/2; dY=0;}
+  pdf.addImage(globeImg,'PNG',dX,dY,dW,dH);
+  addFooter();
+
+  /* ══ PAGES 2+ — Info cards ══════════════════════════════════════ */
+  if(choice!=='globe+info') return pdf.save(_eFilename());
+
+  // Collect all cards: direct searches + wiki features in panel order
+  var cards=[];
+  if(typeof searchCards!=='undefined') searchCards.forEach(function(sc){
+    cards.push({key:sc.key,data:sc.data,color:sc.color,isWiki:false});
+  });
+  Object.keys(activeHighlights).forEach(function(k){
+    if(k.indexOf('wiki_')!==0) return;
+    var f=GEO_FEATURES[k]; if(!f) return;
+    var hi=activeHighlights[k];
+    cards.push({key:k,data:f,color:(hi?hi.color:'#f0c060'),isWiki:true});
+  });
+  if(!cards.length) return pdf.save(_eFilename());
+
+  /* ── Pre-render all polygon thumbnails synchronously ── */
+  cards.forEach(function(card){
+    card.hasPoly=_eHasPoly(card.key,card.data);
+    if(card.hasPoly){
+      var geom=_eGetGeom(card.key,card.data);
+      card.thumbUrl = geom ? _ePolyThumb(geom,card.color,isDark) : null;
+    } else {
+      card.thumbUrl=null;
+    }
+  });
+
+  /* ── Layout: 2 columns ── */
+  var TOP=13, COLW=(PW-SM*2-7)/2, GAP=7, MAXCY=PH-FOOT-5;
+  var THUMBH=34; // mm — square thumbnail height in the card
+
+  var yL=TOP,yR=TOP,col=0;
+  var onPage=false;
+
+  function xOf(c){return SM+c*(COLW+GAP);}
+  function getCY(){return col===0?yL:yR;}
+  function advCY(d){if(col===0)yL+=d;else yR+=d;}
+
+  function startInfoPage(){
+    pdf.addPage('a4','landscape');
+    fill(bgR); pdf.rect(0,0,PW,PH,'F');
+    // Subtle column divider
+    drw(BORDER); pdf.setLineWidth(0.15);
+    pdf.line(PW/2,TOP+4,PW/2,PH-FOOT-6);
+    addFooter();
+    yL=TOP; yR=TOP; col=0; onPage=true;
+  }
+
+  function ensureSpace(need){
+    if(!onPage){startInfoPage();return;}
+    if(col===0&&yL+need>MAXCY){col=1;return;}
+    if(col===1&&yR+need>MAXCY){startInfoPage();}
+  }
+
+  startInfoPage();
+
+  cards.forEach(function(card,ci){
+    var f=card.data, cRgb=_eHex(card.color);
+    var hasPoly=card.hasPoly, thumbUrl=card.thumbUrl;
+
+    // ── Estimate card height ──
+    pdf.setFontSize(7.8);
+    var descLines=pdf.splitTextToSize(f.desc||'',COLW-8);
+    var descH=descLines.length*3.8;
+    var statsKeys=f.stats?Object.keys(f.stats):[];
+    var relArr=f.related||[];
+    var relTxt=relArr.length?(relArr.map(function(rk){
+      var rf=GEO_FEATURES[rk]; return rf?rf.name:rk.replace(/_/g,' ');
+    }).join('  ·  ')):'';
+    var relLines=relTxt?pdf.splitTextToSize('Related: '+relTxt,COLW-8):[];
+
+    var cardH=5 +                              // top padding
+      (thumbUrl?THUMBH+3:0) +                  // thumbnail
+      6 +                                       // name
+      4 +                                       // type
+      descH + 3 +                              // description
+      (statsKeys.length?(statsKeys.length*10+5):0) + // stats
+      (relLines.length?(relLines.length*3.6+4):0) +  // related
+      5;                                        // bottom padding
+
+    ensureSpace(cardH+4);
+
+    var cx=xOf(col), cy=getCY();
+
+    /* ── Card background with gradient-like layering ── */
+    // Outer card
+    fill(s2R); pdf.roundedRect(cx,cy,COLW,cardH,2.2,2.2,'F');
+
+    // Top accent band (colour-tinted, 30% opacity)
+    var accentBandH=hasPoly&&thumbUrl ? THUMBH+5 : 9;
+    // Simulate tinted band via a thin overlay
+    var aR=_eLighter(cRgb,isDark?-30:30);
+    pdf.setFillColor(cRgb[0],cRgb[1],cRgb[2]);
+    // Left border stripe (3px)
+    pdf.rect(cx,cy,2.2,cardH,'F');
+
+    // Thin top border in accent colour
+    pdf.setDrawColor(cRgb[0],cRgb[1],cRgb[2]);
+    pdf.setLineWidth(0.6);
+    pdf.line(cx+2.2,cy+0.3,cx+COLW,cy+0.3);
+    pdf.setLineWidth(0.15);
+
+    var iy=cy+4;
+
+    /* ── Polygon thumbnail ── */
+    if(thumbUrl){
+      // Rounded clip simulation: just draw image directly — jsPDF doesn't clip
+      pdf.addImage(thumbUrl,'PNG',cx+3,iy,COLW-6,THUMBH);
+      // Caption bar at bottom of thumb
+      fill(s3R); pdf.rect(cx+3,iy+THUMBH-5,COLW-6,5,'F');
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(5.5); txt(MUTED);
+      pdf.text('Highlighted region',cx+5,iy+THUMBH-1.8);
+      iy+=THUMBH+4;
+    }
+
+    /* ── Feature name ── */
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5);
+    pdf.setTextColor(cRgb[0],cRgb[1],cRgb[2]);
+    // Truncate long names
+    var displayName=f.name||'';
+    while(pdf.getTextWidth(displayName)>COLW-7&&displayName.length>8)
+      displayName=displayName.slice(0,-1);
+    if(displayName!==f.name) displayName+='…';
+    pdf.text(displayName,cx+4,iy+4.5);
+    iy+=6.5;
+
+    /* ── Type pill ── */
+    var typeTxt=(typeIcon(f.type)||'📌')+' '+(f.type||'').toUpperCase();
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(6); txt(MUTED);
+    pdf.text(typeTxt,cx+4,iy); iy+=5;
+
+    /* ── Thin divider ── */
+    drw(BORDER); pdf.setLineWidth(0.15);
+    pdf.line(cx+4,iy,cx+COLW-4,iy); iy+=3;
+
+    /* ── Description ── */
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(7.8); txt(TEXT);
+    pdf.text(descLines,cx+4,iy); iy+=descH+3;
+
+    /* ── Stats ── */
+    if(statsKeys.length){
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(5.8); txt(MUTED);
+      pdf.text('KEY STATISTICS',cx+4,iy); iy+=4;
+      statsKeys.forEach(function(sk){
+        fill(s3R); pdf.roundedRect(cx+3,iy,COLW-6,8.5,1,1,'F');
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(5.5); txt(MUTED);
+        pdf.text(String(sk).toUpperCase(),cx+5,iy+2.8);
+        pdf.setFontSize(7.2); txt(TEXT);
+        var vl=pdf.splitTextToSize(String(f.stats[sk]),COLW-10);
+        pdf.text(vl[0],cx+5,iy+6.8);
+        iy+=10;
+      });
+      iy+=2;
+    }
+
+    /* ── Related ── */
+    if(relLines.length){
+      drw(BORDER); pdf.setLineWidth(0.12);
+      pdf.line(cx+4,iy,cx+COLW-4,iy); iy+=3;
+      pdf.setFont('helvetica','italic'); pdf.setFontSize(6.5);
+      txt(MUTED); pdf.text(relLines,cx+4,iy);
+      iy+=relLines.length*3.6+2;
+    }
+
+    advCY(cardH+4);
+  });
+
+  pdf.save(_eFilename());
+}
+
+function _eFilename(){
+  var parts=(typeof searchCards!=='undefined'?searchCards:[])
+    .map(function(c){return c.key.replace(/\s+/g,'-');});
+  Object.keys(activeHighlights).filter(function(k){return k.indexOf('wiki_')===0;})
+    .forEach(function(k){parts.push(k.slice(5,18));});
+  return 'cogniswift-earth-'+(parts.slice(0,3).join('_')||'globe')+'.pdf';
+}
 
 // Legacy alias
-function exportPDF(){ openExportModal(); }
+function exportPDF(){openExportModal();}
 
 // ══════════════════════════════════════════════════════════════════════
 // ANNOTATION COLOR PICKER
