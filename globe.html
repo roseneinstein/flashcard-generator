@@ -5732,15 +5732,16 @@ function _eBuildPDF(choice,theme){
   }
 
   function nextSlot(){
-    if(!onPage){startPage();return;}
+    // Advance to next slot AFTER the previous card was placed.
+    // Called at the END of each card, not the beginning.
     if(col===0){col=1;return;}
-    startPage();
+    startPage(); // col becomes 0 on new page
   }
 
-  startPage();
+  startPage(); // col=0 ready for first card
 
   cards.forEach(function(card){
-    nextSlot(); // each card gets its own column slot
+    // col is already set to the correct slot for this card
     var f=card.data;
     var cRgb=_eHex(card.color);
     var thumb=card.thumb;
@@ -5752,22 +5753,20 @@ function _eBuildPDF(choice,theme){
     fill(s2R);
     pdf.roundedRect(cx,cy,COLW,CARD_H,3,3,'F');
 
-    // Glow: coloured left curved border band
-    // Simulate with a filled rounded rect clipped to left 5mm
+    // Thin soft left border: 2mm wide rounded band
     pdf.setFillColor(cRgb[0],cRgb[1],cRgb[2]);
-    pdf.roundedRect(cx,cy,5,CARD_H,3,3,'F');      // left rounded band
+    pdf.roundedRect(cx,cy,2,CARD_H,1.5,1.5,'F');  // thin 2mm left band
     fill(s2R);
-    pdf.rect(cx+3,cy,3,CARD_H,'F');               // flatten right half of band → straight join to body
+    pdf.rect(cx+1,cy+1,1.5,CARD_H-2,'F');          // flatten inner edge for clean join
 
-    // Top glow line
+    // Top glow line (subtle)
     pdf.setDrawColor(cRgb[0],cRgb[1],cRgb[2]);
-    pdf.setLineWidth(0.7);
-    pdf.line(cx+5,cy+0.35,cx+COLW-3,cy+0.35);
+    pdf.setLineWidth(0.4);
+    pdf.line(cx+2,cy+0.3,cx+COLW-3,cy+0.3);
 
-    // Bottom glow line (dim)
-    pdf.setLineWidth(0.3);
-    pdf.setDrawColor(cRgb[0],cRgb[1],cRgb[2]);
-    pdf.line(cx+5,cy+CARD_H-0.35,cx+COLW-3,cy+CARD_H-0.35);
+    // Bottom glow line (very dim)
+    pdf.setLineWidth(0.2);
+    pdf.line(cx+2,cy+CARD_H-0.3,cx+COLW-3,cy+CARD_H-0.3);
     pdf.setLineWidth(0.14);
 
     // Outer card border
@@ -5861,6 +5860,9 @@ function _eBuildPDF(choice,theme){
       var relLines=pdf.splitTextToSize('See also: '+relNames,IW);
       pdf.text(relLines.slice(0,2),IX,iy);
     }
+
+    // Advance to next slot for the next card
+    nextSlot();
   });
 
   pdf.save(_eFilename());
