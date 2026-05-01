@@ -20,7 +20,7 @@ function toISO(unixSec) {
 async function getUserBySub(subId) {
   const { data } = await supabase
     .from('users')
-    .select('id, tier, sub_expiry, sub_status')
+    .select('id, tier, sub_expiry, sub_status, sub_plan, sub_billing')
     .eq('sub_id', subId)
     .maybeSingle();
   return data || null;
@@ -53,20 +53,39 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── subscription.charged: monthly renewal succeeded ──────────────────────
+  // ── subscription.charged: renewal succeeded (including retried payments) ─
+  // This fires on EVERY successful charge — first month, renewals, AND retries.
+  // If user was downgraded to free during a halted period, we restore their tier here.
   else if (event === 'subscription.charged') {
     const sub = payload?.subscription?.entity;
     if (!sub) return res.status(200).json({ received: true });
+
     const periodEnd = toISO(sub.current_end);
     const dbUser    = await getUserBySub(sub.id);
+
     if (dbUser) {
+      // Determine the correct plan to restore
+      // Priority: sub.notes.plan (set at subscription creation) → dbUser.sub_plan → infer from current tier
+      const planToRestore = sub.notes?.plan || dbUser.sub_plan || (dbUser.tier !== 'free' ? dbUser.tier : 'pro');
+
+      // Always restore tier + mark active + update expiry on any successful charge
+      // This covers: normal renewals, retried payments after bank failure, halted→recovered
       await supabase.from('users')
-        .update({ sub_status: 'active', sub_expiry: periodEnd })
+        .update({
+          tier:       planToRestore,
+          sub_status: 'active',
+          sub_expiry: periodEnd,
+        })
         .eq('id', dbUser.id);
+
+      console.log(`[CogniSwift] subscription.charged: restored ${planToRestore} for user ${dbUser.id}, expires ${periodEnd}`);
     }
   }
 
   // ── subscription.halted: payment failed after all retries ────────────────
+  // Razorpay retries 3 times over ~3 days before firing this event.
+  // We only downgrade AFTER all retries are exhausted (i.e. this event fires).
+  // Individual retry attempts fire payment.failed — we do NOT downgrade on those.
   else if (event === 'subscription.halted') {
     const sub    = payload?.subscription?.entity;
     if (!sub) return res.status(200).json({ received: true });
@@ -75,15 +94,33 @@ export default async function handler(req, res) {
       await supabase.from('users')
         .update({ tier: 'free', sub_status: 'halted', sub_expiry: null })
         .eq('id', dbUser.id);
+
+      console.log(`[CogniSwift] subscription.halted: downgraded user ${dbUser.id} to free`);
+    }
+  }
+
+  // ── payment.failed: a single retry attempt failed ────────────────────────
+  // Do NOT downgrade here. Razorpay will retry again.
+  // We only downgrade when subscription.halted fires (all retries exhausted).
+  else if (event === 'payment.failed') {
+    const payment = payload?.payment?.entity;
+    const subId   = payment?.subscription_id;
+
+    if (subId) {
+      const dbUser = await getUserBySub(subId);
+      if (dbUser) {
+        // Only update status to show payment is being retried — do NOT change tier
+        // sub_status 'retry' tells frontend payment is retrying but access continues
+        await supabase.from('users')
+          .update({ sub_status: 'retry' })
+          .eq('id', dbUser.id);
+
+        console.log(`[CogniSwift] payment.failed (retry in progress): user ${dbUser.id} keeps tier ${dbUser.tier}`);
+      }
     }
   }
 
   // ── subscription.cancelled / completed ───────────────────────────────────
-  // IMPORTANT: if user cancelled via our app (cancel_at_cycle_end=1),
-  // Razorpay fires this event AFTER the cycle ends — so sub_expiry has
-  // already passed and downgrading to free is correct.
-  // If cancelled immediately (e.g. from Razorpay dashboard), we still
-  // check sub_expiry before downgrading so user keeps any paid time.
   else if (event === 'subscription.cancelled' || event === 'subscription.completed') {
     const sub    = payload?.subscription?.entity;
     if (!sub) return res.status(200).json({ received: true });
@@ -94,7 +131,6 @@ export default async function handler(req, res) {
 
       if (stillValid) {
         // Paid period not over yet — keep tier, just mark as pending cancel
-        // auth.js expiry check will downgrade them when the date passes
         await supabase.from('users')
           .update({ sub_status: 'pending_cancel' })
           .eq('id', dbUser.id);
@@ -122,7 +158,7 @@ export default async function handler(req, res) {
         .update({ razorpay_payment_id: payment.id, status: 'captured' })
         .eq('razorpay_order_id', payment.order_id);
       await supabase.from('users')
-        .update({ tier: pmtRecord.plan, sub_expiry: periodEnd })
+        .update({ tier: pmtRecord.plan, sub_status: 'active', sub_expiry: periodEnd })
         .eq('id', pmtRecord.user_id);
     }
   }
