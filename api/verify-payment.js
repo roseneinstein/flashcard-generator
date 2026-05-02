@@ -1,6 +1,6 @@
 // Called by frontend immediately after Razorpay payment succeeds.
-// Verifies signature and upgrades tier in DB right away.
-// Sets sub_expiry to 30 days (monthly) or 365 days (annual).
+// Handles both subscription payments (Pro/Elite monthly/annual)
+// and one-time daily payments (Pro/Elite daily trial).
 
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     razorpay_order_id,
     razorpay_signature,
     plan,
-    billing,        // 'monthly' | 'annual'
+    billing,
     access_token,
   } = req.body;
 
@@ -30,7 +30,67 @@ export default async function handler(req, res) {
 
   const secret = process.env.RAZORPAY_SECRET;
 
-  // ── Subscription payment ──────────────────────────────────────────────────
+  // ── DAILY: one-time order verification ───────────────────────────────────
+  if (billing === 'daily' && razorpay_order_id) {
+    if (!razorpay_payment_id || !razorpay_signature)
+      return res.status(400).json({ error: 'Missing payment fields' });
+
+    const body     = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
+    if (expected !== razorpay_signature)
+      return res.status(400).json({ error: 'Invalid payment signature' });
+
+    // 24 hours from now
+    const dailyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    // Check if user already has a better active paid subscription — don't overwrite
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('tier, sub_status, sub_billing')
+      .eq('id', user.id)
+      .single();
+
+    const hasActivePaidSub = existingUser?.sub_status === 'active' &&
+                             (existingUser?.sub_billing === 'monthly' ||
+                              existingUser?.sub_billing === 'annual');
+    if (hasActivePaidSub) {
+      return res.status(400).json({
+        error: 'You already have an active subscription. Daily trial cannot be applied.',
+      });
+    }
+
+    const { error: upErr } = await supabase
+      .from('users')
+      .update({
+        tier:        plan,
+        sub_status:  'active',
+        sub_expiry:  dailyExpiry,
+        sub_billing: 'daily',
+        sub_plan:    plan,
+        // Clear any old sub_id so we don't accidentally cancel a future subscription
+        sub_id:      null,
+      })
+      .eq('id', user.id);
+
+    if (upErr) return res.status(500).json({ error: upErr.message });
+
+    // Mark payment as captured
+    await supabase.from('payments')
+      .update({ razorpay_payment_id, status: 'captured' })
+      .eq('razorpay_order_id', razorpay_order_id);
+
+    console.log(`[CogniSwift] Daily ${plan} activated for user ${user.id}, expires ${dailyExpiry}`);
+
+    return res.status(200).json({
+      success:      true,
+      tier:         plan,
+      billing:      'daily',
+      sub_expiry:   dailyExpiry,
+      is_daily:     true,
+    });
+  }
+
+  // ── SUBSCRIPTION: monthly/annual verification ─────────────────────────────
   if (razorpay_subscription_id) {
     if (!razorpay_payment_id || !razorpay_signature)
       return res.status(400).json({ error: 'Missing payment fields' });
@@ -40,17 +100,15 @@ export default async function handler(req, res) {
     if (expected !== razorpay_signature)
       return res.status(400).json({ error: 'Invalid payment signature' });
 
-    // Fetch stored plan + billing from DB (more trustworthy than client)
     const { data: dbUser } = await supabase
       .from('users')
       .select('sub_id, sub_plan, sub_billing')
       .eq('id', user.id)
       .single();
 
-    const tierPlan    = dbUser?.sub_plan    || plan    || 'pro';
+    const tierPlan     = dbUser?.sub_plan    || plan    || 'pro';
     const billingCycle = dbUser?.sub_billing || billing || 'monthly';
 
-    // Set expiry: 365 days for annual, 30 days for monthly
     const days      = billingCycle === 'annual' ? 365 : 30;
     const periodEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
@@ -69,7 +127,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, tier: tierPlan, billing: billingCycle });
   }
 
-  // ── Legacy one-time order (backward compat) ───────────────────────────────
+  // ── LEGACY: one-time order (non-daily, backward compat) ──────────────────
   if (razorpay_order_id) {
     if (!razorpay_payment_id || !razorpay_signature || !plan)
       return res.status(400).json({ error: 'Missing fields' });
