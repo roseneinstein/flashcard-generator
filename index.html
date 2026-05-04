@@ -1324,7 +1324,10 @@ async function fetchUserProfile(){
     var data=await r.json();
     if(data.id){
       // Compute days_left from sub_expiry so UI can show "12 days left"
-      if(data.sub_expiry){
+      // Daily trial users: days_left is always null — UI shows hrs/mins from sub_expiry instead
+      if(data.sub_billing==='daily'){
+        data.days_left=null;
+      } else if(data.sub_expiry){
         var msLeft=new Date(data.sub_expiry).getTime()-Date.now();
         data.days_left=Math.max(0,Math.ceil(msLeft/(1000*60*60*24)));
       } else {
@@ -1341,7 +1344,7 @@ function getUsage(){var t=new Date().toDateString();var s=JSON.parse(localStorag
 function setLocalUsage(n){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:n}));}
 function bumpUsage(){setLocalUsage(getUsage()+1);}
 function getDayLimit(){var t=getTier();var b=_userCache?_userCache.sub_billing:null;if(b==='daily')return CFG.DAILY_TRIAL_LIMIT;return t==='elite'?CFG.ELITE_LIMIT:t==='pro'?CFG.PRO_LIMIT:CFG.FREE_LIMIT;}
-function getMonthLimit(){var t=getTier();return t==='elite'?CFG.ELITE_MONTH_LIMIT:t==='pro'?CFG.PRO_MONTH_LIMIT:null;}
+function getMonthLimit(){var b=_userCache?_userCache.sub_billing:null;if(b==='daily')return null;var t=getTier();return t==='elite'?CFG.ELITE_MONTH_LIMIT:t==='pro'?CFG.PRO_MONTH_LIMIT:null;}
 function getMonthKey(){return 'cs_mu_'+new Date().getFullYear()+'_'+(new Date().getMonth()+1);}
 function getMonthUsage(){try{var s=JSON.parse(localStorage.getItem(getMonthKey())||'{}');return s.c||0;}catch(e){return 0;}}
 function bumpMonthUsage(){try{var k=getMonthKey();var s=JSON.parse(localStorage.getItem(k)||'{}');localStorage.setItem(k,JSON.stringify({c:(s.c||0)+1}));}catch(e){}}
@@ -2384,8 +2387,8 @@ function App(){
         bumpUsage();setUsage(getUsage());
       }
       setActiveSetName(''); // clear set name on fresh generation
-      if(isElite())bumpStreak();
-      bumpMonthUsage(); // track monthly usage for Pro and Elite limits
+      if(isElite()&&!isDaily())bumpStreak();
+      if(!isDaily())bumpMonthUsage(); // track monthly usage for Pro and Elite limits (not daily trial)
       st((res.flashcards||[]).length+' cards ready');
       setTimeout(function(){var ra=document.getElementById('ra');if(ra)ra.scrollIntoView({behavior:'smooth',block:'start'});},100);
       // Show save-before-quiz reminder for signed-in Pro/Elite users
@@ -2688,9 +2691,10 @@ function App(){
             });
             var vd=await vr.json();
             if(vd.success){
+              setLocalUsage(0);setUsage(0);
               var freshUser=await fetchUserProfile();
               if(freshUser&&freshUser.id){setUser(freshUser);setSession(freshUser);}
-              else{var up=Object.assign({},user,{tier:plan,sub_status:'active',sub_billing:'daily',sub_expiry:vd.sub_expiry});setUser(up);setSession(up);}
+              else{var up=Object.assign({},user,{tier:plan,sub_status:'active',sub_billing:'daily',sub_expiry:vd.sub_expiry,days_left:null});setUser(up);setSession(up);}
               setPw(false);
               st('🎉 '+(plan==='elite'?'Elite':'Pro')+' Daily Trial active! You have 24 hours and 5 generations.');
             }else{
@@ -3525,7 +3529,8 @@ function App(){
         e('div',{className:'urow'},
           e('div',{className:'ut'},e('div',{className:'uf',style:{width:Math.min(100,usage/getDayLimit()*100)+'%'}})),
           e('span',{className:'utx'},usage+'/'+getDayLimit()+' today'),
-          getMonthLimit()&&e('span',{className:'utx',style:{marginLeft:10,opacity:0.7}},getMonthUsage()+'/'+getMonthLimit()+' this month')
+          isDaily()&&e('span',{className:'utx',style:{marginLeft:8,color:'#f59e0b',fontWeight:600,fontSize:'0.62rem'}},'Daily Trial · 5 gens max'),
+          !isDaily()&&getMonthLimit()&&e('span',{className:'utx',style:{marginLeft:10,opacity:0.7}},getMonthUsage()+'/'+getMonthLimit()+' this month')
         )
       ),
 
