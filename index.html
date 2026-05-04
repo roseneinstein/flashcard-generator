@@ -679,6 +679,8 @@ input[type=file]{display:none}
 .mp-feat-row{font-size:0.67rem;color:var(--muted);padding:2px 0;display:flex;align-items:baseline;gap:5px;line-height:1.35}
 .mp-feat-head{grid-column:1/-1;font-size:0.72rem;color:var(--text);font-weight:500;padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:2px}
 .mp-feat-check{color:var(--accent);font-size:0.6rem;flex-shrink:0;margin-top:1px}
+.mp-popular{background:var(--accent);color:var(--bg);border-radius:3px;padding:2px 6px;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;display:inline-block;margin-bottom:5px}
+.bill-save-daily{font-size:0.72rem;color:#b45309;font-weight:500;letter-spacing:0.01em}
 .mp-pk{font-size:0.72rem;color:var(--muted);line-height:1.65;font-weight:300}
 .pb{width:100%;padding:11px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--r-sm);font-family:'Geist',sans-serif;font-size:0.85rem;font-weight:500;cursor:none;letter-spacing:0.02em;transition:opacity .2s;margin-bottom:9px}
 .pb:hover{opacity:0.84}
@@ -1284,6 +1286,7 @@ const CFG={
   FREE_LIMIT:5,
   PRO_LIMIT:20,
   ELITE_LIMIT:40,
+  DAILY_TRIAL_LIMIT:5,
   PRO_MONTH_LIMIT:100,
   ELITE_MONTH_LIMIT:100,
   FREE_CHARS:8000,
@@ -1337,7 +1340,7 @@ async function fetchUserProfile(){
 function getUsage(){var t=new Date().toDateString();var s=JSON.parse(localStorage.getItem('fw_u')||'{}');return s.d===t?s.c||0:0;}
 function setLocalUsage(n){localStorage.setItem('fw_u',JSON.stringify({d:new Date().toDateString(),c:n}));}
 function bumpUsage(){setLocalUsage(getUsage()+1);}
-function getDayLimit(){var t=getTier();return t==='elite'?CFG.ELITE_LIMIT:t==='pro'?CFG.PRO_LIMIT:CFG.FREE_LIMIT;}
+function getDayLimit(){var t=getTier();var b=_userCache?_userCache.sub_billing:null;if(b==='daily')return CFG.DAILY_TRIAL_LIMIT;return t==='elite'?CFG.ELITE_LIMIT:t==='pro'?CFG.PRO_LIMIT:CFG.FREE_LIMIT;}
 function getMonthLimit(){var t=getTier();return t==='elite'?CFG.ELITE_MONTH_LIMIT:t==='pro'?CFG.PRO_MONTH_LIMIT:null;}
 function getMonthKey(){return 'cs_mu_'+new Date().getFullYear()+'_'+(new Date().getMonth()+1);}
 function getMonthUsage(){try{var s=JSON.parse(localStorage.getItem(getMonthKey())||'{}');return s.c||0;}catch(e){return 0;}}
@@ -1363,6 +1366,7 @@ function setSession(u){_userCache=u;}
 function isPro(){return _userCache&&(_userCache.tier==='pro'||_userCache.tier==='elite');}
 function isElite(){return _userCache&&_userCache.tier==='elite';}
 function isProOrElite(){return _userCache&&(_userCache.tier==='pro'||_userCache.tier==='elite');}
+function isDaily(){return _userCache&&_userCache.sub_billing==='daily'&&_userCache.sub_status==='active';}
 function getTier(){return _userCache?_userCache.tier:'free';}
 
 async function callSummary(text,depth,tier){
@@ -1760,6 +1764,8 @@ function Quiz(props){
 function PCard(props){
   var r=useRef();
   var isAnn=props.bill==='annual';
+  var isDailyCard=props.bill==='daily';
+  var btnLabel=props.price==='0'?'Start free':isDailyCard?'Try for ₹'+props.price+' →':'Get access';
   return e('div',{className:'plan'+(props.pop?' pop':''),ref:r,onMouseMove:function(ev){var b=r.current.getBoundingClientRect();r.current.style.setProperty('--mx',((ev.clientX-b.left)/b.width*100)+'%');r.current.style.setProperty('--my',((ev.clientY-b.top)/b.height*100)+'%');}},
     e('div',{className:'p-tag'},props.name,props.pop&&e('span',{className:'p-bdg'},'Popular')),
     props.price==='0'
@@ -1771,20 +1777,21 @@ function PCard(props){
       : isAnn
         ? e(React.Fragment,null,
             e('div',{className:'p-price'},e('sup',null,'₹'),props.priceAnnual,e('span',{style:{fontSize:'0.85rem',fontWeight:300,opacity:0.7}},' /yr')),
-            e('div',{className:'p-per'},'₹'+props.perMonth+'/mo ',e('span',{className:'p-strike'},'₹'+props.strikeAnnual+'/yr')),
+            e('div',{className:'p-per'},'₹'+props.perMonth+'/mo ',e('span',{className:'p-strike'},'₹'+props.strikeAnnual+'/yr')),
             e('div',{className:'p-mo-note'},'Save ₹'+props.saveAmt+' — billed annually'),
             e('div',{className:'p-found'},'Founding member rate — prices will rise as we grow')
           )
         : e(React.Fragment,null,
             e('div',{className:'p-price'},e('sup',null,'₹'),props.price),
             e('div',{className:'p-per'},props.period),
-            e('div',{className:'p-mo-note'})
+            isDailyCard
+              ? e('div',{className:'p-mo-note',style:{color:'#f59e0b',fontWeight:500}},'No autopay · expires in 24h')
+              : e('div',{className:'p-mo-note'})
           ),
     e('ul',{className:'p-feats'},props.feats.map(function(f){return e('li',{key:f},f);})),
-    e('button',{className:'p-btn'+(props.pop?' pr':''),onClick:props.onSel},props.price==='0'?'Start free':'Get access')
+    e('button',{className:'p-btn'+(props.pop?' pr':''),style:isDailyCard&&props.pop?{background:'linear-gradient(135deg,#f59e0b,#d97706)',borderColor:'#f59e0b',color:'#1a1a1a'}:isDailyCard?{borderColor:'#f59e0b',color:'#f59e0b'}:{},onClick:props.onSel},btnLabel)
   );
 }
-
 function Summary({data,loading}){
   if(loading)return e('div',{className:'ss-ld'},
     e('div',{className:'dots'},e('span'),e('span'),e('span')),
@@ -2314,7 +2321,10 @@ function App(){
     var txt=itab==='text'?notes:pdfTxt;
     if(!txt.trim())return st('Paste some notes first');
     var dayLimit=getDayLimit();
-    if(usage>=dayLimit){setPw(true);return;}
+    if(usage>=dayLimit){
+      if(isDaily()){st('Daily trial limit reached (5 generations). Upgrade to keep going!');setPwTab('monthly');setPwBill('monthly');setPw(true);return;}
+      setPw(true);return;
+    }
     // Monthly limit check for Pro and Elite
     var monthLimit=getMonthLimit();
     if(monthLimit&&getMonthUsage()>=monthLimit){
@@ -2634,6 +2644,64 @@ function App(){
       });
       rzp.open();
     }catch(err){st('Subscription error: '+err.message);}
+  }
+
+  async function payDaily(plan){
+    if(!user){setShowAuth(true);setPw(false);return;}
+    if(user.sub_billing==='daily'&&user.sub_status==='active'){st('You already have an active daily trial. Upgrade to monthly/annual for uninterrupted access.');setPw(false);return;}
+    if((user.tier==='pro'||user.tier==='elite')&&user.sub_status==='active'&&(user.sub_billing==='monthly'||user.sub_billing==='annual')){st('You already have an active subscription. Daily trial is not available.');setPw(false);return;}
+    try{
+      st('Setting up daily trial…');
+      var token=loadToken();
+      if(!token){setShowAuth(true);setPw(false);return;}
+      var r=await fetch('/api/subscribe',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({plan,billing:'daily',access_token:token})
+      });
+      var ord=await r.json();
+      if(ord.error)return st('Error: '+ord.error);
+      var rzp=new window.Razorpay({
+        key:      ord.key_id,
+        order_id: ord.order_id,
+        amount:   ord.amount,
+        currency: 'INR',
+        name:     'CogniSwift',
+        description: plan==='elite'?'Elite Daily Trial · ₹25':'Pro Daily Trial · ₹15',
+        theme:    {color:'#e8d5b0'},
+        prefill:  {email:user.email,name:ord.name||''},
+        handler:async function(response){
+          st('Activating daily trial…');
+          try{
+            var freshToken=loadToken();
+            var vr=await fetch('/api/verify-payment',{
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id:   ord.order_id,
+                razorpay_signature:  response.razorpay_signature,
+                plan:                plan,
+                billing:             'daily',
+                access_token:        freshToken,
+              })
+            });
+            var vd=await vr.json();
+            if(vd.success){
+              var freshUser=await fetchUserProfile();
+              if(freshUser&&freshUser.id){setUser(freshUser);setSession(freshUser);}
+              else{var up=Object.assign({},user,{tier:plan,sub_status:'active',sub_billing:'daily',sub_expiry:vd.sub_expiry});setUser(up);setSession(up);}
+              setPw(false);
+              st('🎉 '+(plan==='elite'?'Elite':'Pro')+' Daily Trial active! You have 24 hours and 5 generations.');
+            }else{
+              st('Verification failed: '+(vd.error||'Please refresh and try again.'));
+            }
+          }catch(err){st('Error activating trial: '+err.message);}
+        },
+        modal:{ondismiss:function(){st('Daily trial payment cancelled');}}
+      });
+      rzp.open();
+    }catch(err){st('Daily trial error: '+err.message);}
   }
 
   async function cancelSubscription(){
@@ -3203,6 +3271,8 @@ function App(){
   // ────────────────────────────────────────────────────────────
   var billS=useState('monthly'),setBill=billS[1];var bill=billS[0];
   var pwBillS=useState('monthly'),setPwBill=pwBillS[1];var pwBill=pwBillS[0];
+  var pwTabS=useState('daily'),setPwTab=pwTabS[1];var pwTab=pwTabS[0];
+  var landingTabS=useState('monthly'),setLandingTab=landingTabS[1];var landingTab=landingTabS[0];
   var itxt=itab==='text'?notes:pdfTxt;
   var scrollApp=function(){var el=document.getElementById('app');if(el)el.scrollIntoView({behavior:'smooth'});};
 
@@ -3273,16 +3343,19 @@ function App(){
                   e('div',{style:{fontSize:'0.7rem',color:'var(--muted)',marginBottom:4}},user.email),
                   e('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
                     e('span',{className:'tier-badge '+(user.tier||'free'),style:{fontSize:'0.62rem'}},user.tier||'free'),
-                    user.days_left!=null&&user.tier!=='free'&&e('span',{style:{fontSize:'0.65rem',color:user.days_left<=5?'var(--red)':user.days_left<=10?'#f59e0b':'var(--muted)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},user.days_left+' days left'),
+                    user.sub_billing==='daily'&&user.sub_status==='active'&&e('span',{style:{fontSize:'0.62rem',background:'rgba(251,191,36,0.15)',color:'#f59e0b',borderRadius:'4px',padding:'1px 6px',fontWeight:600}},'Daily Trial'),
+                    user.sub_billing==='daily'&&user.sub_status==='active'&&user.sub_expiry&&(function(){var ms=new Date(user.sub_expiry).getTime()-Date.now();if(ms<=0)return null;var hrs=Math.floor(ms/3600000);var mins=Math.floor((ms%3600000)/60000);return e('span',{style:{fontSize:'0.62rem',color:hrs<2?'var(--red)':'var(--muted)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},hrs+'h '+mins+'m left');}()),
+                    user.sub_billing!=='daily'&&user.days_left!=null&&user.tier!=='free'&&e('span',{style:{fontSize:'0.65rem',color:user.days_left<=5?'var(--red)':user.days_left<=10?'#f59e0b':'var(--muted)',background:'var(--surface2)',borderRadius:'4px',padding:'1px 6px'}},user.days_left+' days left'),
                     user.sub_status==='cancel_pending'&&e('span',{style:{fontSize:'0.63rem',color:'#f59e0b'}},'· cancels end of period'),
                     user.sub_status==='halted'&&e('span',{style:{fontSize:'0.63rem',color:'var(--red)'}},'· ⚠ payment failed')
                   )
                 ),
                 user.sub_status==='halted'&&e('div',{style:{padding:'6px 14px 8px',fontSize:'0.72rem',color:'var(--red)',borderBottom:'1px solid var(--border)',marginBottom:4,lineHeight:1.5}},'Payment failed. '),
                 user.sub_status==='halted'&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'↺ Resubscribe'),
-                (user.tier==='free'&&user.sub_status!=='halted')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
-                (user.tier==='pro'&&user.sub_status!=='halted')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Elite'),
-                (user.tier==='pro'||user.tier==='elite')&&user.sub_status!=='cancel_pending'&&user.sub_status!=='cancelled'&&user.sub_status!=='halted'&&e('button',{className:'user-drop-item',style:{color:'var(--muted)',fontSize:'0.7rem'},onClick:cancelSubscription},'✕ Cancel subscription'),
+                user.sub_billing==='daily'&&user.sub_status==='active'&&e('button',{className:'user-drop-item',style:{color:'#f59e0b',fontWeight:600},onClick:function(){setShowUserMenu(false);setPwBill('monthly');setPwTab('monthly');setPw(true);}},'⬆ Keep '+(user.tier==='elite'?'Elite':'Pro')+' — Upgrade to Monthly'),
+                (user.tier==='free'&&user.sub_status!=='halted'&&user.sub_billing!=='daily')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Pro'),
+                (user.tier==='pro'&&user.sub_status!=='halted'&&user.sub_billing!=='daily')&&e('button',{className:'user-drop-item',onClick:function(){setShowUserMenu(false);setPw(true);}},'⬆ Upgrade to Elite'),
+                (user.tier==='pro'||user.tier==='elite')&&user.sub_billing!=='daily'&&user.sub_status!=='cancel_pending'&&user.sub_status!=='cancelled'&&user.sub_status!=='halted'&&e('button',{className:'user-drop-item',style:{color:'var(--muted)',fontSize:'0.7rem'},onClick:cancelSubscription},'✕ Cancel subscription'),
                 e('button',{className:'user-drop-item danger',onClick:logout},t('Sign out'))
               )
             )
@@ -3592,12 +3665,14 @@ function App(){
       e('h2',{className:'st rev'},t('Start free.'),e('br'),e('em',null,t('Upgrade anytime.'))),
       e('div',{className:'bill-wrap'},
         e('div',{className:'bill-tog'},
-          e('button',{className:'bill-opt'+(bill==='monthly'?' act':''),onClick:function(){setBill('monthly');}},t('Monthly')),
-          e('button',{className:'bill-opt'+(bill==='annual'?' act':''),onClick:function(){setBill('annual');}},t('Annual'))
+          e('button',{className:'bill-opt'+(landingTab==='daily'?' act':''),style:landingTab==='daily'?{background:'#f59e0b',color:'#1a1a1a'}:{},onClick:function(){setLandingTab('daily');}},'⚡ Day Trial'),
+          e('button',{className:'bill-opt'+(landingTab==='monthly'?' act':''),onClick:function(){setLandingTab('monthly');setBill('monthly');}},t('Monthly')),
+          e('button',{className:'bill-opt'+(landingTab==='annual'?' act':''),onClick:function(){setLandingTab('annual');setBill('annual');}},t('Annual'))
         ),
-        bill==='annual'&&e('span',{className:'bill-save'},t('Save up to 25%'))
+        landingTab==='annual'&&e('span',{className:'bill-save'},t('Save up to 25%')),
+        landingTab==='daily'&&e('span',{className:'bill-save-daily'},'⚡ One-time · No autopay · 24-hour access · 5 generations')
       ),
-      e('div',{className:'plans rev'},
+      landingTab!=='daily'&&e('div',{className:'plans rev'},
         e(PCard,{name:'Free',price:'0',period:t('forever'),bill:bill,feats:[
           '5 generations per day',
           'Up to 8,000 characters per input',
@@ -3623,7 +3698,7 @@ function App(){
             'Custom card count up to 30',
             'Card of the day',
             'Ad-free forever',
-          ],onSel:function(){setSp('pro');setPwBill(bill);if(user&&(user.tier==='pro'||user.tier==='elite')){setSp('elite');}setPw(true);}}),
+          ],onSel:function(){setSp('pro');setPwBill(bill);setPwTab('monthly');if(user&&(user.tier==='pro'||user.tier==='elite')){setSp('elite');}setPw(true);}}),
         e(PCard,{name:'Elite',price:'199',period:t('per month'),bill:bill,
           priceAnnual:'1,799',perMonth:'150',strikeAnnual:'2,388',saveAmt:'589',
           feats:[
@@ -3641,7 +3716,41 @@ function App(){
             'Export as PPT / slides',
             'Summary depth control (4 levels)',
             'Custom card count up to 50',
-          ],onSel:function(){setSp('elite');setPwBill(bill);setPw(true);}})
+          ],onSel:function(){setSp('elite');setPwBill(bill);setPwTab('monthly');setPw(true);}})
+      ),
+      landingTab==='daily'&&e('div',{className:'plans rev',style:{gridTemplateColumns:'repeat(2,1fr)',maxWidth:520,margin:'0 auto',border:'none',gap:12}},
+        e(PCard,{name:'Pro Daily',price:'15',period:'one-time · 24 hrs',bill:'daily',pop:true,
+          feats:[
+            '5 generations (24-hour access)',
+            'Up to 20,000 characters per input',
+            'PDF uploads up to 20 pages',
+            'Save sets to your account',
+            'Mistake tracker with solutions',
+            'Voice readout of every card',
+            'Regenerate any single card',
+            'Selectable tables, charts & graphs processing',
+            'Quiz history across saved sets',
+            'Custom card count up to 30',
+            'Card of the day',
+            'Ad-free · No autopay ever',
+            'Data cleared after 24h if not upgraded',
+          ],onSel:function(){setSp('pro');setPwTab('daily');setPw(true);}}),
+        e(PCard,{name:'Elite Daily',price:'25',period:'one-time · 24 hrs',bill:'daily',
+          feats:[
+            'Everything in Pro Daily, plus:',
+            '5 generations (24-hour access)',
+            'Up to 30,000 characters per input',
+            'PDF uploads up to 50 pages',
+            'Scanned docs, diagrams & handwritten PDFs',
+            'FSRS spaced repetition — best-in-class globally',
+            'Exam date selector & confidence score',
+            'Weak area report & analytics',
+            'Study streak & heatmap',
+            'Custom deck themes & fav cards',
+            'Export as PPT / slides',
+            'Ad-free · No autopay ever',
+            'Data cleared after 24h if not upgraded',
+          ],onSel:function(){setSp('elite');setPwTab('daily');setPw(true);}})
       )
     ),
 
@@ -4867,8 +4976,9 @@ function App(){
     ),
 
     pw&&(function(){
-      var isProUser=user&&user.tier==='pro';
-      // Pro users see Elite-only. Free/guest see both.
+      var isProUser=user&&user.tier==='pro'&&user.sub_billing!=='daily';
+      var isDailyUser=user&&user.sub_billing==='daily'&&user.sub_status==='active';
+      var showDailyTab=!isProUser&&!isDailyUser&&!(user&&user.tier==='elite'&&user.sub_status==='active'&&user.sub_billing!=='daily');
       var eliteFeats=[
         'Everything in Pro, plus:',
         '40 generations per day (100/month)',
@@ -4899,14 +5009,46 @@ function App(){
         'Card of the day',
         'Ad-free forever',
       ];
+      var proFeatsDaily=[
+        '5 generations valid for 24 hours',
+        '20,000 characters per input',
+        'PDF uploads up to 20 pages',
+        'Save sets to your account',
+        'Mistake tracker with solutions',
+        'Voice readout of cards',
+        'Regenerate any single card',
+        'Selectable tables, charts & graphs processing',
+        'Quiz history across saved sets',
+        'Custom card count up to 30',
+        'Card of the day',
+        'Ad-free experience',
+        'No autopay — one-time ₹15',
+        'Data deleted after 24h if not upgraded',
+      ];
+      var eliteFeatsDaily=[
+        'Everything in Pro Daily Trial, plus:',
+        '5 generations valid for 24 hours',
+        '30,000 characters per input',
+        'PDF uploads up to 50 pages',
+        'Scanned docs, diagrams & handwritten PDFs',
+        'FSRS spaced repetition — best-in-class globally',
+        'Exam date selector & confidence score',
+        'Weak area report & analytics',
+        'Study streak calendar & heatmap',
+        'Custom deck themes & favourite cards',
+        'Export as PPT / slides',
+        'No autopay — one-time ₹25',
+        'Data deleted after 24h if not upgraded',
+      ];
       var isAnnPw=pwBill==='annual';
+      var curPwTab=isDailyUser?'monthly':pwTab;
       var plans=isProUser
         ? [{id:'elite',n:'Elite',
             p:isAnnPw?'1,799':'199',s:isAnnPw?'/ year':'/ month',
             mo:isAnnPw?'₹150/mo billed annually':'',
             strike:isAnnPw?'₹2,388/yr':'',save:isAnnPw?'Save ₹589':'',feats:eliteFeats}]
         : [
-            {id:'pro',n:'Pro',
+            {id:'pro',n:'Pro',popular:true,
               p:isAnnPw?'899':'99',s:isAnnPw?'/ year':'/ month',
               mo:isAnnPw?'₹75/mo billed annually':'',
               strike:isAnnPw?'₹1,188/yr':'',save:isAnnPw?'Save ₹289':'',feats:proFeats},
@@ -4919,40 +5061,102 @@ function App(){
       var activePrice=isAnnPw?(activeSp==='elite'?'1,799':'899'):(activeSp==='elite'?'199':'99');
       return e('div',{className:'ov',onClick:function(ev){if(ev.target===ev.currentTarget)setPw(false);}},
         e('div',{className:'mo mo-wide'},
-          e('div',{className:'mo-ey'},user&&user.sub_status==='halted'?'Resubscribe':isProUser?'Upgrade to Elite':'Upgrade'),
-          e('h2',null,user&&user.sub_status==='halted'?'Restore your access':isProUser?'Unlock Elite':'Unlock full access'),
-          e('p',{className:'mo-s'},user&&user.sub_status==='halted'?'Your last payment failed. Your data is safe — resubscribe to restore access.':isProUser?'You’re on Pro. Upgrade to Elite for spaced repetition, analytics, themes and more.':'You’ve used your free generations for today. Pick a plan — no interruptions, no limits.'),
-          e('div',{style:{display:'flex',justifyContent:'center',marginBottom:16}},e('div',{className:'bill-tog'},
-            e('button',{className:'bill-opt'+(pwBill==='monthly'?' act':''),onClick:function(){setPwBill('monthly');}},t('Monthly')),
-            e('button',{className:'bill-opt'+(pwBill==='annual'?' act':''),onClick:function(){setPwBill('annual');}},t('Annual'))
+          e('div',{className:'mo-ey'},isDailyUser?'Upgrade from Daily Trial':user&&user.sub_status==='halted'?'Resubscribe':isProUser?'Upgrade to Elite':'Upgrade'),
+          e('h2',null,isDailyUser?'Keep your '+(user.tier==='elite'?'Elite':'Pro')+' access':user&&user.sub_status==='halted'?'Restore your access':isProUser?'Unlock Elite':'Unlock full access'),
+          e('p',{className:'mo-s'},
+            isDailyUser?'Your 24-hour trial ends soon. Upgrade to monthly or annual to keep all your sets and never lose progress.'
+            :user&&user.sub_status==='halted'?'Your last payment failed. Your data is safe — resubscribe to restore access.'
+            :isProUser?'You’re on Pro. Upgrade to Elite for spaced repetition, analytics, themes and more.'
+            :'You’ve used your free generations for today. Pick a plan — no interruptions, no limits.'
+          ),
+          !isProUser&&e('div',{style:{display:'flex',justifyContent:'center',marginBottom:16}},
+            e('div',{style:{display:'flex',background:'var(--surface2)',borderRadius:'var(--r)',padding:3,gap:3}},
+              showDailyTab&&e('button',{
+                style:{padding:'6px 14px',borderRadius:'calc(var(--r) - 2px)',border:'none',cursor:'pointer',fontSize:'0.75rem',fontWeight:600,transition:'all .15s',
+                  background:curPwTab==='daily'?'var(--accent)':'transparent',
+                  color:curPwTab==='daily'?'var(--bg)':'var(--muted)'},
+                onClick:function(){setPwTab('daily');}
+              },'⚡ Day Trial'),
+              e('button',{
+                style:{padding:'6px 14px',borderRadius:'calc(var(--r) - 2px)',border:'none',cursor:'pointer',fontSize:'0.75rem',fontWeight:600,transition:'all .15s',
+                  background:curPwTab==='monthly'?'var(--surface)':'transparent',
+                  color:curPwTab==='monthly'?'var(--text)':'var(--muted)'},
+                onClick:function(){setPwTab('monthly');setPwBill('monthly');}
+              },'Monthly'),
+              e('button',{
+                style:{padding:'6px 14px',borderRadius:'calc(var(--r) - 2px)',border:'none',cursor:'pointer',fontSize:'0.75rem',fontWeight:600,transition:'all .15s',
+                  background:curPwTab==='annual'?'var(--surface)':'transparent',
+                  color:curPwTab==='annual'?'var(--text)':'var(--muted)'},
+                onClick:function(){setPwTab('annual');setPwBill('annual');}
+              },'Annual 🔥 -25%')
+            )
+          ),
+          isProUser&&e('div',{style:{display:'flex',justifyContent:'center',marginBottom:16}},e('div',{className:'bill-tog'},
+            e('button',{className:'bill-opt'+(pwBill==='monthly'?' act':''),onClick:function(){setPwBill('monthly');}},'Monthly'),
+            e('button',{className:'bill-opt'+(pwBill==='annual'?' act':''),onClick:function(){setPwBill('annual');}},'Annual')
           )),
-          e('div',{className:'mo-plans'},
-            plans.map(function(x){
-              var isSel=(isProUser?activeSp:sp)===x.id;
-              return e('div',{key:x.id,className:'mp'+(isSel?' sel':''),onClick:function(){setSp(x.id);}},
-                e('div',{className:'mp-n'},x.n),
-                e('div',{className:'mp-p'},e('sup',null,'₹'),x.p),
-                e('div',{className:'mp-s'},x.s,x.strike&&e('span',{className:'p-strike',style:{marginLeft:5}},x.strike)),
-                x.mo&&e('div',{style:{fontSize:'0.62rem',color:'#4ade80',marginTop:3,fontWeight:500,lineHeight:1.4}},
-                  x.mo,'  ',x.save&&e('span',{style:{opacity:0.75}},x.save)),
-                e('div',{className:'mp-feat-grid'},
-                  x.feats.map(function(f,i){
-                    return e('div',{key:i,className:'mp-feat-row'+(i===0?' mp-feat-head':'')},
-                      i>0&&e('span',{className:'mp-feat-check'},'✓'),
-                      f
-                    );
-                  })
-                )
-              );
-            })
+          curPwTab==='daily'&&showDailyTab&&e('div',null,
+            e('div',{style:{background:'rgba(251,191,36,0.07)',border:'1px solid rgba(251,191,36,0.3)',borderRadius:'var(--r)',padding:'10px 14px',marginBottom:12,fontSize:'0.72rem',color:'#b45309',lineHeight:1.6,textAlign:'center'}},
+              '⚡ One-time payment · No auto-renew · 24-hour access · 5 generations · Data cleared if you don’t upgrade'
+            ),
+            e('div',{className:'mo-plans'},
+              [{id:'pro',n:'Pro Daily',p:'15',feats:proFeatsDaily,popular:true},{id:'elite',n:'Elite Daily',p:'25',feats:eliteFeatsDaily,popular:false}].map(function(x){
+                var isSel=sp===x.id;
+                return e('div',{key:x.id,className:'mp'+(isSel?' sel':''),onClick:function(){setSp(x.id);}},
+                  x.popular&&e('div',{className:'mp-popular'},'Popular'),
+                  e('div',{className:'mp-n'},x.n),
+                  e('div',{className:'mp-p'},e('sup',null,'₹'),x.p),
+                  e('div',{className:'mp-s'},'one-time · 24 hrs'),
+                  e('div',{style:{fontSize:'0.62rem',color:'#f59e0b',marginTop:3,fontWeight:600}},'No autopay'),
+                  e('div',{className:'mp-feat-grid'},
+                    x.feats.map(function(f,i){
+                      return e('div',{key:i,className:'mp-feat-row'+(i===0?' mp-feat-head':'')},
+                        i>0&&e('span',{className:'mp-feat-check'},'✓'),
+                        f
+                      );
+                    })
+                  )
+                );
+              })
+            ),
+            e('div',{style:{fontSize:'0.62rem',color:'var(--muted2)',textAlign:'center',marginBottom:8,lineHeight:1.5}},
+              'Upgrade to monthly/annual anytime during your trial to keep your saved sets.'
+            ),
+            e('button',{className:'pb',style:{background:'linear-gradient(135deg,#f59e0b,#d97706)'},onClick:function(){payDaily(sp);}},
+              'Start '+(sp==='elite'?'Elite':'Pro')+' Daily Trial · ₹'+(sp==='elite'?'25':'15')+' →'
+            ),
+            e('button',{className:'md',onClick:function(){setPw(false);}},'Maybe later')
           ),
-          isAnnPw&&e('div',{style:{fontSize:'0.62rem',color:'var(--muted2)',textAlign:'center',marginBottom:6,fontStyle:'italic',lineHeight:1.5}},
-            'Founding member rate — prices will rise as we grow'
-          ),
-          e('button',{className:'pb',onClick:function(){pay(isProUser?'elite':activeSp,pwBill);}},
-            'Subscribe ₹'+activePrice+(isAnnPw?'/year':'/month')+' →'
-          ),
-          e('button',{className:'md',onClick:function(){setPw(false);}},isProUser?'Maybe later':'Continue tomorrow')
+          curPwTab!=='daily'&&e('div',null,
+            e('div',{className:'mo-plans'},
+              plans.map(function(x){
+                var isSel=(isProUser?activeSp:sp)===x.id;
+                return e('div',{key:x.id,className:'mp'+(isSel?' sel':''),onClick:function(){setSp(x.id);}},
+                  x.popular&&e('div',{className:'mp-popular'},'Popular'),
+                  e('div',{className:'mp-n'},x.n),
+                  e('div',{className:'mp-p'},e('sup',null,'₹'),x.p),
+                  e('div',{className:'mp-s'},x.s,x.strike&&e('span',{className:'p-strike',style:{marginLeft:5}},x.strike)),
+                  x.mo&&e('div',{style:{fontSize:'0.62rem',color:'#4ade80',marginTop:3,fontWeight:500,lineHeight:1.4}},
+                    x.mo,'  ',x.save&&e('span',{style:{opacity:0.75}},x.save)),
+                  e('div',{className:'mp-feat-grid'},
+                    x.feats.map(function(f,i){
+                      return e('div',{key:i,className:'mp-feat-row'+(i===0?' mp-feat-head':'')},
+                        i>0&&e('span',{className:'mp-feat-check'},'✓'),
+                        f
+                      );
+                    })
+                  )
+                );
+              })
+            ),
+            isAnnPw&&e('div',{style:{fontSize:'0.62rem',color:'var(--muted2)',textAlign:'center',marginBottom:6,fontStyle:'italic',lineHeight:1.5}},
+              'Founding member rate — prices will rise as we grow'
+            ),
+            e('button',{className:'pb',onClick:function(){pay(isProUser?'elite':activeSp,pwBill);}},
+              'Subscribe ₹'+activePrice+(isAnnPw?'/year':'/month')+' →'
+            ),
+            e('button',{className:'md',onClick:function(){setPw(false);}},isDailyUser?'Keep trial for now':isProUser?'Maybe later':'Continue tomorrow')
+          )
         )
       );
     })(),
@@ -4973,7 +5177,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(e(App,null));
 </script>
 <script>(function(){var s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';document.head.appendChild(s);})()</script>
 <script>
-if('serviceWorker' in navigator){
+if('serviceWorker' in navigator && !window.location.hostname.endsWith('.claudeusercontent.com')){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW:',e);});
   });
