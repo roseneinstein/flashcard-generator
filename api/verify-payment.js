@@ -106,8 +106,15 @@ export default async function handler(req, res) {
       .eq('id', user.id)
       .single();
 
-    const tierPlan     = dbUser?.sub_plan    || plan    || 'pro';
-    const billingCycle = dbUser?.sub_billing || billing || 'monthly';
+    const tierPlan = dbUser?.sub_plan || plan || 'pro';
+
+    // IMPORTANT: Never use sub_billing from DB if it is 'daily' — that is a stale value
+    // from a daily trial. Always prefer the billing field from the request body for
+    // monthly/annual subscriptions, falling back to 'monthly' as a safe default.
+    const dbBilling = dbUser?.sub_billing;
+    const billingCycle = (dbBilling && dbBilling !== 'daily')
+      ? dbBilling
+      : (billing && billing !== 'daily' ? billing : 'monthly');
 
     const days      = billingCycle === 'annual' ? 365 : 30;
     const periodEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
